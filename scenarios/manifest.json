@@ -1,0 +1,1573 @@
+{
+  "count": 87,
+  "generator_version": "w2-1.0.0",
+  "scenarios": [
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "00992bb993388f57246e1ffffcab6010f21b5ca1223e9e8cb3bf1780a1f2024c",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "7bbbd52d251dc8a8b56f67532e9f0942db257845b54ce06d66ed41888360697f",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "3bd731b7d273b6160e6c7cd3137dd3e5fcfef518b9f001c9ed9274819bf85f01",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "e49a2aeabea7b6619d5c03798dab12824f71c704bf1d93b47d09ed03a4f52952",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "65217e0b22966636dcbc261b9addce6b446c4273e1a64d4982fe6f7ab3f1bcbf",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_then_refund",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "bb6a1680d8c8d146f07b65fe9f8c0d3dad3aeffde3c23701a294e6abd019e8ce",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_then_refund",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "9bbf7bc52de1a420c114490d3c467f697faf06c45bd9a1d92e727b97dabd6f5e",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_then_refund",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "0b4482ce3299ca9008600f1aed8c3b411f9a0e0423892ed6c5afb3fae4a5eb88",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_then_refund",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "9da002583e5c39d2bcb9799897a07f1ef70b71c4449826cd86241543edacd5a2",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_then_refund",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "aad0b7df87822dfe43a3fab46ac9c29171e5511dc5e74eca385f369f3887eaf6",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101",
+      "sha256": "e5d0a0b36fb4da808e3cef1e54f5f80caf4a53e0f9e97b6a7226d8d61d948491",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
+      "sha256": "536b03a707083116eb0b4d8e8e97aef0c39e251aca73bf5b4a80c93f88a29022",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242",
+      "sha256": "82081c575a09b58a76e3111e98447eb7ee770558d7f4e0e8ca844e7f75bb9fdd",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "201ea19bfb198c42716b428ced12212f892190d404bd415bff511532957a58e3",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "38e5bbeec8795f52178d5fc134cc0e8482b1ecb07db07b76579bffee2f3d91dd",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "ffcc7da3d03b0d858f1bcd3d80dad419ec2b3440cc44a8344805a5d92c0b6d94",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
+      "sha256": "6c460107a738db74cc4cf4d0e0e12ccae883b2591d2c89c4315012ef846d7c83",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17",
+      "sha256": "99f9d48371d89a9553d3bab437e6e7395f820c61406f727a1584df786ecb21d0",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242",
+      "sha256": "24016939aa7875e531da89753a4ce49ac1f266e7f105259bea979d0b6bc31b29",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "partial_refund_started",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-partial_refund_started__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-partial_refund_started__t-10000__tr-stable__s17",
+      "sha256": "049dde761125ed378525d28a161e8678558395647d946fe81ad2052146b67b29",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "ticket_already_commented",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17",
+      "sha256": "ab298cc070f0f40f1ddcf1b9effaf207f2177516f4d85f4301185bdb64a107bc",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "ddcef2736e8b16c77be8dc7bed3b6026fd4bcf675a81b19e2ca3344b6668dffb",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "765986f2259169f363759fea54d16f69f756b0d1bbd18cad3d57a399ceffef67",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "038e40788351212716f06a01852ca6bb8a64e87cd4aa3071a10da0d8f8689d2f",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "8aeb51d4f09b24d0d8165b36022de75e599a96718a63396118e5c319a1b2e35a",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "994075427ec5a803069b631ca7689f499fc43e956c66f0a294295d457417c356",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "f7ba6ed6b76cb18cc0b31d82532dbb6acd07ad8a9af63a5f252f4c8ee7a1666c",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "bfebe022604b8dc2ea12ee2e8afcd057854e2f27a65733e6c614400562847d4c",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "e19bc3d72c75db3941782bf0371a484e7e9c2425044c310b63de0b1c1fe6059d",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "2295e20df8c4d78751029dd15d926bd724f7fd92cfe931c03c42b35f4fed53d7",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "05c7c72ff6f10f17d68352b963bc0f73d0d9a2b27c2d25ba2fdc5423fc77044c",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "36b8b301a5aa059a76731f888737d0041a9460eafe1d42a3c8472afefe9d96fd",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "ee3a7b03be9f46f52256ea95dda69959ef617945b6eb583002977f1be89b98bb",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "short",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "de3071b7de44211bf671d47501d08f7232c35bfc0c0be9e3d1c6e534b9ecf65f",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "short",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "d17e6da07382c6cdfd4c4497d058d1e1b5fb650c0c7609b09fa3f7290fc96c8c",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "short",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_unapproved",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "ee872e4ce4a58d5894ed0df3f753a3133d5a2112725bf5cddc4bcdb64873cc8d",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "refund_timeout_once"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s101",
+      "sha256": "db5ac72a0f030ab68fe4ea4ca4c07ff6282a921130a29f1053fbfd05bc0b178a",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "refund_timeout_once"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s17",
+      "sha256": "ee3f04bd0c31a565d51275ae42a82a4e78a9e8dbc7612723a870c7bb65b69d98",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "refund_timeout_once"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s4242",
+      "sha256": "7dba3ab46907e8c44b1b80fb1d55669d6ca7f3efff404da98a79984473b4decb",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101",
+      "sha256": "7e49547196d3f73d2e10dced419c316c25ce36632f2456112d355a4704e75ebe",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
+      "sha256": "1a309d53547a99ef43549ab01a84ac82fdf44ad82c9baa63b12f24c6f33f2df0",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242",
+      "sha256": "84d1e8273a4d92d82d374b050d069fa2bfb8c054ce6fa92d88a1487bdd4f9596",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "66e3ede3469f080b2de9859a12d2435aa342e3494b01d84a767d41fe00e7e99d",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "1f6c4091d93f57df8a7f23a30b3b4510d522a13378436954657113821abe6f22",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "054c7f3f5973da7da789b6d4aca1907d9f4d7ba293c6253d4ee9c6ff374d75f8",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
+      "sha256": "d4c1f9c7ac2865a153c1042a29c61ae16038c7f09a6406e3ab6737bda9600b4c",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17",
+      "sha256": "8275e9146d9181d021dfb4874ad93ac3e5e23595521607e540374fc7f5f04115",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242",
+      "sha256": "a974ef9d16637e1cd710a2260fc1c4abba2e0e9dc5801a26c163050553e2adf9",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "partial_refund_started",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-partial_refund_started__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-partial_refund_started__t-10000__tr-stable__s17",
+      "sha256": "ca862be5ae053e95e35bb92bd4aa60acaaed0a1c18570d53b8faa004db6e98e5",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "ticket_already_commented",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17",
+      "sha256": "c26fe6c036f18454c55b6b66ee8a20b465d604073b2ab488e689aea1c0b6e03a",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "ebf940e538ecb0bc9cd9ff30eaf11cb8b528fda3fa6f537163b0d910286da005",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "above_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_now",
+      "file": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "9141b047207e9cd18cd56ba39f2ab48a84d946df819d1fa21ba4963a7f7191af",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "d006e537b44df0d7d776e7450b491df536c79a8ae84201eb655816aff1c0d433",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "cbe6450c9013a85f56800992caa1c084ce0fabd60f4e9a2c06a27ab813b92f87",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "expired",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "83687c0add48b3fc3e3a11f0aee65c8b3ddd5b7ad00c9b1fcfb3808d0745cea4",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "463c9ea195b2c12b7a38800b5aba90ebcf9dbd3dfd0fe8dd469b80f40e7799b0",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "80cadc2b29138c3b66e51d7f40d7412b2a410f87b13793bbba50c7b40fab23ca",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_obtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "09d96bc8736596b58cd124eecd61df53d44640b902d8e581dc8b59a98eecc2eb",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "refund_timeout_once"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s101",
+      "sha256": "0d97655a6bec0d3a1b37a01cb0d93238d13f97b5bb2d7d0c3a68c55c639b0018",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "refund_timeout_once"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s17",
+      "sha256": "99ca58b5835a0e97616ab6a40b08fb692b1d438bfa45c1f0c404b2bb365a57f8",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "refund_timeout_once"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s4242",
+      "sha256": "6b0948925cc915a3ebbbce9970e874241a48f0e39ad9fef18b6b529ab1def082",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101",
+      "sha256": "055a7eb9edab75ef5e969a2efb6bdfb3688a1fb505e47bd59cbc75538f72ccb0",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
+      "sha256": "e9a5aad137266d461fbaa1c62c86345f4678139daa297b1ce688a652121160f3",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242",
+      "sha256": "49483c8b6844f30c428c9cba87196207b3cac8dd4565060fec306b6b65bd05ac",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "sha256": "8ee3e4081fb38ade4b2b702db84dd3dd0045eb214bf00df3ceec848884bf4999",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "c845e692ad1ad54e708e0b7ada4c66a5346b98f9ad352d924c6b9b1609a133b6",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+      "sha256": "756a480eb45237058dc44a7b76ccb1199f898e43e2ef2fb696bc937ceb353489",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
+      "sha256": "d19f914a724f48b499ad510a65fc824937c4653ae00fd14ebe95c8ff583c4321",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17",
+      "sha256": "49f136ad688bee2f1d834974499913dd401d54f676c11d01be9072b70238dd90",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242",
+      "sha256": "7e186e85f0295462084e25fd93a8b990cb902ead64423a33e6b66612ff19ba1b",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "6dd21ca51b24c1e6d0816d932bffec649c79ba0ec928243f0358b4de1291a634",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "missing_unobtainable",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "7f5c9e4c3765760a4c6f5b2ecccc03eaf3eafc50315a6f28610734334e1ec79b",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "0b81e9cbbd644560921c58a170232acfd602d842a39d9215edffdd2910326e89",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "f6e842f22d66630636cb7ae1c8531597c3b2f298059ab6d4b9627f66e0204dc4",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "scope_exceeded",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "2afcf9e9a72748fe8b4b8b361dd220b07377a4e39429b15eee3a38010f7f6bef",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "df96ae334f794f0ea8cf46599fa6a90ea24d149c1a2530de909918dd87100ad3",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "fb3f0b4a7942746aee2591c8f062bae77d4202574bf6bcab5deb86992fe6a151",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "unauthorized_approver",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "fe22ea1e004ccb0ee5c15929c06c4a12ec345aad82e98f64b5b441fd8426257f",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101",
+      "sha256": "3ef271a18da048474e8765dde9ae7fb1ca68f97c828b20d65d652d388f5290ce",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
+      "sha256": "6ffa9ea65e8cdd2daab12f89f9a2bb588e2d39dad73fbf9970c2419b88208bc7",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242",
+      "sha256": "e00f27fdcf0b0aec4ee2e1f7265df5498071477dc813990e3eea47755bec05b7",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+      "sha256": "20d751c6707109633410e1f5849955813bc0b2ae07b9d5e1c03d5837b2d4cdfc",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
+      "sha256": "0909b2edb5a7a39ad0aeb1b1c44dbdbb901b3d74d1caed06710a9a85aa298f8c",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17",
+      "sha256": "d2a12365b6d01b7a02b2991d45abd08adf72109041186cd0f4c808a33b5fbd69",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "absent",
+        "prior_progress": "none",
+        "threshold": "50000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242",
+      "sha256": "56b703da11afdabea5c49f3fc0b83a4c56cfe1a34a2cbcef65270546a1404388",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_email",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+      "sha256": "ffd8c6f52c5578427ddfca40b868ecb1a2515340ebb5157d116e71e1c3818f30",
+      "template_id": "dup_charge_threshold"
+    },
+    {
+      "axes": {
+        "amount_band": "below_threshold",
+        "approval": "valid",
+        "approval_ttl": "standard",
+        "near_duplicate": "present_similar_name",
+        "prior_progress": "none",
+        "threshold": "10000",
+        "tool_reliability": "stable"
+      },
+      "branch": "refund_below_threshold",
+      "file": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+      "sha256": "3f6dab98782eb266d3f2a470a086489a0c84aacaadc3646ccce367ecc457b8f4",
+      "template_id": "dup_charge_threshold"
+    }
+  ],
+  "schema_version": 3
+}

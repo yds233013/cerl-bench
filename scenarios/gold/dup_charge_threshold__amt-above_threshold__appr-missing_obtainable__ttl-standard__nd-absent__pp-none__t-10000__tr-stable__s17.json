@@ -1,0 +1,84 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Northwind Traders"
+    },
+    {
+      "customer_id": "cus_000000000001",
+      "kind": "billing.list_charges"
+    },
+    {
+      "charge_id": "ch_000000000001",
+      "kind": "billing.get_charge"
+    },
+    {
+      "charge_id": "ch_000000000002",
+      "kind": "billing.get_charge"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "refund_approval_threshold"
+    },
+    {
+      "channel": "billing-approvals",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "amount_cents": 42000,
+      "channel": "billing-approvals",
+      "kind": "slack.request_approval",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "subject_ref": "ch_000000000002",
+      "text": "Requesting approval to refund duplicate charge ch_000000000002."
+    },
+    {
+      "channel": "billing-approvals",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "channel": "billing-approvals",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "amount_cents": 42000,
+      "approval_ref": "apr_4c4e3381072a",
+      "charge_id": "ch_000000000002",
+      "idempotency_key": "oracle-refund-1",
+      "kind": "billing.issue_refund",
+      "reason": "duplicate"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Refunded the duplicate charge ch_000000000002 under approval apr_4c4e3381072a.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Refunded the duplicate charge ch_000000000002 under approval apr_4c4e3381072a."
+    }
+  ],
+  "branch": "request_then_refund",
+  "predicate_library_hash": "15746cfac6659f485b3d6ca110ea0c9bdd46aa59f578a248f030b5c065eec0ef",
+  "required_decision": "act",
+  "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+  "terminal_state_hash": "18ba00fe04b8548b9355d3983dd846e105202c32e62364ecddc77a93abd61985",
+  "tool_calls": 13,
+  "trace_head_hash": "dd80d6cb3fe0f67781fbbc0844d35bc217db60b75f3179f06e319acfb14fae48",
+  "verifier_version": "1.0.0"
+}

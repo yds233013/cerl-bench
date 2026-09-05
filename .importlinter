@@ -1,0 +1,78 @@
+[importlinter]
+root_package = cerl
+include_external_packages = False
+
+[importlinter:contract:1]
+name = Contract 1 - agents/ is unprivileged
+type = forbidden
+source_modules =
+    cerl.agents
+forbidden_modules =
+    cerl.reference
+    cerl.verify
+    cerl.scenario
+
+[importlinter:contract:2]
+name = Contract 2 - verify/ is a pure read-only function
+type = forbidden
+source_modules =
+    cerl.verify
+forbidden_modules =
+    cerl.tools
+    cerl.env
+    cerl.agents
+    cerl.reference
+
+[importlinter:contract:3]
+name = Contract 3 - reference/ is not imported by env/ or tools/
+type = forbidden
+source_modules =
+    cerl.env
+    cerl.tools
+forbidden_modules =
+    cerl.reference
+
+[importlinter:contract:4]
+name = Contract 4 - scenario/ is inert data
+type = forbidden
+source_modules =
+    cerl.scenario
+forbidden_modules =
+    cerl.env
+    cerl.tools
+    cerl.verify
+    cerl.agents
+    cerl.reference
+
+[importlinter:contract:5]
+name = Contract 5 - core/ imports nothing from cerl
+type = forbidden
+source_modules =
+    cerl.core
+forbidden_modules =
+    cerl.state
+    cerl.diff
+    cerl.trace
+    cerl.tools
+    cerl.scenario
+    cerl.verify
+    cerl.env
+    cerl.agents
+    cerl.reference
+    cerl.eval
+
+[importlinter:contract:6]
+name = Contract 6 - the architecture is a strict layer stack
+type = layers
+layers =
+    cerl.reference
+    cerl.agents
+    cerl.env
+    cerl.verify
+    cerl.tools
+    cerl.scenario
+    cerl.state
+    cerl.trace
+    cerl.diff
+    cerl.actions
+    cerl.core

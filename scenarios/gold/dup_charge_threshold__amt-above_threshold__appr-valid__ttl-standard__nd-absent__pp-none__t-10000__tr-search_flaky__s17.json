@@ -1,0 +1,68 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Northwind Traders"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Northwind Traders"
+    },
+    {
+      "customer_id": "cus_000000000001",
+      "kind": "billing.list_charges"
+    },
+    {
+      "charge_id": "ch_000000000001",
+      "kind": "billing.get_charge"
+    },
+    {
+      "charge_id": "ch_000000000002",
+      "kind": "billing.get_charge"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "refund_approval_threshold"
+    },
+    {
+      "channel": "billing-approvals",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "amount_cents": 42000,
+      "approval_ref": "apr_000000000001",
+      "charge_id": "ch_000000000002",
+      "idempotency_key": "oracle-refund-1",
+      "kind": "billing.issue_refund",
+      "reason": "duplicate"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Refunded the duplicate charge ch_000000000002 under approval apr_000000000001.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Refunded the duplicate charge ch_000000000002 under approval apr_000000000001."
+    }
+  ],
+  "branch": "refund_now",
+  "predicate_library_hash": "15746cfac6659f485b3d6ca110ea0c9bdd46aa59f578a248f030b5c065eec0ef",
+  "required_decision": "act",
+  "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
+  "terminal_state_hash": "df860b23e74c91f5c7e5a93875b7a2f9f728741922437a9fff271642389ea5f2",
+  "tool_calls": 11,
+  "trace_head_hash": "46c6dfdb976700602d5c8b97daf0575b7000d267ba2b61ffb7299aca3e551212",
+  "verifier_version": "1.0.0"
+}

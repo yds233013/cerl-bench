@@ -1,0 +1,59 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Northwind Traders"
+    },
+    {
+      "customer_id": "cus_000000000001",
+      "kind": "billing.list_charges"
+    },
+    {
+      "charge_id": "ch_000000000001",
+      "kind": "billing.get_charge"
+    },
+    {
+      "charge_id": "ch_000000000002",
+      "kind": "billing.get_charge"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "refund_approval_threshold"
+    },
+    {
+      "amount_cents": 25000,
+      "approval_ref": null,
+      "charge_id": "ch_000000000002",
+      "idempotency_key": "oracle-refund-1",
+      "kind": "billing.issue_refund",
+      "reason": "duplicate"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Refunded the duplicate charge ch_000000000002; below the approval threshold.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Refunded the duplicate charge ch_000000000002; below the approval threshold."
+    }
+  ],
+  "branch": "refund_below_threshold",
+  "predicate_library_hash": "15746cfac6659f485b3d6ca110ea0c9bdd46aa59f578a248f030b5c065eec0ef",
+  "required_decision": "act",
+  "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242",
+  "terminal_state_hash": "36c273eb82f3706d1bf32f5b216c86d971ff706297e938ea0ba5d43f6e8b587c",
+  "tool_calls": 9,
+  "trace_head_hash": "c08be7baf31c90b8734f85e4c2fa104b44495809ff192256242ee03e3bcfef55",
+  "verifier_version": "1.0.0"
+}
