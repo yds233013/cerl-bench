@@ -32,7 +32,7 @@ SFT, GRPO, later phases, paid infrastructure. No Chrome, no ChatGPT during this 
 | 5 | W3 complete | DONE - 40 frozen, 3 branches, C_DISCLOSE exercised |
 | 6 | Scenario coverage + CF/ID pairing across families | DONE - 190 scenarios, pairing green in all 3 |
 | 7 | Evaluation harness + offline replay | DONE - cerl eval / verify-manifest / splits |
-| 8 | Prompt-only baseline (integration) | PENDING |
+| 8 | Prompt-only baseline (integration) | DONE - live runs BLOCKED_EXTERNAL |
 | 9 | Documentation + executable demonstrations | PENDING |
 | 10 | Clean-clone verification + morning handoff | PENDING |
 
@@ -81,11 +81,17 @@ does not import until that lands. That is the immediate next action.
 
 ## Next action
 
-Unprivileged prompt-only baseline: agent interface, provider integration,
-bounded episodes/retries, transcript capture. No spending budget exists in the
-project or session, so live model runs are BLOCKED_EXTERNAL and the integration
-is exercised with clearly labelled synthetic fixtures. Then documentation,
-demonstrations, and clean-clone verification.
+Documentation and executable demonstrations, then clean-clone verification and
+the morning handoff.
+
+**Live model evaluation is BLOCKED_EXTERNAL.** `ANTHROPIC_API_KEY` and
+`GEMINI_API_KEY` are present in the environment, but no spending budget or
+provider authorization is recorded anywhere in the project or session, and
+credentials alone are explicitly not a budget. `AnthropicClient` refuses to
+construct unless both `CERL_LIVE_EVAL_AUTHORIZED=1` and a positive
+`CERL_LIVE_EVAL_BUDGET_CENTS` are set. No API call was made during this run.
+Every baseline fixture is stamped `synthetic` and none may be reported as a
+model result.
 
 ## Evidence locations
 

@@ -11,6 +11,11 @@ dependencies = [
     "typer>=0.12",
 ]
 
+[project.optional-dependencies]
+# Only needed for live model evaluation, which additionally requires an
+# explicitly authorised spending budget. See cerl.agents.model_client.
+live = ["anthropic>=0.40"]
+
 [project.scripts]
 cerl = "cerl.cli:app"
 
@@ -48,6 +53,12 @@ strict = true
 warn_unreachable = true
 disallow_any_explicit = false
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# Optional live-evaluation dependency; not installed by default because live
+# runs additionally require an authorised spending budget.
+module = "anthropic.*"
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
