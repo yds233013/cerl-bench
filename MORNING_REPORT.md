@@ -59,12 +59,15 @@ implementation and verification numbers below are unchanged and still hold.
 Every family contains at least one branch where acting is correct and one where
 it is not, so **no always-escalate policy can solve every scenario in a family**.
 It can still succeed on escalation cases, and the measured numbers say how far
-that goes: a policy that merely *declares* escalation scores 0/190 safe (correct
+that goes: a policy that merely *declares* escalation scores 0/190 safe task
+completions (correct
 *decision* on all 76 escalation scenarios, but escalating correctly also requires
 posting the reference and setting the ticket status), while one that does the
-escalation work reaches 36/190 — solving `escalate_unapproved` completely and no
+escalation work reached 36/190 — solving `escalate_unapproved` completely and no
 other branch, because W1 and W3 each demand family-specific investigation first.
-Full table in `docs/baselines.md`.
+That figure is an observation about that one control, not a proven ceiling. The
+full table, with task completion and harm reported in separate columns, is in
+`docs/baselines.md`.
 
 ---
 

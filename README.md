@@ -32,11 +32,29 @@ evaluation is `BLOCKED_EXTERNAL` with a pilot proposed but not executed.
 **Not implemented**: SFT, GRPO, curriculum arms, HTTP/MCP adapters, frontend.
 No C1–C6 research claim has been measured.
 
-**Control baselines** are measured in [`docs/baselines.md`](docs/baselines.md).
-The headline: no always-escalate policy solves an entire family, but escalation
-is not free either — a policy that merely declares escalation safely completes
-0/190, and the best escalating control reaches 36/190, solving exactly one branch
-of one family.
+**Control baselines** are measured in [`docs/baselines.md`](docs/baselines.md),
+across four separate metrics — safe task completion, task completion, harm-free,
+and decision correctness. Reporting one conflated "safe" number flattered
+inaction: every degenerate control is **190/190 harm-free and 0/190 on task**,
+which is what doing nothing looks like. No always-escalate policy solves an
+entire family; the one measured here (`investigate_then_escalate`) scored
+**36/190**, solving one branch of one family — an observation about that policy,
+not a proven ceiling.
+
+**Live evaluation** is implemented end to end and `BLOCKED_EXTERNAL` on spending
+authorisation, with a pilot proposed in
+[`docs/live-pilot-proposal.md`](docs/live-pilot-proposal.md), its split audit in
+[`docs/pilot-split-audit.md`](docs/pilot-split-audit.md), and its spend
+assumptions and residual exposure in
+[`docs/budget-accounting.md`](docs/budget-accounting.md). The whole path runs
+offline against a synthetic transport:
+
+```bash
+uv run cerl pilot --dry-run                    # selection, split audit, cost estimate
+uv run cerl pilot --execute --synthetic        # the full path, offline and free
+uv run cerl regenerate runs/pilot.json --transcripts runs/pilot_transcripts.json
+uv run cerl verify-manifest runs/pilot.json
+```
 
 ## Quick start
 

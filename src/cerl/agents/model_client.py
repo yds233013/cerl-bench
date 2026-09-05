@@ -22,8 +22,13 @@ import os
 from collections.abc import Sequence
 from typing import Any, Protocol
 
-from cerl.agents.budget import BudgetLedger, estimate_input_tokens
-from cerl.core import Frozen, FrozenMap, canonical_json, content_hash
+from cerl.agents.budget import (
+    BudgetExceeded,
+    SpendLedger,
+    TokenCounter,
+    resolve_counter,
+)
+from cerl.core import Frozen, FrozenMap, content_hash
 
 #: Set to a positive integer to authorise live API spend, in whole US cents.
 #: Absent or zero means live evaluation is not authorised.
@@ -157,14 +162,60 @@ class TranscriptCacheClient:
         return self._entries[key]
 
 
-class AnthropicClient:
-    """Live Anthropic API client, metered by a spend ledger.
+class Transport(Protocol):
+    """The thing that actually issues a request.
 
-    The construction-time authorisation check below is a *gate*, not spending
-    control: it is evaluated once, before anything has been spent. Control comes
-    from :class:`~cerl.agents.budget.BudgetLedger`, which reserves the worst-case
-    cost of every request -- **including every retry** -- before it is issued and
-    refuses the request rather than exceeding the cap.
+    Extracted so the whole client -- reservation, retry, confirmation, unresolved
+    accounting -- can be exercised offline against a synthetic transport. A
+    transport declares its own provenance through ``source``, and the client
+    stamps every response with it, so a synthetic transport can never produce a
+    response labelled ``live``.
+    """
+
+    #: "live" or "synthetic". Never blank.
+    source: str
+
+    def create(self, **kwargs: Any) -> Any: ...
+
+    def count_tokens(self, **kwargs: Any) -> Any: ...
+
+
+class AnthropicTransport:
+    """The real SDK. Constructed with retries disabled -- see below."""
+
+    source = "live"
+
+    def __init__(self, max_retries: int = 0, timeout: float = 120.0) -> None:
+        import anthropic
+
+        # The SDK retries automatically by default. An invisible retry is a
+        # billable request the ledger never reserved for, so it is switched off
+        # and retrying is done here, where each attempt reserves.
+        self._client = anthropic.Anthropic(max_retries=max_retries, timeout=timeout)
+
+    @property
+    def raw(self) -> Any:
+        return self._client
+
+    def create(self, **kwargs: Any) -> Any:
+        return self._client.messages.create(**kwargs)
+
+    def count_tokens(self, **kwargs: Any) -> Any:
+        return self._client.messages.count_tokens(**kwargs)
+
+
+class AmbiguousRequestOutcome(RuntimeError):
+    """A request may have reached the provider; its cost is unresolved."""
+
+
+class AnthropicClient:
+    """Model client metered by a :class:`SpendLedger`.
+
+    The authorisation check in ``__init__`` is a *gate*, evaluated once before
+    anything is spent. Control comes from the ledger: every request -- including
+    every retry -- is reserved against the spendable balance before it is sent,
+    and a request whose outcome is ambiguous is charged permanently rather than
+    forgiven.
     """
 
     name = "anthropic"
@@ -175,10 +226,13 @@ class AnthropicClient:
         max_tokens: int = 4096,
         effort: str = "medium",
         *,
-        ledger: BudgetLedger | None = None,
+        ledger: SpendLedger | None = None,
+        transport: Transport | None = None,
+        counter: TokenCounter | None = None,
         max_retries: int = 2,
+        require_authorization: bool = True,
     ) -> None:
-        if not live_evaluation_authorized():
+        if require_authorization and not live_evaluation_authorized():
             raise LiveEvaluationNotAuthorized(
                 f"live evaluation requires {AUTHORIZATION_ENV}=1 and a positive "
                 f"{BUDGET_ENV}. Credentials alone are not a spending budget.",
@@ -187,39 +241,36 @@ class AnthropicClient:
         self.max_tokens = max_tokens
         self.effort = effort
         self.max_retries = max_retries
-        # The env budget is the cap. A caller may pass a smaller ledger, never a
-        # larger one -- otherwise the authorisation could be widened in code.
-        authorized = live_evaluation_budget()
+        self._transport = transport
+        self._counter = counter
+
         if ledger is None:
-            ledger = BudgetLedger(cap_cents=float(authorized), model=model)
-        elif ledger.cap_cents > authorized:
+            ledger = SpendLedger(
+                cap_cents=float(live_evaluation_budget()), model=model,
+            )
+        elif require_authorization and ledger.cap_cents > live_evaluation_budget():
             raise LiveEvaluationNotAuthorized(
                 f"ledger cap {ledger.cap_cents}c exceeds the authorised "
-                f"{authorized}c from {BUDGET_ENV}",
+                f"{live_evaluation_budget()}c from {BUDGET_ENV}",
             )
         self.ledger = ledger
-        self._client: Any = None
 
-    def _ensure_client(self) -> Any:
-        if self._client is None:
-            import anthropic
+    # -- lazily built collaborators --------------------------------------
 
-            self._client = anthropic.Anthropic()
-        return self._client
+    def _ensure_transport(self) -> Transport:
+        if self._transport is None:
+            self._transport = AnthropicTransport()
+        return self._transport
 
-    def _request_size(
-        self,
-        system: str,
-        messages: Sequence[dict[str, Any]],
-        tools: Sequence[dict[str, Any]],
-    ) -> int:
-        """Pessimistic input-token estimate for the pre-flight reservation."""
-        blob = canonical_json({
-            "system": system,
-            "messages": list(messages),
-            "tools": list(tools),
-        })
-        return estimate_input_tokens(len(blob))
+    def _ensure_counter(self) -> TokenCounter:
+        if self._counter is None:
+            transport = self._ensure_transport()
+            raw = getattr(transport, "raw", None)
+            self._counter = resolve_counter(raw, self.model)
+            self.ledger.counter_name = self._counter.name
+        return self._counter
+
+    # -- one request ------------------------------------------------------
 
     def complete(
         self,
@@ -227,55 +278,87 @@ class AnthropicClient:
         messages: Sequence[dict[str, Any]],
         tools: Sequence[dict[str, Any]],
     ) -> ModelResponse:
-        client = self._ensure_client()
-        estimated_input = self._request_size(system, messages, tools)
-        last_error: Exception | None = None
+        transport = self._ensure_transport()
+        counter = self._ensure_counter()
+        self.ledger.counter_name = counter.name
 
-        # Every attempt reserves independently. A retry is a billable request,
-        # and a retry loop that does not reserve is how a capped run overruns.
+        message_list = list(messages)
+        tool_list = list(tools)
+        # The whole request: system prompt, every prior turn, and the tool
+        # schemas. Counting only the newest message would under-reserve by the
+        # size of the transcript, which dominates a long episode.
+        input_tokens = counter.count(system, message_list, tool_list)
+
+        last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
-            reserved = self.ledger.reserve(estimated_input, self.max_tokens)
+            reservation = self.ledger.reserve(
+                input_tokens, self.max_tokens, margin=counter.uncertainty_margin,
+            )
             try:
-                response = client.messages.create(
+                response = transport.create(
                     model=self.model,
                     max_tokens=self.max_tokens,
                     system=system,
-                    messages=list(messages),
-                    tools=list(tools),
+                    messages=message_list,
+                    tools=tool_list,
                     thinking={"type": "adaptive"},
                     output_config={"effort": self.effort},
                 )
-            except Exception as exc:
-                # No usage was returned, so nothing was billed to us that we can
-                # measure. Release the reservation and let the next attempt make
-                # its own, which is checked against the cap in turn.
-                self.ledger.release(reserved)
-                last_error = exc
+            except BudgetExceeded:
+                raise
+            except Exception as error:
+                # The request was transmitted, or may have been. We cannot tell
+                # a pre-flight failure from a provider-side one at this level,
+                # so the conservative reading is the only safe one: assume we
+                # were billed and keep the charge.
+                self.ledger.mark_unresolved(
+                    reservation, f"{type(error).__name__} on attempt {attempt + 1}",
+                )
+                last_error = error
                 if attempt == self.max_retries:
-                    raise
+                    raise AmbiguousRequestOutcome(
+                        f"request failed after {attempt + 1} attempts; "
+                        f"{self.ledger.unresolved_cents:.3f}c is unresolved",
+                    ) from error
                 continue
 
             usage = getattr(response, "usage", None)
-            self.ledger.settle(
-                reserved,
-                int(getattr(usage, "input_tokens", estimated_input) or 0),
-                int(getattr(usage, "output_tokens", 0) or 0),
-            )
-            text = ""
-            tool_name = None
-            tool_input: dict[str, Any] = {}
-            for block in response.content:
-                if block.type == "text":
-                    text += block.text
-                elif block.type == "tool_use":
-                    tool_name = block.name
-                    tool_input = dict(block.input)
-            return ModelResponse(
-                text=text,
-                tool_name=tool_name,
-                tool_input=FrozenMap(tool_input),
-                stop_reason=str(response.stop_reason),
-                source="live",
-            )
+            if usage is None or getattr(usage, "output_tokens", None) is None:
+                # A response arrived but we cannot price it. It was certainly
+                # billed, so the reservation is kept rather than released.
+                self.ledger.mark_unresolved(reservation, "response carried no usage")
+            else:
+                self.ledger.confirm(
+                    reservation,
+                    int(getattr(usage, "input_tokens", input_tokens) or 0),
+                    int(usage.output_tokens or 0),
+                    cache_read_tokens=int(
+                        getattr(usage, "cache_read_input_tokens", 0) or 0,
+                    ),
+                    cache_write_tokens=int(
+                        getattr(usage, "cache_creation_input_tokens", 0) or 0,
+                    ),
+                )
+            return self._to_response(response, transport.source)
 
-        raise RuntimeError(f"unreachable: retries exhausted ({last_error})")
+        raise AmbiguousRequestOutcome(f"unreachable: retries exhausted ({last_error})")
+
+    def _to_response(self, response: Any, source: str) -> ModelResponse:
+        text = ""
+        tool_name = None
+        tool_input: dict[str, Any] = {}
+        for block in response.content:
+            if block.type == "text":
+                text += block.text
+            elif block.type == "tool_use":
+                tool_name = block.name
+                tool_input = dict(block.input)
+        return ModelResponse(
+            text=text,
+            tool_name=tool_name,
+            tool_input=FrozenMap(tool_input),
+            stop_reason=str(response.stop_reason),
+            # Provenance comes from the transport, never from a constant. A
+            # synthetic transport cannot produce a "live" label.
+            source=source,
+        )

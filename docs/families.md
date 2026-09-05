@@ -2,9 +2,10 @@
 
 Each family spans a different point in the outcome space, and each contains at
 least one branch where acting is correct — so no always-escalate policy can solve
-every scenario in a family. It can still succeed on escalation cases: measured,
-the best such policy reaches 36/190 across the corpus, solving exactly one branch
-of one family. See `docs/baselines.md`.
+every scenario in a family. It can still succeed on escalation cases: the
+escalating control measured in `docs/baselines.md` scored 36/190 across the
+corpus, solving one branch of one family. That is an observation about that
+policy, not a ceiling on escalation-shaped policies in general.
 
 ## W2 — duplicate charge with an approval threshold
 

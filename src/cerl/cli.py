@@ -9,6 +9,8 @@ from typing import Annotated, Any
 import typer
 
 from cerl.actions import ActionKind
+from cerl.agents import budget as budget_module
+from cerl.agents import model_client, synthetic_transport
 from cerl.core import FrozenMap
 from cerl.eval import demos as demo_module
 from cerl.eval import manifest as manifest_module
@@ -272,54 +274,180 @@ def evaluate(
 @app.command(name="pilot")
 def pilot_command(
     *,
-    dry_run: Annotated[
+    execute: Annotated[
         bool,
-        typer.Option("--dry-run/--execute", help="Project cost without spending."),
-    ] = True,
+        typer.Option("--execute/--dry-run", help="Run the pilot. Default is dry run."),
+    ] = False,
+    synthetic: Annotated[
+        bool,
+        typer.Option(help="Use the synthetic transport: offline, free, labelled synthetic."),
+    ] = False,
     cached: Annotated[
-        bool, typer.Option(help="Assume prompt caching on the fixed prefix."),
+        bool, typer.Option(help="Assume prompt caching in the projection."),
     ] = True,
+    partition: Annotated[
+        str, typer.Option(help="Partition to draw from. Default: train."),
+    ] = "train",
+    out: Annotated[Path, typer.Option(help="Run manifest path.")] = Path(
+        "runs/pilot.json",
+    ),
+    transcripts_out: Annotated[Path, typer.Option(help="Transcript cache path.")] = Path(
+        "runs/pilot_transcripts.json",
+    ),
+    ledger_out: Annotated[Path, typer.Option(help="Spend ledger path.")] = Path(
+        "runs/pilot_ledger.json",
+    ),
     frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
 ) -> None:
-    """Report the live-pilot selection and its measured cost projection.
+    """Project or execute the live-evaluation pilot.
 
-    ``--dry-run`` (the default) touches no network and spends nothing: it selects
-    the scenarios, drives each one with the oracle to measure the real prompt
-    sizes, and reports what the run would cost. ``--execute`` is deliberately not
-    implemented -- executing the pilot requires a reviewed authorisation, and a
-    flag that quietly starts spending is exactly what should not exist here.
+    ``--dry-run`` is the default and spends nothing: it selects the scenarios,
+    audits them against the split manifest, and estimates the cost from the real
+    request payloads. ``--execute`` runs the pilot, and requires either explicit
+    spending authorisation or ``--synthetic``, which uses an offline transport
+    whose results are labelled synthetic and can never be labelled live.
     """
     scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
     if not scenarios:
         raise typer.BadParameter(f"no frozen scenarios in {frozen_dir}")
-    projection = pilot_module.project(scenarios)
+    try:
+        wanted = split_module.Partition(partition)
+    except ValueError as exc:
+        raise typer.BadParameter(f"unknown partition {partition!r}") from exc
+
+    projection = pilot_module.project(scenarios, wanted)
+    report = projection.audit
 
     typer.echo(f"model            : {projection.model}")
     typer.echo(f"max_tokens       : {projection.max_tokens}")
+    typer.echo(f"token counter    : {projection.counter_name} (estimate, not a live measurement)")
+    typer.echo(f"partition        : {report.partition}")
     typer.echo(f"episodes         : {len(projection.episodes)}")
-    typer.echo(f"branches covered : {len(projection.branches)}")
-    for family, branch in projection.branches:
-        count = sum(
-            1 for e in projection.episodes if (e.family, e.branch) == (family, branch)
-        )
-        typer.echo(f"  {family}/{branch}: {count}")
+    typer.echo(f"branches covered : {len(report.branch_coverage)}")
+    typer.echo(f"sibling groups   : {len(report.sibling_groups)}")
 
-    expected = projection.total_cents(worst_case=False, cached=cached)
+    if report.held_out_partitions_touched:
+        typer.secho(
+            f"SPLIT INTEGRITY: selection touches {report.held_out_partitions_touched}",
+            fg=typer.colors.RED,
+        )
+    if report.uncoverable_branches:
+        typer.secho(
+            f"COVERAGE CONFLICT: {report.partition} cannot supply "
+            f"{report.uncoverable_branches}",
+            fg=typer.colors.RED,
+        )
+    if report.clean:
+        typer.secho("split audit: clean", fg=typer.colors.GREEN)
+
+    estimated = projection.total_cents(worst_case=False, cached=cached)
     worst = projection.total_cents(worst_case=True, cached=cached)
     cap = projection.recommended_cap_cents()
-    typer.echo(f"expected cost    : ${expected / 100:.2f}")
-    typer.echo(f"worst case       : ${worst / 100:.2f}  (every episode to budget_steps)")
+    typer.echo(f"estimated cost   : ${estimated / 100:.2f}  (projection, no live call)")
+    typer.echo(f"modelled worst   : ${worst / 100:.2f}  (every episode to budget_steps)")
     typer.echo(f"recommended cap  : ${cap / 100:.2f}  ({cap} cents)")
 
-    if dry_run:
+    if not execute:
         typer.secho("DRY RUN: nothing was sent and nothing was spent.", fg=typer.colors.GREEN)
         return
-    typer.secho(
-        "Executing the pilot is not implemented. Review "
-        "docs/live-pilot-proposal.md and authorise explicitly.",
-        fg=typer.colors.YELLOW,
+
+    chosen = list(pilot_module.select(scenarios, wanted))
+    result = (
+        _run_synthetic_pilot(chosen, cap, ledger_out)
+        if synthetic
+        else _run_live_pilot(chosen, ledger_out)
     )
-    raise typer.Exit(code=1)
+
+    manifest_path = manifest_module.write(result.manifest, out)
+    transcript_path = pilot_module.write_transcripts(result.transcripts, transcripts_out)
+    typer.echo(f"completed        : {result.completed}/{len(chosen)} episodes")
+    typer.echo(f"source           : {result.source}")
+    typer.echo(f"spend            : {dict(result.spend)}")
+    for entry in result.interrupted:
+        typer.secho(f"INTERRUPTED {entry}", fg=typer.colors.YELLOW)
+    typer.secho(f"wrote {manifest_path} and {transcript_path}", fg=typer.colors.GREEN)
+    if result.source != "live":
+        typer.secho(
+            "These are SYNTHETIC results. They are not model output and must "
+            "never be reported as such.",
+            fg=typer.colors.YELLOW,
+        )
+
+
+def _run_synthetic_pilot(
+    scenarios: list[FrozenScenario], cap_cents: int, ledger_path: Path,
+) -> pilot_module.PilotResult:
+    """Exercise the whole execution path offline, at zero cost.
+
+    Deliberately symmetric with the live path, ledger persistence included: a
+    rehearsal that skips a step is not a rehearsal of that step.
+    """
+    ledger = budget_module.SpendLedger(
+        cap_cents=float(cap_cents),
+        model=pilot_module.PILOT_MODEL,
+        counter_name=budget_module.MockTokenCounter.name,
+    )
+    transport = synthetic_transport.SyntheticTransport(
+        default=synthetic_transport.text_turn("no scripted turn for this step"),
+    )
+    client = pilot_module.build_client(
+        ledger, transport=transport, counter=budget_module.MockTokenCounter(),
+    )
+    return pilot_module.execute(
+        scenarios, client, ledger, source=transport.source, ledger_path=ledger_path,
+    )
+
+
+def _run_live_pilot(
+    scenarios: list[FrozenScenario], ledger_path: Path,
+) -> pilot_module.PilotResult:
+    """Run against the provider. Requires authorisation and a configured budget."""
+    authorized = model_client.live_evaluation_budget()
+    if authorized <= 0:
+        raise typer.BadParameter(
+            "live execution requires CERL_LIVE_EVAL_AUTHORIZED=1 and a positive "
+            "CERL_LIVE_EVAL_BUDGET_CENTS. Credentials alone are not a budget. "
+            "Use --synthetic to exercise the path offline.",
+        )
+    # Resume rather than restart: a run that began from zero would grant itself
+    # the whole cap again, turning "a $50 cap" into $50 per attempt.
+    ledger = budget_module.SpendLedger.resume(
+        ledger_path, float(authorized), pilot_module.PILOT_MODEL,
+    )
+    client = pilot_module.build_client(ledger)
+    return pilot_module.execute(
+        scenarios, client, ledger, source="live", ledger_path=ledger_path,
+    )
+
+
+@app.command(name="regenerate")
+def regenerate_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Run manifest to regenerate.")],
+    transcripts: Annotated[
+        Path, typer.Option(help="Transcript cache recorded with the run."),
+    ] = Path("runs/pilot_transcripts.json"),
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Replay a recorded run from its transcript cache. Offline, no model.
+
+    This is the model-reproducibility claim, and it is weaker than and separate
+    from ``verify-manifest``: replaying actions proves the environment and
+    verifier are deterministic, while replaying transcripts proves only that the
+    same recorded turns produce the same actions. A cache miss fails rather than
+    falling back to a live call.
+    """
+    if not manifest_path.exists():
+        raise typer.BadParameter(f"no manifest at {manifest_path}")
+    if not transcripts.exists():
+        raise typer.BadParameter(f"no transcript cache at {transcripts}")
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    manifest = manifest_module.load(manifest_path)
+    recorded = pilot_module.read_transcripts(transcripts)
+    report = pilot_module.regenerate(scenarios, manifest, list(recorded))
+    typer.echo(report.summary())
+    if not report.ok:
+        raise typer.Exit(code=1)
+    typer.secho("REGENERATED (offline, from cache)", fg=typer.colors.GREEN)
 
 
 @app.command(name="verify-manifest")

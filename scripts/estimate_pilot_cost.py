@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Re-derive the cost table in docs/live-pilot-proposal.md.
 
-Offline and free. Every figure comes from serialising the exact request payloads
-the harness builds, over the actual pilot selection, driven by the oracle.
+Offline and free. Every figure is an **estimate** produced from serialised
+request payloads driven by the oracle -- not a measured live cost. No paid call
+has ever been made from this repository.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cerl.eval import pilot as pilot_module
+from cerl.eval import splits
 from cerl.scenario import freeze as freeze_module
 
 FROZEN = Path("scenarios/frozen")
@@ -17,25 +19,34 @@ FROZEN = Path("scenarios/frozen")
 
 def main() -> None:
     scenarios = [freeze_module.load(p) for p in sorted(FROZEN.glob("*.json"))]
-    projection = pilot_module.project(scenarios)
 
-    print(f"fixed prefix (system + tool schemas): {pilot_module._fixed_prefix_tokens():,} tokens")  # noqa: SLF001
-    print(f"episodes: {len(projection.episodes)} across {len(projection.branches)} branches\n")
+    print(f"fixed prefix (system + tool schemas): {pilot_module.fixed_prefix_tokens():,} tokens")
+    print("token counter: heuristic (the anthropic SDK is an optional extra)")
+    print("ALL FIGURES ARE ESTIMATES. No live call has been made.\n")
 
-    steps = sorted(e.oracle_steps for e in projection.episodes)
-    print(f"oracle steps/episode: min {steps[0]} median {steps[len(steps) // 2]} max {steps[-1]}")
+    header = f"{'configuration':52s} {'episodes':>8s} {'estimated':>11s} {'worst case':>12s} {'cap':>7s}"
+    print(header)
+    print("-" * len(header))
 
-    print(f"\n{'configuration':46s} {'expected':>10s} {'worst case':>12s}")
-    print("-" * 70)
-    for label, cached in (("no caching", False), ("prompt caching", True)):
-        expected = projection.total_cents(worst_case=False, cached=cached)
-        worst = projection.total_cents(worst_case=True, cached=cached)
-        name = f"{len(projection.episodes)} episodes, {projection.max_tokens} tok, {label}"
-        print(f"{name:46s} {'$%.2f' % (expected / 100):>10s} {'$%.2f' % (worst / 100):>12s}")
+    for per_branch in (1, 2):
+        projection = pilot_module.project(scenarios, splits.Partition.TRAIN, per_branch)
+        for label, cached in (("no caching", False), ("prompt caching", True)):
+            expected = projection.total_cents(worst_case=False, cached=cached)
+            worst = projection.total_cents(worst_case=True, cached=cached)
+            cap = int((worst // 100 + 1) * 100)
+            name = f"{per_branch}/branch, {projection.max_tokens} tok, {label}"
+            print(
+                f"{name:52s} {len(projection.episodes):8d} "
+                f"{'$%.2f' % (expected / 100):>11s} {'$%.2f' % (worst / 100):>12s} "
+                f"{'$%d' % (cap / 100):>7s}",
+            )
+        audit = projection.audit
+        print(
+            f"    -> {len(audit.branch_coverage)}/10 branches, partition "
+            f"{audit.partition}, clean={audit.clean}",
+        )
 
-    cap = projection.recommended_cap_cents()
-    print(f"\nrecommended cap: ${cap / 100:.2f} ({cap} cents)")
-    print("Nothing was sent and nothing was spent.")
+    print("\nNothing was sent and nothing was spent.")
 
 
 if __name__ == "__main__":
