@@ -10,6 +10,10 @@ import typer
 
 from cerl.actions import ActionKind
 from cerl.core import FrozenMap
+from cerl.eval import manifest as manifest_module
+from cerl.eval import runner as eval_runner
+from cerl.eval import splits as split_module
+from cerl.eval import verify_run
 from cerl.reference import gold as gold_module
 from cerl.reference import registry as reference_registry
 from cerl.reference.runner import run_reference
@@ -212,3 +216,86 @@ def inspect(
 TOOL_KINDS = tuple(sorted(k.value for k in ActionKind))
 EMPTY = FrozenMap[str, str]()
 VERIFY = verify
+
+
+@app.command(name="eval")
+def evaluate(
+    partition: Annotated[
+        str, typer.Option(help="train | validation | evaluation | all."),
+    ] = "all",
+    family: Annotated[str, typer.Option(help="Family to evaluate, or 'all'.")] = "all",
+    agent: Annotated[
+        str, typer.Option(help="Policy: 'oracle' or 'alternative'."),
+    ] = "oracle",
+    out: Annotated[Path, typer.Option(help="Where to write the run manifest.")] = Path(
+        "runs/run.json",
+    ),
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Evaluate a policy over a partition and write a verifiable run manifest.
+
+    Phase 1B ships reference policies only. An evaluated model agent would be
+    recorded with ``privilege_mode: unprivileged``; a reference policy is
+    recorded as privileged, because it reads ground truth and its numbers are an
+    upper bound rather than a benchmark result.
+    """
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    if family != "all":
+        scenarios = [s for s in scenarios if s.family == family]
+    if partition != "all":
+        try:
+            wanted = split_module.Partition(partition)
+        except ValueError as exc:
+            raise typer.BadParameter(f"unknown partition {partition!r}") from exc
+        scenarios = split_module.select(scenarios, wanted)
+    if not scenarios:
+        raise typer.BadParameter("no scenarios matched")
+
+    manifest = eval_runner.run_reference_evaluation(scenarios, agent)
+    manifest = manifest.model_copy(
+        update={"partition": None if partition == "all" else partition},
+    )
+    path = manifest_module.write(manifest, out)
+
+    metrics = dict(manifest.metrics)
+    typer.echo(f"episodes            : {metrics['episodes']}")
+    typer.echo(f"safe completion     : {metrics['safe_completion_rate']:.3f}")
+    typer.echo(f"decision correct    : {metrics['decision_correct_rate']:.3f}")
+    typer.echo(f"committed violations: {metrics['committed_violation_rate']:.3f}")
+    typer.echo(f"attempted violations: {metrics['attempted_violation_rate']:.3f}")
+    typer.echo(f"by family           : {metrics['episodes_by_family']}")
+    typer.secho(f"wrote {path}", fg=typer.colors.GREEN)
+
+
+@app.command(name="verify-manifest")
+def verify_manifest_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Run manifest to verify.")],
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Replay a recorded run offline and check it against its own evidence.
+
+    No model, no network. This verifies the environment and verifier, which is
+    what "reproducible" means for the benchmark: given these actions, these are
+    the scores. Reproducing a *model's* actions is a separate claim.
+    """
+    if not manifest_path.exists():
+        raise typer.BadParameter(f"no manifest at {manifest_path}")
+    manifest = manifest_module.load(manifest_path)
+    report = verify_run.verify_manifest(manifest, frozen_dir)
+    typer.echo(report.summary())
+    if not report.ok:
+        raise typer.Exit(code=1)
+    typer.secho("VERIFIED (offline, no model in the loop)", fg=typer.colors.GREEN)
+
+
+@app.command(name="splits")
+def splits_command(
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Report the train/validation/evaluation partition sizes."""
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    summary = split_module.summarize(scenarios)
+    typer.echo(f"split version: {summary.version}")
+    for name, count in sorted(summary.counts.items()):
+        typer.echo(f"  {name:12s} {count:4d}")
+    typer.echo(f"  {'total':12s} {summary.total():4d}")

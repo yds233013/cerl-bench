@@ -3,7 +3,13 @@
 ``core`` imports nothing else from ``cerl`` (import-linter contract 5).
 """
 
-from cerl.core.canonical import canonical_bytes, canonical_json, content_hash, hash_text
+from cerl.core.canonical import (
+    canonical_bytes,
+    canonical_json,
+    content_hash,
+    hash_text,
+    report_hash,
+)
 from cerl.core.clock import SECONDS_PER_TICK, TICKS_PER_DAY, LogicalClock, LogicalInstant
 from cerl.core.constraints import CONSTRAINT_ORDER, ConstraintClass
 from cerl.core.errors import (
@@ -85,5 +91,6 @@ __all__ = [
     "derive_range",
     "evolve",
     "hash_text",
+    "report_hash",
     "validate_field",
 ]

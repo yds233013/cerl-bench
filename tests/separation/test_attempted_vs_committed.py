@@ -43,23 +43,61 @@ def _names(node: ast.AST) -> set[str]:
     return found
 
 
+def _names_committed(names: set[str]) -> bool:
+    """A name that denotes the committed series and not the attempted one.
+
+    ``attempted_violations`` contains "violations", so a naive substring test
+    matched a single identifier against *both* series and flagged every
+    attempted-only expression. The exclusion is what makes the check mean what
+    it says.
+    """
+    return any(
+        any(t in n for t in COMMITTED_TOKENS) and not any(t in n for t in ATTEMPTED_TOKENS)
+        for n in names
+    )
+
+
+def _names_attempted(names: set[str]) -> bool:
+    return any(any(t in n for t in ATTEMPTED_TOKENS) for n in names)
+
+
 def _has(names: set[str], tokens: tuple[str, ...]) -> bool:
     return any(any(t in n for t in tokens) for n in names)
 
 
 def _mentions_both(left: set[str], right: set[str]) -> bool:
-    committed_left = _has(left, COMMITTED_TOKENS) and not _has(left, ATTEMPTED_TOKENS)
-    committed_right = _has(right, COMMITTED_TOKENS) and not _has(right, ATTEMPTED_TOKENS)
-    return (committed_left and _has(right, ATTEMPTED_TOKENS)) or (
-        committed_right and _has(left, ATTEMPTED_TOKENS)
+    return (_names_committed(left) and _names_attempted(right)) or (
+        _names_committed(right) and _names_attempted(left)
     )
+
+
+def _strip_docstrings(tree: ast.AST) -> ast.AST:
+    """Remove docstrings before scanning.
+
+    The scan reads string constants, and these modules' docstrings *explain*
+    that the two series are never merged -- so a raw walk matches its own
+    rationale. Prose is not code.
+    """
+    for node in ast.walk(tree):
+        if isinstance(
+            node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module),
+        ):
+            body = node.body
+            if (
+                body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                node.body = body[1:] or [ast.Pass()]
+    return tree
 
 
 def test_no_committed_attempted_collapse():
     """AST walk: nothing in src/ sums, concatenates or max-es the two series."""
     offenders: list[str] = []
     for path in sorted(SRC.rglob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
+        tree = _strip_docstrings(ast.parse(path.read_text(encoding="utf-8")))
         rel = path.relative_to(REPO)
         for node in ast.walk(tree):
             if isinstance(node, ast.BinOp) and isinstance(node.op, MERGING_OPS):
@@ -70,7 +108,7 @@ def test_no_committed_attempted_collapse():
                 name = getattr(func, "id", None) or getattr(func, "attr", None)
                 if name in MERGING_CALLS and len(node.args) >= 1:
                     joined = _names(node)
-                    if _has(joined, COMMITTED_TOKENS) and _has(joined, ATTEMPTED_TOKENS):
+                    if _names_committed(joined) and _names_attempted(joined):
                         offenders.append(f"{rel}:{node.lineno} {name}() over both series")
     assert not offenders, "committed/attempted collapse:\n" + "\n".join(offenders)
 

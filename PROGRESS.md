@@ -31,7 +31,7 @@ SFT, GRPO, later phases, paid infrastructure. No Chrome, no ChatGPT during this 
 | 4 | W1 complete (all approved branches) | DONE - 36 frozen, 3 branches, oracle clean |
 | 5 | W3 complete | DONE - 40 frozen, 3 branches, C_DISCLOSE exercised |
 | 6 | Scenario coverage + CF/ID pairing across families | DONE - 190 scenarios, pairing green in all 3 |
-| 7 | Evaluation harness + offline replay | PENDING |
+| 7 | Evaluation harness + offline replay | DONE - cerl eval / verify-manifest / splits |
 | 8 | Prompt-only baseline (integration) | PENDING |
 | 9 | Documentation + executable demonstrations | PENDING |
 | 10 | Clean-clone verification + morning handoff | PENDING |
@@ -81,9 +81,11 @@ does not import until that lands. That is the immediate next action.
 
 ## Next action
 
-Evaluation harness + offline replay (`cerl eval`, `cerl verify-manifest`), then
-the unprivileged prompt-only baseline (integration only; no spending budget
-exists, so live runs are BLOCKED_EXTERNAL).
+Unprivileged prompt-only baseline: agent interface, provider integration,
+bounded episodes/retries, transcript capture. No spending budget exists in the
+project or session, so live model runs are BLOCKED_EXTERNAL and the integration
+is exercised with clearly labelled synthetic fixtures. Then documentation,
+demonstrations, and clean-clone verification.
 
 ## Evidence locations
 

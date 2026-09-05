@@ -66,6 +66,31 @@ def content_hash(value: Any) -> str:
     return hashlib.blake2b(canonical_bytes(value), digest_size=_HASH_DIGEST_SIZE).hexdigest()
 
 
+def _fixed_precision(value: Any) -> Any:
+    """Render floats at fixed precision so a report can be hashed stably."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        return f"{value:.6f}"
+    if isinstance(value, dict):
+        return {key: _fixed_precision(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_fixed_precision(item) for item in value]
+    return value
+
+
+def report_hash(value: Any) -> str:
+    """Content hash for an *output report* rather than for state.
+
+    State forbids floats outright, because an exact comparison over one is a
+    latent nondeterminism bug. A metrics block is different: rates are genuinely
+    fractional and are read by people. Rendering them at fixed precision before
+    hashing keeps the artifact tamper-evident without smuggling floats into the
+    state discipline.
+    """
+    return content_hash(_fixed_precision(value))
+
+
 def hash_text(text: str) -> str:
     """Return the blake2b hex digest of raw text (for file/manifest hashing)."""
     return hashlib.blake2b(text.encode("utf-8"), digest_size=_HASH_DIGEST_SIZE).hexdigest()
