@@ -31,3 +31,27 @@ are simply harder scenarios, Δ measures difficulty rather than overfitting and
 every other claim is confounded. Two structural defenses, both asserted in tests:
 difficulty-matched CF/ID siblings, and a rename-only perturbation that must be
 free for any policy that learned the rule rather than the tokens.
+
+
+## Revision history
+
+Preserved rather than rewritten: a preregistration that quietly changed would be
+worthless.
+
+| Date | Change |
+|---|---|
+| Phase 0 | C1–C6 recorded before any implementation existed. |
+| Phase 1A | Unchanged. C5 clarified to name the *committed* side-effect rate specifically, since attempted-but-blocked behaviour became a separate reported series. |
+| Phase 1B | Unchanged. Scope note added below. |
+
+## Scope note (Phase 1B)
+
+**No claim here has been tested.** No model has been evaluated, no training arm
+exists, and no experimental finding is recorded anywhere in this repository. The
+falsification conditions above remain as written, and the verifier and scenario
+corpus are frozen and hash-pinned before any arm is run, so they cannot be tuned
+to a result afterwards.
+
+W1's `identity_evidence` axis is stratified rather than held out, which means W1
+contributes to C1–C3 through its `merge_approval` axis only. That is a narrowing
+of scope, recorded here rather than absorbed silently.

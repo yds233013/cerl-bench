@@ -56,8 +56,37 @@ terminal hash, and the verdict — with no model in the loop, no network, no API
 key. This is what "reproducible" means for the benchmark: *given these actions,
 these are the scores, forever.*
 
-**Claim 2 — model reproduction (best-effort, Phase 1B+).**
-Re-running *generation* is a different and weaker claim. A committed transcript
-cache makes it byte-exact offline; live pinned decoding is explicitly **not
-guaranteed**, because provider-side changes can alter outputs. Phase 1A ships no
-evaluated agent, so only Claim 1 is currently exercised.
+**Claim 2 — model reproduction (implemented, tested independently).**
+Re-running *generation* is a different and weaker claim: "the same recorded
+turns give the same actions". `TranscriptCacheClient` replays recorded
+request/response pairs offline, keyed by a content hash over the whole request
+so drift cannot alias onto a wrong answer. A cache **miss raises** rather than
+silently falling back to a live call — a cache that quietly reaches the network
+is not a reproducibility mechanism.
+
+The two claims are tested apart, in `tests/evaluation/`. One says "the same
+actions give the same scores"; the other says "the same turns give the same
+actions". A green replay must never be read as evidence that a model result was
+reproduced.
+
+**Live decoding is explicitly not guaranteed** and has not been run — see
+`README.md` § Live evaluation.
+
+## What offline verification actually checks
+
+`cerl verify-manifest` compares a recorded run against **its own evidence**
+rather than accepting freshly regenerated output as ground truth. It detects:
+
+| Tampering | Detected via |
+|---|---|
+| an altered action | terminal and chain hashes |
+| a doctored verdict | recomputed rubric, class, tool calls |
+| a doctored metric block | aggregates recomputed from the episodes |
+| a changed scenario file | `scenario_hash` |
+| a changed initial world | `initial_state_hash` |
+| a renamed responder rule | per-step `responder_rule` |
+| an incompatible grading version | `predicate_library_hash` skew |
+| a missing scenario | reported, never silently skipped |
+
+One test breaks the socket layer before verifying, so "no network" is asserted
+rather than assumed.

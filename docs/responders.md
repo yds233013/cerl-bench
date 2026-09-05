@@ -66,3 +66,20 @@ how a per-branch declaration quietly becomes the global exemption it replaced.
 W2 ships two rules with complementary guards. The `approval` axis moves the
 *approver's limit*, not which rule exists — so `missing_obtainable` and
 `missing_unobtainable` are the same responder set seen at different amounts.
+
+
+## Across families
+
+W2 and W1 both use responders; W3 uses none — its counterparts do not reply
+within an episode, and adding one would multiply scenarios without testing
+anything the other two do not already cover.
+
+W1's approval axis selects **which rule is present** rather than which guard
+passes, because a merge request carries no amount and the guard therefore cannot
+discriminate on one. Exactly one rule can fire in any W1 instance, which is what
+keeps the per-branch declaration precise instead of blanket.
+
+An earlier version had both W1 rules present with guards that were not actually
+complementary — both held at amount zero — and the declaration gate caught it by
+demanding a declaration for a rule that could in principle fire. That is the
+gate working: it refuses to let a reachable rule go undeclared.

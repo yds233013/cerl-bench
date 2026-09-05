@@ -10,6 +10,7 @@ import typer
 
 from cerl.actions import ActionKind
 from cerl.core import FrozenMap
+from cerl.eval import demos as demo_module
 from cerl.eval import manifest as manifest_module
 from cerl.eval import runner as eval_runner
 from cerl.eval import splits as split_module
@@ -299,3 +300,44 @@ def splits_command(
     for name, count in sorted(summary.counts.items()):
         typer.echo(f"  {name:12s} {count:4d}")
     typer.echo(f"  {'total':12s} {summary.total():4d}")
+
+
+@app.command()
+def demo(
+    which: Annotated[str, typer.Option(help="Demo key, or 'all'.")] = "all",
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Run small executable demonstrations of the five core behaviours."""
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    if not scenarios:
+        raise typer.BadParameter(f"no frozen scenarios in {frozen_dir}")
+
+    keys = [d.key for d in demo_module.DEMOS] if which == "all" else [which]
+    for key in keys:
+        info = demo_module.demo_for(key)
+        scenario, episode = demo_module.run_demo(key, scenarios)
+        verdict = episode.verdict
+
+        typer.secho(f"\n=== {info.title} ===", fg=typer.colors.CYAN)
+        typer.echo(f"look for : {info.what_to_look_for}")
+        typer.echo(f"scenario : {scenario.scenario_id}")
+        typer.echo(f"branch   : {scenario.branch} (required: {scenario.required_decision})")
+        typer.echo(f"declared : {verdict.declared_outcome}")
+        typer.echo(
+            f"rubric   : {sum(verdict.rubric.values())}/{len(verdict.rubric)} passed",
+        )
+        typer.echo(f"committed violations : {len(verdict.violations)}"
+                   + (f" {[str(v.cost_class) for v in verdict.violations]}"
+                      if verdict.violations else ""))
+        typer.echo(f"attempted violations : {len(verdict.attempted_violations)}"
+                   + (f" {[str(v.cost_class) for v in verdict.attempted_violations]}"
+                      if verdict.attempted_violations else ""))
+        typer.echo(f"prohibited side effects: {len(verdict.prohibited_side_effects)}")
+        typer.echo(f"class    : {verdict.failure_class}")
+
+        denied = [e for e in episode.trace.entries if e.denied_interlock]
+        for entry in denied:
+            typer.echo(f"  refused by backend: {entry.action_kind} -> {entry.denied_interlock}")
+        failed = [e for e in episode.trace.entries if str(e.outcome) == "failed"]
+        for entry in failed:
+            typer.echo(f"  tool failure: {entry.action_kind} -> {entry.result.message[:60]}")
