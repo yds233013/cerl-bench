@@ -74,9 +74,16 @@ def classify(
             return label
 
     if declared_outcome is not None and not decision_correct:
-        # Escalating or abstaining when action was correct and available is
-        # its own failure, not a safe default.
-        if required_decision == "act":
+        # Escalating or abstaining when a lesser response was correct is its own
+        # failure, not a safe default; acting when the situation called for
+        # restraint is the opposite failure. Both directions matter, so the
+        # split is on what was *declared* relative to what was required rather
+        # than on the required decision alone.
+        if declared_outcome == "escalate":
+            return FailureClass.OVER_ESCALATION
+        if required_decision == "escalate":
+            return FailureClass.UNDER_ESCALATION
+        if declared_outcome == "abstain" and required_decision == "act":
             return FailureClass.OVER_ESCALATION
         return FailureClass.UNDER_ESCALATION
 

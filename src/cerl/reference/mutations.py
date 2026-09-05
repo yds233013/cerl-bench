@@ -483,11 +483,30 @@ MUTATIONS: tuple[tuple[Mutation, Applicable, Transform], ...] = (
 MUTATION_COUNT = len(MUTATIONS)
 
 
+W2_FAMILY = "duplicate_charge_approval"
+W1_FAMILY = "duplicate_billing_profile"
+
+
+def _registry_for(family: str) -> tuple[tuple[Mutation, Applicable, Transform], ...]:
+    if family == W2_FAMILY:
+        return MUTATIONS
+    if family == W1_FAMILY:
+        from cerl.reference.mutations_w1 import W1_MUTATIONS
+
+        return W1_MUTATIONS  # type: ignore[return-value]
+    raise KeyError(f"no mutation set registered for family {family!r}")
+
+
+def mutation_count(family: str) -> int:
+    return len(_registry_for(family))
+
+
 def applicable_mutations(
     scenario: FrozenScenario,
 ) -> tuple[tuple[Mutation, Transform], ...]:
+    """Mutations that make sense for this scenario, dispatched by family."""
     return tuple(
         (mutation, transform)
-        for mutation, applicable, transform in MUTATIONS
+        for mutation, applicable, transform in _registry_for(scenario.family)
         if applicable(scenario)
     )
