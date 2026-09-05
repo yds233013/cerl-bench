@@ -288,6 +288,15 @@ def pilot_command(
     partition: Annotated[
         str, typer.Option(help="Partition to draw from. Default: train."),
     ] = "train",
+    per_branch: Annotated[
+        int, typer.Option(help="Episodes per eligible outcome branch."),
+    ] = pilot_module.EPISODES_PER_BRANCH,
+    eligible_only: Annotated[
+        bool,
+        typer.Option(
+            help="Restrict to training-eligible scenarios. Off is a leakage diagnostic.",
+        ),
+    ] = True,
     out: Annotated[Path, typer.Option(help="Run manifest path.")] = Path(
         "runs/pilot.json",
     ),
@@ -315,13 +324,20 @@ def pilot_command(
     except ValueError as exc:
         raise typer.BadParameter(f"unknown partition {partition!r}") from exc
 
-    projection = pilot_module.project(scenarios, wanted)
+    projection = pilot_module.project(
+        scenarios, wanted, per_branch, eligible_only=eligible_only,
+    )
     report = projection.audit
 
     typer.echo(f"model            : {projection.model}")
     typer.echo(f"max_tokens       : {projection.max_tokens}")
     typer.echo(f"token counter    : {projection.counter_name} (estimate, not a live measurement)")
     typer.echo(f"partition        : {report.partition}")
+    pool_label = "training-eligible only" if report.eligible_only else "ALL (diagnostic)"
+    typer.echo(
+        f"eligibility      : {pool_label}  "
+        f"(split {split_module.ELIGIBILITY_VERSION})",
+    )
     typer.echo(f"episodes         : {len(projection.episodes)}")
     typer.echo(f"branches covered : {len(report.branch_coverage)}")
     typer.echo(f"sibling groups   : {len(report.sibling_groups)}")
@@ -331,14 +347,28 @@ def pilot_command(
             f"SPLIT INTEGRITY: selection touches {report.held_out_partitions_touched}",
             fg=typer.colors.RED,
         )
-    if report.uncoverable_branches:
+    if report.held_out_selected:
         typer.secho(
-            f"COVERAGE CONFLICT: {report.partition} cannot supply "
-            f"{report.uncoverable_branches}",
+            f"LEAKAGE: selection includes registered held-out scenarios "
+            f"{report.held_out_selected}",
             fg=typer.colors.RED,
         )
+    if report.uncoverable_branches:
+        pool = (
+            f"eligible {report.partition}" if report.eligible_only else report.partition
+        )
+        typer.secho(
+            f"COVERAGE LIMIT: {pool} cannot supply {report.uncoverable_branches}. "
+            f"Reported, not backfilled -- importing a held-out value to restore "
+            f"coverage is what this check exists to prevent.",
+            fg=typer.colors.YELLOW,
+        )
     if report.clean:
-        typer.secho("split audit: clean", fg=typer.colors.GREEN)
+        typer.secho(
+            f"split audit: clean (no leakage; {len(report.branch_coverage)}/10 "
+            f"branches eligible)",
+            fg=typer.colors.GREEN,
+        )
 
     estimated = projection.total_cents(worst_case=False, cached=cached)
     worst = projection.total_cents(worst_case=True, cached=cached)
@@ -351,7 +381,13 @@ def pilot_command(
         typer.secho("DRY RUN: nothing was sent and nothing was spent.", fg=typer.colors.GREEN)
         return
 
-    chosen = list(pilot_module.select(scenarios, wanted))
+    if not report.clean:
+        raise typer.BadParameter(
+            "refusing to execute a selection with leakage; see the audit above",
+        )
+    chosen = list(
+        pilot_module.select(scenarios, wanted, per_branch, eligible_only=eligible_only),
+    )
     result = (
         _run_synthetic_pilot(chosen, cap, ledger_out)
         if synthetic
@@ -365,6 +401,12 @@ def pilot_command(
     typer.echo(f"spend            : {dict(result.spend)}")
     for entry in result.interrupted:
         typer.secho(f"INTERRUPTED {entry}", fg=typer.colors.YELLOW)
+    for request_id in result.orphaned_requests:
+        typer.secho(
+            f"UNRESOLVED request {request_id}: recovered without an outcome, "
+            f"charged against the cap and NOT replayed",
+            fg=typer.colors.YELLOW,
+        )
     typer.secho(f"wrote {manifest_path} and {transcript_path}", fg=typer.colors.GREEN)
     if result.source != "live":
         typer.secho(
@@ -382,11 +424,8 @@ def _run_synthetic_pilot(
     Deliberately symmetric with the live path, ledger persistence included: a
     rehearsal that skips a step is not a rehearsal of that step.
     """
-    ledger = budget_module.SpendLedger(
-        cap_cents=float(cap_cents),
-        model=pilot_module.PILOT_MODEL,
-        counter_name=budget_module.MockTokenCounter.name,
-    )
+    ledger = pilot_module.open_ledger(ledger_path, float(cap_cents))
+    ledger.counter_name = budget_module.MockTokenCounter.name
     transport = synthetic_transport.SyntheticTransport(
         default=synthetic_transport.text_turn("no scripted turn for this step"),
     )
@@ -410,10 +449,10 @@ def _run_live_pilot(
             "Use --synthetic to exercise the path offline.",
         )
     # Resume rather than restart: a run that began from zero would grant itself
-    # the whole cap again, turning "a $50 cap" into $50 per attempt.
-    ledger = budget_module.SpendLedger.resume(
-        ledger_path, float(authorized), pilot_module.PILOT_MODEL,
-    )
+    # the whole cap again, turning "a $50 cap" into $50 per attempt. Recovery
+    # reads the per-request journal, so spend inside an interrupted episode is
+    # not lost, and an orphaned request is charged rather than replayed.
+    ledger = pilot_module.open_ledger(ledger_path, float(authorized))
     client = pilot_module.build_client(ledger)
     return pilot_module.execute(
         scenarios, client, ledger, source="live", ledger_path=ledger_path,

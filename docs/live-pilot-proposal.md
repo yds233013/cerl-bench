@@ -15,6 +15,7 @@ reported as one. Re-derive them free with `uv run cerl pilot --dry-run`.
 | | |
 |---|---|
 | Provider | Anthropic first-party API (`anthropic` SDK, an optional extra) |
+| Selection pool | training-eligible only (split 1.1.0) |
 | Model id | **`claude-opus-5`** |
 | Thinking | `{"type": "adaptive"}` |
 | Effort | `output_config={"effort": "medium"}` |
@@ -37,9 +38,21 @@ regenerate` replays the transcripts from cache.
 
 ## 2. Scenario selection — audited against the split manifest
 
-**20 episodes, 2 per outcome branch, drawn entirely from the `train`
-partition.** Selection is deterministic: within each `(family, branch)`, the two
-lowest `scenario_id` values in sort order. No sampling, no seed.
+**Drawn entirely from training-eligible scenarios**: the `train` partition
+*minus* every scenario carrying a value registered as held out. Selection is
+deterministic — within each `(family, branch)`, the lowest `scenario_id` values
+in sort order. No sampling, no seed.
+
+**This changed after an audit found leakage.** 85 of the 144 `train` scenarios
+are registered counterfactuals, because a CF and its ID sibling deliberately
+share a partition. The previous 20-scenario selection included five of them.
+Split **1.1.0** adds an explicit eligibility predicate; no scenario moved
+partitions. Full detail in `docs/pilot-split-audit.md`.
+
+**Coverage is 8 of 10 branches, not 10.** `suspicious_refund_escalation`'s
+`escalate_fraud` and `request_info` are reachable *only* through held-out values
+— in W3 only `signal_count=0` is in-distribution. Restoring the tenth branch
+would mean importing a holdout, so the gap is reported instead.
 
 **This pilot is a development smoke test.** Its outcomes may inform fixes, which
 is precisely why it draws only from `train`: a run that can change the system
@@ -56,18 +69,16 @@ membership and branch coverage: **`docs/pilot-split-audit.md`**. Summary:
 
 | Check | Result |
 |---|---|
-| Partition | `train` only, 20/20 |
-| Held-out scenarios touched | **0** |
-| Branches covered | **10 / 10** |
-| Sibling groups | 15, none straddling a partition |
-| Scenarios relabelled | **0** |
+| Pool | training-eligible only (split 1.1.0) |
+| Registered held-out scenarios selected | **0** |
+| Branches covered | **8 / 10** (structural limit, reported) |
+| Sibling groups | none straddling a partition |
+| Scenarios relabelled or moved | **0** |
 
-**One conflict, reported rather than resolved.** The `evaluation` partition
-cannot supply all ten branches — four have zero evaluation instances — so a
-full-coverage pilot on held-out data is impossible with this corpus.
-`cerl pilot --partition evaluation` prints `COVERAGE CONFLICT` and names them
-instead of quietly borrowing from another partition. Fixing it is a corpus
-decision for a person.
+**Two coverage limits, reported rather than resolved.** The eligible pool cannot
+supply two W3 branches; the `evaluation` partition cannot supply four, and W3 has
+no evaluation partition at all. `cerl pilot` prints `COVERAGE LIMIT` and names
+them instead of borrowing. Both are corpus decisions for a person.
 
 ## 3. Frozen prompt
 
@@ -100,17 +111,22 @@ at `max_tokens`.
 
 | Config | Episodes | Branches | Estimated | Worst case | Cap |
 |---|---|---|---|---|---|
-| **A — 2/branch, caching (proposed)** | **20** | **10/10** | **$4.18** | **$50.54** | **$51** |
-| A′ — 2/branch, no caching | 20 | 10/10 | $9.26 | $105.82 | $106 |
-| **B — 1/branch, caching (conservative)** | **10** | **10/10** | **$2.12** | **$25.27** | **$26** |
-| B′ — 1/branch, no caching | 10 | 10/10 | $4.69 | $52.90 | $53 |
+| A — 2/branch, caching | 16 | 8/10 | $3.53 | $40.78 | $41 |
+| A′ — 2/branch, no caching | 16 | 8/10 | $7.91 | $86.86 | $87 |
+| **B — 1/branch, caching (recommended first run)** | **8** | **8/10** | **$1.77** | **$20.39** | **$21** |
+| B′ — 1/branch, no caching | 8 | 8/10 | $3.98 | $43.43 | $44 |
 
-Both configurations cover all ten branches; B halves the episodes per branch, and
-the trade is explicit — one episode per branch cannot distinguish a branch the
-policy handles from a lucky run.
+Episode counts fell from 20/10 to 16/8 because the eligible pool reaches eight
+branches. **The smaller configuration is 8 episodes, not 10** — it is one per
+eligible branch, and padding it back to ten would require the held-out scenarios
+the audit just excluded.
 
-**Recommended: config A, cap $51.** If that is more than you want to authorise,
-config B at cap $26 is the conservative fallback.
+**Recommended: config B, cap $21** for the first paid run. It touches every
+eligible branch once at the lowest exposure; config A doubles coverage per branch
+for $41 once B has shown the harness behaves.
+
+One episode per branch cannot distinguish a branch the policy handles from a
+lucky run, and B claims no more than that.
 
 **Estimated and worst case differ by ~12×.** Input grows quadratically with steps
 because every turn re-sends the transcript, so an agent that flails to the step
@@ -189,9 +205,10 @@ uv run pytest tests/live -q
 ```bash
 export ANTHROPIC_API_KEY=...              # supplied by the operator
 export CERL_LIVE_EVAL_AUTHORIZED=1        # two independent signals, so a
-export CERL_LIVE_EVAL_BUDGET_CENTS=5100   # stray budget cannot start spending
+export CERL_LIVE_EVAL_BUDGET_CENTS=2100   # stray budget cannot start spending
 
-uv run cerl pilot --execute \
+# Config B: 8 episodes, one per eligible branch, cap $21.
+uv run cerl pilot --execute --per-branch 1 \
     --out runs/pilot_opus5.json \
     --transcripts-out runs/pilot_transcripts.json \
     --ledger-out runs/pilot_ledger.json
@@ -213,10 +230,13 @@ whether the model emits parseable tool calls; a per-branch signal precise enough
 to decide whether a larger run is worth funding; and a real transcript cache
 enabling free offline replay thereafter.
 
-**Cannot:** any C1–C6 claim. 20 episodes, 2 per branch, drawn from `train` with
-no ID/CF split contrast, support no generalization-gap estimate and no confidence
-interval. **No result from this pilot may be reported as a measurement of Δ**, and
-because it runs on `train` it is not a held-out evaluation of anything.
+**Cannot:** any C1–C6 claim. 8 episodes across 8 branches, drawn from
+training-eligible scenarios with no held-out contrast, support no
+generalization-gap estimate and no confidence interval. **No result from this
+pilot may be reported as a measurement of Δ**, and because it deliberately
+excludes every registered counterfactual it is not an evaluation of
+generalization at all. It also says nothing about the two W3 branches it cannot
+reach.
 
 It is a smoke test with a price tag. Calling it more would be the overclaim the
 rest of this repository is built to prevent.

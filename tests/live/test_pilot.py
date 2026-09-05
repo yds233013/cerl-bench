@@ -13,7 +13,6 @@ from cerl.agents.synthetic_transport import (
 )
 from cerl.eval import manifest as manifest_module
 from cerl.eval import pilot, splits, verify_run
-from cerl.reference.registry import families as oracle_families
 
 
 @pytest.fixture(scope="module")
@@ -31,41 +30,72 @@ def chosen(all_frozen):
 # --------------------------------------------------------------------------
 
 
-def test_the_selection_draws_only_from_the_train_partition(chosen):
-    """A pilot whose outcomes inform fixes must not consume held-out scenarios."""
+def test_the_selection_draws_only_from_training_eligible_scenarios(chosen):
+    """A pilot whose outcomes inform fixes must not consume held-out scenarios.
+
+    Partition membership alone was not sufficient: 85 of the 144 train
+    scenarios are registered counterfactuals.
+    """
     assert chosen
     for scenario in chosen:
-        assert splits.partition_of(scenario) is splits.Partition.TRAIN, scenario.scenario_id
+        assert splits.is_training_eligible(scenario), scenario.scenario_id
 
 
 def test_the_audit_reports_a_clean_split(all_frozen, projection):
     report = projection.audit
     assert report.partition == "train"
     assert report.held_out_partitions_touched == ()
-    assert report.uncoverable_branches == ()
+    assert report.held_out_selected == ()
     assert report.clean
     assert dict(report.partitions_touched) == {"train": len(projection.episodes)}
 
 
-def test_every_branch_of_every_family_is_covered(all_frozen, projection):
+def test_the_eligible_pool_covers_eight_of_the_ten_branches(all_frozen, projection):
+    """Reported, not engineered around.
+
+    Two W3 branches are reachable only through registered held-out values --
+    signal_count 1 gives request_info, 2 and 3 give escalate_fraud, and only 0
+    is in-distribution. Backfilling them would import exactly the leakage the
+    eligibility layer exists to prevent, so the pilot covers 8 and says so.
+    """
     corpus = {f"{s.family}/{s.branch}" for s in all_frozen}
-    assert set(projection.audit.branch_coverage) == corpus
     assert len(corpus) == 10
-    assert {k.split("/")[0] for k in corpus} == set(oracle_families())
+    covered = set(projection.audit.branch_coverage)
+    assert len(covered) == 8
+    assert projection.audit.uncoverable_branches == (
+        "suspicious_refund_escalation/escalate_fraud",
+        "suspicious_refund_escalation/request_info",
+    )
+    assert covered | set(projection.audit.uncoverable_branches) == corpus
     assert set(projection.audit.branch_coverage.values()) == {pilot.EPISODES_PER_BRANCH}
 
 
-def test_the_audit_surfaces_a_coverage_conflict_rather_than_hiding_it(all_frozen):
-    """The evaluation partition cannot supply every branch. Say so, don't fix it.
+def test_the_selection_contains_no_registered_held_out_scenario(projection):
+    """The leakage gate, at the pilot boundary."""
+    assert projection.audit.held_out_selected == ()
+    assert projection.audit.eligible_only
+    assert projection.audit.clean
 
-    Silently reaching into another partition to complete coverage is exactly the
-    move that destroys a held-out split, so the audit reports the conflict and
-    leaves the decision to a person.
-    """
+
+def test_the_audit_surfaces_a_coverage_limit_rather_than_hiding_it(all_frozen):
+    """Missing branches are reported; they never justify importing a holdout."""
     report = pilot.audit(list(all_frozen), splits.Partition.EVALUATION)
     assert report.uncoverable_branches, "expected evaluation to be short of branches"
-    assert not report.clean
     assert report.held_out_partitions_touched == ()
+    # Still leakage-free: a coverage limit is not a leak.
+    assert report.clean
+
+
+def test_disabling_the_eligibility_filter_reintroduces_leakage(all_frozen):
+    """Shows the filter is load-bearing, not decorative.
+
+    With it off the selection reaches ten branches -- by including registered
+    counterfactuals. That is the trade the pilot refuses.
+    """
+    report = pilot.audit(list(all_frozen), eligible_only=False)
+    assert len(report.branch_coverage) == 10
+    assert report.held_out_selected, "expected held-out scenarios without the filter"
+    assert not report.clean
 
 
 def test_selection_is_deterministic(all_frozen):
@@ -119,12 +149,21 @@ def test_caching_lowers_the_projection(projection):
 
 
 def test_the_published_proposal_figures_still_hold(projection):
-    assert len(projection.episodes) == 20
+    assert len(projection.episodes) == 16
     expected = projection.total_cents(worst_case=False, cached=True)
     worst = projection.total_cents(worst_case=True, cached=True)
-    assert expected == pytest.approx(418.0, abs=25.0), expected
-    assert worst == pytest.approx(5054.0, abs=200.0), worst
-    assert projection.recommended_cap_cents() == 5100
+    assert expected == pytest.approx(353.0, abs=25.0), expected
+    assert worst == pytest.approx(4078.0, abs=200.0), worst
+    assert projection.recommended_cap_cents() == 4100
+
+
+def test_the_smaller_development_configuration_is_eight_episodes(all_frozen):
+    """One per eligible branch. Eight, not ten -- and not padded to ten."""
+    small = pilot.project(list(all_frozen), splits.Partition.TRAIN, 1)
+    assert len(small.episodes) == 8
+    assert len(small.audit.branch_coverage) == 8
+    assert small.audit.held_out_selected == ()
+    assert small.recommended_cap_cents() == 2100
 
 
 # --------------------------------------------------------------------------

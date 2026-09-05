@@ -91,6 +91,51 @@ environment. They are estimates, and are labelled as such.
   reservation is not restored as spendable — its outcome is unknown, so it is
   already recorded as unresolved.
 
+## Crash safety
+
+Two files, two jobs. The **snapshot** (`ledger.json`) carries cap and model
+provenance to check a resume against. The **journal** (`ledger.jsonl`) carries
+the money, one record per request.
+
+Ordering is the guarantee: the reservation is written, flushed, and `fsync`ed
+**before** the request is sent, and the outcome is appended after it returns.
+
+Recovery applies one rule: **a reservation with no outcome becomes an unresolved
+charge.** After the fact we cannot distinguish "never sent" from "sent and
+billed", so the conservative reading is the only safe one.
+
+| On recovery | Behaviour |
+|---|---|
+| Confirmed usage | Preserved exactly. It was really billed. |
+| Reservation with no outcome | Charged as unresolved, listed in `orphaned_requests` |
+| The allowance | **Not reset.** Recovery restores the spend position |
+| Uncertain requests | **Never replayed.** Retrying is a person's decision, not a side effect of restarting |
+| Cap and model | Still checked; a changed cap or model is refused |
+| Truncated final record | Discarded; everything before it is intact |
+| Snapshot vs journal disagreement | The journal wins — it is the finer record |
+
+Covered by `tests/live/test_crash_recovery.py`, which interrupts at the two
+places money is actually at risk: **inside `transport.create`** (the request is
+on the wire and no outcome is recorded) and **between the journal write and the
+snapshot**. Recovery is then performed from the files on disk alone, as a
+restarted process would see them. The crash is raised as a `BaseException` so it
+is not caught by the client's retry handler — a real crash gets no chance to
+record an outcome, and a catchable one would test the wrong path.
+
+### Remaining limitation
+
+The journal makes recovery consistent with **what this process observed**. It
+cannot make it consistent with what the provider billed. If a request is sent and
+the provider bills it but the process dies before any outcome is recorded, the
+journal charges the worst-case reservation, which is an over-estimate whenever
+the true response was shorter. In the other direction, a request that never left
+the socket is also charged. Both errors are conservative — they shrink the
+remaining allowance — and neither can be resolved without reading the provider's
+own billing record.
+
+`fsync` durability is also only as good as the storage stack beneath it; a drive
+that lies about flushing can still lose the tail of the journal.
+
 ## Sequential execution
 
 The pilot issues one request at a time. This is a deliberate accounting choice,
@@ -121,12 +166,12 @@ Stated plainly, because a limit whose failure modes are hidden is not a limit.
 4. **Provider-side additions.** The request the provider prices is not
    byte-identical to what we serialise (server-side scaffolding). The 5% margin
    on the API counter is an allowance for this, not a measurement of it.
-5. **A crash between the provider billing us and the ledger being written.** The
-   ledger is saved after each episode, not after each request, so up to one
-   episode of spend can be lost from the record. That spend is real and the
-   resumed run will not know about it. *Mitigation:* per-request persistence is
-   possible and was not implemented; for a 20-episode pilot the exposure is at
-   most one episode's cost.
+5. **~~A crash between the provider billing us and the ledger being written.~~**
+   **Resolved.** A per-episode snapshot left a loss window an episode wide: a
+   crash after twelve confirmed requests recovered as zero, and the resumed run
+   handed itself the allowance back — measured at 147¢ invisible on a 1000¢ cap.
+   A write-ahead journal now records every request. Remaining exposure is
+   described below.
 
 ## The honest bottom line
 

@@ -29,8 +29,10 @@ request is refused when its worst-case estimate does not fit in that balance.
 from __future__ import annotations
 
 import json
+import os
 import threading
 from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -227,11 +229,6 @@ def resolve_counter(client: Any, model: str) -> TokenCounter:
     return HeuristicTokenCounter()
 
 
-# --------------------------------------------------------------------------
-# the ledger
-# --------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class Reservation:
     """A hold placed before a request is sent."""
@@ -239,6 +236,159 @@ class Reservation:
     cents: float
     input_tokens: int
     max_output_tokens: int
+    #: Ties the reservation to its outcome record in the journal.
+    request_id: str = ""
+
+
+# --------------------------------------------------------------------------
+# durable per-request journal
+# --------------------------------------------------------------------------
+
+
+class JournalEvent(StrEnum):
+    """Two records per request: an intent, then an outcome."""
+
+    RESERVED = "reserved"
+    CONFIRMED = "confirmed"
+    UNRESOLVED = "unresolved"
+
+
+@dataclass(frozen=True)
+class RecoveredSpend:
+    """What a journal says was spent, after an interruption."""
+
+    confirmed_cents: float
+    unresolved_cents: float
+    requests_confirmed: int
+    requests_unresolved: int
+    #: Reservations with no outcome record. The request may have been sent.
+    orphaned_requests: tuple[str, ...]
+    unresolved_reasons: tuple[str, ...]
+
+
+class SpendJournal:
+    """Append-only write-ahead log of billable requests.
+
+    A ledger snapshot written once per episode leaves a loss window the width of
+    an episode: a crash after twelve requests loses all twelve, and the resumed
+    run hands itself the allowance back. This journal closes that window by
+    recording the *intent to send* before the request goes out, and the outcome
+    after it returns.
+
+    Durability is at the real boundary: each record is written, flushed, and
+    ``fsync``ed before the call that follows it. That is what makes "recorded
+    before sending" true rather than merely intended -- a buffered write sitting
+    in the OS page cache is not a record of anything.
+
+    Recovery reads the log and applies one rule: **a reservation with no outcome
+    becomes an unresolved charge.** We cannot tell "never sent" from "sent and
+    billed" after the fact, so the conservative reading is the only safe one.
+    """
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _append(self, record: dict[str, Any]) -> None:
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    def record_reservation(self, request_id: str, reservation: Reservation) -> None:
+        """Written **before** the request is sent. The order is the guarantee."""
+        self._append(
+            {
+                "event": JournalEvent.RESERVED.value,
+                "request_id": request_id,
+                "cents": reservation.cents,
+                "input_tokens": reservation.input_tokens,
+                "max_output_tokens": reservation.max_output_tokens,
+            },
+        )
+
+    def record_confirmation(self, request_id: str, actual_cents: float) -> None:
+        self._append(
+            {
+                "event": JournalEvent.CONFIRMED.value,
+                "request_id": request_id,
+                "cents": actual_cents,
+            },
+        )
+
+    def record_unresolved(self, request_id: str, cents: float, reason: str) -> None:
+        self._append(
+            {
+                "event": JournalEvent.UNRESOLVED.value,
+                "request_id": request_id,
+                "cents": cents,
+                "reason": reason,
+            },
+        )
+
+    def recover(self) -> RecoveredSpend:
+        """Replay the log into a spend position.
+
+        A truncated final line -- a crash mid-write -- is discarded rather than
+        failing recovery. Its request is then either absent (so it was never
+        reserved, and could not have been sent) or present as an orphaned
+        reservation, which is charged.
+        """
+        reserved: dict[str, float] = {}
+        outcomes: dict[str, tuple[str, float, str]] = {}
+        if not self.path.exists():
+            return RecoveredSpend(0.0, 0.0, 0, 0, (), ())
+
+        for line in self.path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                # A partial trailing write. Everything before it is intact.
+                continue
+            request_id = str(record.get("request_id", ""))
+            event = str(record.get("event", ""))
+            cents = float(record.get("cents", 0.0))
+            if event == JournalEvent.RESERVED.value:
+                reserved[request_id] = cents
+            elif event in {JournalEvent.CONFIRMED.value, JournalEvent.UNRESOLVED.value}:
+                outcomes[request_id] = (event, cents, str(record.get("reason", "")))
+
+        confirmed = unresolved = 0.0
+        n_confirmed = n_unresolved = 0
+        reasons: list[str] = []
+        orphans: list[str] = []
+
+        for request_id, held in reserved.items():
+            outcome = outcomes.get(request_id)
+            if outcome is None:
+                # Reserved, never resolved. It may have reached the provider.
+                unresolved += held
+                n_unresolved += 1
+                orphans.append(request_id)
+                reasons.append(f"interrupted before an outcome was recorded ({request_id})")
+            elif outcome[0] == JournalEvent.CONFIRMED.value:
+                confirmed += outcome[1]
+                n_confirmed += 1
+            else:
+                unresolved += outcome[1]
+                n_unresolved += 1
+                reasons.append(outcome[2] or "unresolved")
+
+        return RecoveredSpend(
+            confirmed_cents=confirmed,
+            unresolved_cents=unresolved,
+            requests_confirmed=n_confirmed,
+            requests_unresolved=n_unresolved,
+            orphaned_requests=tuple(orphans),
+            unresolved_reasons=tuple(reasons),
+        )
+
+
+# --------------------------------------------------------------------------
+# the ledger
+# --------------------------------------------------------------------------
 
 
 @dataclass
@@ -264,6 +414,13 @@ class SpendLedger:
     refusals: int = 0
     #: Why each unresolved charge is unresolved, so the exposure is explicable.
     unresolved_reasons: list[str] = field(default_factory=list)
+    #: Write-ahead log. Without one, a crash inside an episode loses every
+    #: request since the last snapshot and the resumed run hands itself the
+    #: allowance back.
+    journal: SpendJournal | None = None
+    #: Requests recovered with no outcome record. Charged, never replayed.
+    orphaned_requests: list[str] = field(default_factory=list)
+    _sequence: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     # -- balances ---------------------------------------------------------
@@ -312,8 +469,16 @@ class SpendLedger:
                     f"reserved {self.reserved_cents:.3f}c, "
                     f"unresolved {self.unresolved_cents:.3f}c)",
                 )
+            self._sequence += 1
+            request_id = f"{self._sequence:06d}"
             self.reserved_cents += estimate
-        return Reservation(estimate, billable_input, max_output_tokens)
+        reservation = Reservation(estimate, billable_input, max_output_tokens, request_id)
+        # Durably recorded BEFORE the caller sends anything. If the process dies
+        # between here and the outcome, recovery sees an orphaned reservation
+        # and charges it, rather than losing it.
+        if self.journal is not None:
+            self.journal.record_reservation(request_id, reservation)
+        return reservation
 
     def confirm(
         self,
@@ -332,6 +497,8 @@ class SpendLedger:
             cache_read_tokens=cache_read_tokens,
             cache_write_tokens=cache_write_tokens,
         )
+        if self.journal is not None:
+            self.journal.record_confirmation(reservation.request_id, actual)
         with self._lock:
             self.reserved_cents = max(0.0, self.reserved_cents - reservation.cents)
             self.confirmed_cents += actual
@@ -347,6 +514,10 @@ class SpendLedger:
         hold is kept against the cap forever rather than returned. Treating an
         ambiguous outcome as free is the single easiest way to overspend.
         """
+        if self.journal is not None:
+            self.journal.record_unresolved(
+                reservation.request_id, reservation.cents, reason,
+            )
         with self._lock:
             self.reserved_cents = max(0.0, self.reserved_cents - reservation.cents)
             self.unresolved_cents += reservation.cents
@@ -359,7 +530,13 @@ class SpendLedger:
         Only for failures raised before transmission -- a refusal by our own
         code, a request we chose not to send. Anything that touched the network
         goes to :meth:`mark_unresolved` instead.
+
+        The journal records this as a zero-cost resolution, so recovery does not
+        later see an orphaned reservation and charge for a request that provably
+        never left the process.
         """
+        if self.journal is not None:
+            self.journal.record_confirmation(reservation.request_id, 0.0)
         with self._lock:
             self.reserved_cents = max(0.0, self.reserved_cents - reservation.cents)
 
@@ -376,6 +553,7 @@ class SpendLedger:
             "requests_confirmed": self.requests_confirmed,
             "requests_unresolved": self.requests_unresolved,
             "unresolved_reasons": list(self.unresolved_reasons),
+            "orphaned_requests": list(self.orphaned_requests),
             "pricing_as_of": PRICING_AS_OF,
         }
 
@@ -385,38 +563,74 @@ class SpendLedger:
         return path
 
     @classmethod
-    def resume(cls, path: Path, cap_cents: float, model: str) -> SpendLedger:
+    def resume(
+        cls,
+        path: Path,
+        cap_cents: float,
+        model: str,
+        journal_path: Path | None = None,
+    ) -> SpendLedger:
         """Reload prior spend so a resumed run continues the same allowance.
 
-        A resumed run that started from zero would grant itself the whole cap
-        again, which is how "a $50 cap" becomes $50 per attempt. Reserved
-        amounts are deliberately *not* restored as reserved: a request in flight
-        when the process died has an unknown outcome, so it is already recorded
-        as unresolved and stays charged.
+        Spend is recovered from the **journal** when one exists, because the
+        journal is per-request and the snapshot is per-episode: after a crash
+        inside an episode the snapshot is stale by every request since it was
+        written. The snapshot supplies the cap and model provenance to check
+        against; the journal supplies the money.
+
+        Three rules, all deliberate:
+
+        * **Confirmed usage is preserved.** It was really billed.
+        * **A reservation with no outcome becomes an unresolved charge.** It may
+          have reached the provider, so it is charged, not returned.
+        * **Nothing is replayed.** Recovery restores an accounting position and
+          never re-issues an uncertain request; deciding to retry is a person's
+          call, not a side effect of restarting.
         """
-        if not path.exists():
-            return cls(cap_cents=cap_cents, model=model)
-        prior = json.loads(path.read_text())
-        if prior.get("model") != model:
-            raise ValueError(
-                f"ledger at {path} is for model {prior.get('model')!r}, not {model!r}; "
-                f"refusing to resume a different model's allowance",
-            )
-        if float(prior.get("cap_cents", cap_cents)) != cap_cents:
-            raise ValueError(
-                f"ledger at {path} was capped at {prior.get('cap_cents')}c, not "
-                f"{cap_cents}c; a changed cap must be an explicit new run",
-            )
+        prior: dict[str, Any] = {}
+        if path.exists():
+            prior = json.loads(path.read_text())
+            if prior.get("model") != model:
+                raise ValueError(
+                    f"ledger at {path} is for model {prior.get('model')!r}, not "
+                    f"{model!r}; refusing to resume a different model's allowance",
+                )
+            if float(prior.get("cap_cents", cap_cents)) != cap_cents:
+                raise ValueError(
+                    f"ledger at {path} was capped at {prior.get('cap_cents')}c, not "
+                    f"{cap_cents}c; a changed cap must be an explicit new run",
+                )
+
+        journal = SpendJournal(journal_path) if journal_path is not None else None
         ledger = cls(
             cap_cents=cap_cents,
             model=model,
             counter_name=str(prior.get("counter_name", "unknown")),
-            confirmed_cents=float(prior.get("confirmed_cents", 0.0)),
-            unresolved_cents=float(prior.get("unresolved_cents", 0.0)),
-            requests_confirmed=int(prior.get("requests_confirmed", 0)),
-            requests_unresolved=int(prior.get("requests_unresolved", 0)),
+            journal=journal,
         )
-        ledger.unresolved_reasons.extend(prior.get("unresolved_reasons", []))
+
+        if journal is not None and journal.path.exists():
+            recovered = journal.recover()
+            ledger.confirmed_cents = recovered.confirmed_cents
+            ledger.unresolved_cents = recovered.unresolved_cents
+            ledger.requests_confirmed = recovered.requests_confirmed
+            ledger.requests_unresolved = recovered.requests_unresolved
+            ledger.unresolved_reasons.extend(recovered.unresolved_reasons)
+            ledger.orphaned_requests = list(recovered.orphaned_requests)
+            # Continue the id sequence past everything already journalled, so a
+            # resumed run cannot reuse an id and silently resolve an old record.
+            ledger._sequence = (
+                recovered.requests_confirmed + recovered.requests_unresolved
+            )
+        elif prior:
+            ledger.confirmed_cents = float(prior.get("confirmed_cents", 0.0))
+            ledger.unresolved_cents = float(prior.get("unresolved_cents", 0.0))
+            ledger.requests_confirmed = int(prior.get("requests_confirmed", 0))
+            ledger.requests_unresolved = int(prior.get("requests_unresolved", 0))
+            ledger.unresolved_reasons.extend(prior.get("unresolved_reasons", []))
+            ledger._sequence = (
+                ledger.requests_confirmed + ledger.requests_unresolved
+            )
         return ledger
 
     # -- reporting --------------------------------------------------------
@@ -436,5 +650,6 @@ class SpendLedger:
             "token_counter": self.counter_name,
             "pricing_as_of": PRICING_AS_OF,
             "unresolved_reasons": list(self.unresolved_reasons),
+            "orphaned_requests": list(self.orphaned_requests),
         }
 

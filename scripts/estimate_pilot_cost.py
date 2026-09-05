@@ -24,9 +24,20 @@ def main() -> None:
     print("token counter: heuristic (the anthropic SDK is an optional extra)")
     print("ALL FIGURES ARE ESTIMATES. No live call has been made.\n")
 
-    header = f"{'configuration':52s} {'episodes':>8s} {'estimated':>11s} {'worst case':>12s} {'cap':>7s}"
+    header = (
+        f"{'configuration':52s} {'episodes':>8s} {'estimated':>11s} "
+        f"{'worst case':>12s} {'cap':>7s}"
+    )
     print(header)
     print("-" * len(header))
+
+    inventory = splits.inventory(scenarios)
+    print(
+        f"split {inventory.version}: {inventory.eligible} of {inventory.total} "
+        f"scenarios are training-eligible "
+        f"({sum(inventory.held_out_in_train.values())} train scenarios are "
+        f"registered holdouts)\n",
+    )
 
     for per_branch in (1, 2):
         projection = pilot_module.project(scenarios, splits.Partition.TRAIN, per_branch)
@@ -37,14 +48,19 @@ def main() -> None:
             name = f"{per_branch}/branch, {projection.max_tokens} tok, {label}"
             print(
                 f"{name:52s} {len(projection.episodes):8d} "
-                f"{'$%.2f' % (expected / 100):>11s} {'$%.2f' % (worst / 100):>12s} "
-                f"{'$%d' % (cap / 100):>7s}",
+                f"{f'${expected / 100:.2f}':>11s} {f'${worst / 100:.2f}':>12s} "
+                f"{f'${cap / 100:.0f}':>7s}",
             )
         audit = projection.audit
         print(
             f"    -> {len(audit.branch_coverage)}/10 branches, partition "
-            f"{audit.partition}, clean={audit.clean}",
+            f"{audit.partition}, leakage-free={audit.clean}",
         )
+        if audit.uncoverable_branches:
+            print(
+                f"       not reachable from the eligible pool: "
+                f"{audit.uncoverable_branches}",
+            )
 
     print("\nNothing was sent and nothing was spent.")
 

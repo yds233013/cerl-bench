@@ -91,6 +91,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# Reporting scripts exist to print; they are not library code.
+"scripts/*.py" = ["T201", "EXE001"]
 "tests/*" = [
     "ANN", "PLR2004", "SLF001", "INP001", "T201", "PT018", "PERF401",
     "S603", "S607", "BLE001", "FBT001", "FBT002", "ARG001", "ARG002",

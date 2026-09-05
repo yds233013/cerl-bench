@@ -13,11 +13,19 @@ that needs authorisation:
 * **Regeneration** -- replaying a recorded run from its transcript cache,
   offline and byte-exact.
 
-**Split integrity.** The pilot draws only from the ``train`` partition. It is a
-*development smoke test*: its outcomes may inform fixes, so it must not touch
-scenarios whose value depends on never having informed anything. The other
-partitions are not "development data" and are not renamed -- they are simply not
-used here. See ``docs/pilot-split-audit.md``.
+**Split integrity.** The pilot draws only from **training-eligible** scenarios:
+the ``train`` partition *minus* every scenario carrying a value registered as
+held out in ``siblings``. Partition membership alone was not enough -- 85 of the
+144 train scenarios are registered counterfactuals, because a CF and its ID
+sibling deliberately share a partition. See ``splits.ELIGIBILITY_VERSION`` and
+``docs/pilot-split-audit.md``.
+
+It is a *development smoke test*: its outcomes may inform fixes, so it must not
+touch anything whose value depends on never having informed anything. The
+consequence is stated rather than engineered around -- **eligible scenarios reach
+8 of the 10 outcome branches, not 10.** Two W3 branches are reachable only
+through held-out values, and importing one to restore coverage is exactly the
+move that would make the pilot leak.
 """
 
 from __future__ import annotations
@@ -29,6 +37,7 @@ from typing import Any
 
 from cerl.agents.budget import (
     HeuristicTokenCounter,
+    SpendJournal,
     SpendLedger,
     TokenCounter,
     cost_cents,
@@ -56,6 +65,7 @@ from cerl.eval.manifest import AgentConfig, RunManifest
 from cerl.eval.runner import record_episode
 from cerl.reference.ground_truth import ground_truth_for
 from cerl.reference.registry import oracle_for
+from cerl.scenario import siblings
 from cerl.scenario.schema import FrozenScenario
 
 # --------------------------------------------------------------------------
@@ -69,6 +79,10 @@ EPISODES_PER_BRANCH = 2
 #: The partition the pilot draws from. Not a default to be overridden casually:
 #: a pilot whose outcomes inform fixes must not consume held-out scenarios.
 PILOT_PARTITION = splits.Partition.TRAIN
+
+#: Restrict to training-eligible scenarios. Off only for diagnostics: with it
+#: off, the selection can include registered counterfactuals.
+PILOT_ELIGIBLE_ONLY = True
 
 PILOT_MODEL = "claude-opus-5"
 PILOT_MAX_TOKENS = 2048
@@ -102,24 +116,40 @@ class SelectionAudit(Frozen):
     #: Branches the chosen partition cannot supply. Empty is the passing state.
     uncoverable_branches: tuple[str, ...]
     held_out_partitions_touched: tuple[str, ...]
+    eligible_only: bool = True
+    #: Selected scenarios carrying a registered held-out value. Must be empty.
+    held_out_selected: tuple[str, ...] = ()
 
     @property
     def clean(self) -> bool:
-        return not self.held_out_partitions_touched and not self.uncoverable_branches
+        """Leakage-free. Deliberately does **not** require full branch coverage.
+
+        Missing branches are a corpus limitation to report, not a defect in the
+        selection -- and treating them as one would create pressure to fix the
+        "failure" by importing a held-out value.
+        """
+        return not self.held_out_partitions_touched and not self.held_out_selected
 
 
 def select(
     scenarios: list[FrozenScenario],
     partition: splits.Partition | None = PILOT_PARTITION,
     per_branch: int = EPISODES_PER_BRANCH,
+    *,
+    eligible_only: bool = PILOT_ELIGIBLE_ONLY,
 ) -> tuple[FrozenScenario, ...]:
-    """Pick ``per_branch`` scenarios from every outcome branch of one partition.
+    """Pick ``per_branch`` scenarios from every outcome branch of the pool.
 
     Deterministic: the lowest scenario ids in sort order, no sampling and no
     seed, so the set is a function of the corpus and cannot drift between the
     proposal and the run.
+
+    Branches the eligible pool cannot supply are simply absent. They are
+    reported by :func:`audit`, never backfilled from a held-out value.
     """
     pool = splits.select(scenarios, partition)
+    if eligible_only:
+        pool = splits.training_eligible(pool)
     by_branch: dict[tuple[str, str], list[FrozenScenario]] = defaultdict(list)
     for scenario in pool:
         by_branch[(scenario.family, scenario.branch)].append(scenario)
@@ -133,6 +163,8 @@ def audit(
     scenarios: list[FrozenScenario],
     partition: splits.Partition | None = PILOT_PARTITION,
     per_branch: int = EPISODES_PER_BRANCH,
+    *,
+    eligible_only: bool = PILOT_ELIGIBLE_ONLY,
 ) -> SelectionAudit:
     """Check the selection against the split manifest.
 
@@ -140,7 +172,7 @@ def audit(
     surfaced as ``uncoverable_branches`` -- the conflict is stated, not resolved
     by quietly reaching into a held-out partition.
     """
-    chosen = select(scenarios, partition, per_branch)
+    chosen = select(scenarios, partition, per_branch, eligible_only=eligible_only)
     all_branches = {f"{s.family}/{s.branch}" for s in scenarios}
     covered = {f"{s.family}/{s.branch}" for s in chosen}
 
@@ -157,6 +189,14 @@ def audit(
 
     return SelectionAudit(
         partition=wanted or "all",
+        eligible_only=eligible_only,
+        held_out_selected=tuple(
+            sorted(
+                s.scenario_id
+                for s in chosen
+                if siblings.is_held_out(s.axes, s.template_id)
+            ),
+        ),
         scenario_ids=tuple(s.scenario_id for s in chosen),
         partitions_touched=FrozenMap(dict(touched)),
         branch_coverage=FrozenMap(dict(coverage)),
@@ -282,13 +322,15 @@ def project(
     partition: splits.Partition | None = PILOT_PARTITION,
     per_branch: int = EPISODES_PER_BRANCH,
     counter: TokenCounter | None = None,
+    *,
+    eligible_only: bool = PILOT_ELIGIBLE_ONLY,
 ) -> PilotProjection:
     """Select, audit, and estimate. Offline and free."""
     counter = counter or HeuristicTokenCounter()
-    chosen = select(scenarios, partition, per_branch)
+    chosen = select(scenarios, partition, per_branch, eligible_only=eligible_only)
     return PilotProjection(
         episodes=tuple(profile(s, counter) for s in chosen),
-        audit=audit(scenarios, partition, per_branch),
+        audit=audit(scenarios, partition, per_branch, eligible_only=eligible_only),
         counter_name=counter.name,
     )
 
@@ -306,6 +348,8 @@ class PilotResult(Frozen):
     spend: FrozenMap[str, Any]
     completed: int
     interrupted: tuple[str, ...] = ()
+    #: Requests recovered with no outcome. Charged, never replayed.
+    orphaned_requests: tuple[str, ...] = ()
     #: "live" or "synthetic", from the transport. Never from a flag.
     source: str = "synthetic"
 
@@ -383,6 +427,7 @@ def execute(
         spend=FrozenMap(ledger.report()),
         completed=len(records),
         interrupted=tuple(interrupted),
+        orphaned_requests=tuple(ledger.orphaned_requests),
         source=source,
     )
 
@@ -521,4 +566,25 @@ def read_transcripts(path: Path) -> tuple[AgentTranscript, ...]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     return tuple(
         AgentTranscript.model_validate(entry) for entry in payload["transcripts"]
+    )
+
+
+def journal_path_for(ledger_path: Path) -> Path:
+    """The write-ahead log that sits beside a ledger snapshot.
+
+    Two files, two jobs: the snapshot carries cap and model provenance to check
+    a resume against, the journal carries the money at per-request granularity.
+    """
+    return ledger_path.with_suffix(".jsonl")
+
+
+def open_ledger(
+    ledger_path: Path, cap_cents: float, model: str = PILOT_MODEL,
+) -> SpendLedger:
+    """Resume or start a ledger with durable per-request recording enabled."""
+    journal = journal_path_for(ledger_path)
+    if ledger_path.exists() or journal.exists():
+        return SpendLedger.resume(ledger_path, cap_cents, model, journal_path=journal)
+    return SpendLedger(
+        cap_cents=cap_cents, model=model, journal=SpendJournal(journal),
     )

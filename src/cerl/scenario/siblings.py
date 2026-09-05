@@ -66,10 +66,13 @@ approval verification that recording two records as distinct does not.
 Padding the cheaper branches to match would be exactly the manipulation
 Criterion 41 forbids, and widening the tolerance would gut the control. So
 ``identity_evidence`` is instead **stratified**: all three values appear in both
-the training and evaluation partitions. An axis whose values are present on both
-sides cannot produce an ID/CF difficulty gap, which is the confound C6 exists to
-exclude. What it cannot then do is serve as a held-out counterfactual, and this
-is recorded as a deliberate scope statement rather than a passed criterion.
+the training and evaluation partitions. Stratification does **not** establish
+that the values are equally difficult -- they demonstrably are not, at 12/10/9
+oracle calls. What it does is ensure no held-out ID/CF contrast is computed on
+this axis, so the difficulty difference never enters a gap measurement. It
+changes which comparison is made; it does not equalise the things compared. What
+the axis cannot then do is serve as a held-out counterfactual, and this is
+recorded as a deliberate scope statement rather than a passed criterion.
 
 ``merge_approval`` is a proper intervention because it varies authorisation
 while holding the workflow shape fixed: both members of a pair investigate the

@@ -43,7 +43,11 @@ def test_the_dry_run_reports_the_split_audit():
     result = runner.invoke(app, ["pilot"])
     assert "split audit: clean" in result.output
     assert "partition        : train" in result.output
-    assert "branches covered : 10" in result.output
+    assert "eligibility      : training-eligible only" in result.output
+    assert "branches covered : 8" in result.output
+    # The two branches the eligible pool cannot supply are named, not hidden.
+    assert "COVERAGE LIMIT" in result.output
+    assert "escalate_fraud" in result.output
 
 
 def test_the_dry_run_labels_its_figures_as_projections():
@@ -60,15 +64,16 @@ def test_live_execution_is_refused_without_authorisation(monkeypatch):
     assert "Credentials alone are not a budget" in result.output
 
 
-def test_a_coverage_conflict_is_reported_rather_than_worked_around():
+def test_a_coverage_limit_is_reported_rather_than_worked_around():
     result = runner.invoke(app, ["pilot", "--partition", "evaluation"])
     assert result.exit_code == 0
-    assert "COVERAGE CONFLICT" in result.output
+    assert "COVERAGE LIMIT" in result.output
+    assert "not backfilled" in result.output
 
 
 def test_synthetic_execution_completes_every_episode(executed):
     _, output = executed
-    assert "completed        : 20/20 episodes" in output
+    assert "completed        : 16/16 episodes" in output
     assert "source           : synthetic" in output
 
 
@@ -134,3 +139,35 @@ def test_verify_manifest_replays_the_actions_offline(executed):
     result = runner.invoke(app, ["verify-manifest", str(out / "run.json")])
     assert result.exit_code == 0, result.output
     assert "VERIFIED (offline, no model in the loop)" in result.output
+
+
+# --------------------------------------------------------------------------
+# the 8-episode development configuration and the leakage gate
+# --------------------------------------------------------------------------
+
+
+def test_the_eight_episode_configuration_is_selectable():
+    result = runner.invoke(app, ["pilot", "--per-branch", "1"])
+    assert result.exit_code == 0, result.output
+    assert "episodes         : 8" in result.output
+    assert "branches covered : 8" in result.output
+    assert "recommended cap  : $21.00" in result.output
+
+
+def test_execution_is_refused_when_the_selection_leaks():
+    """The gate: a leaking selection cannot be run, even synthetically."""
+    result = runner.invoke(
+        app, ["pilot", "--execute", "--synthetic", "--no-eligible-only"],
+    )
+    assert result.exit_code != 0
+    assert "LEAKAGE" in result.output
+    assert "refusing to execute" in result.output
+
+
+def test_the_eligibility_filter_can_be_inspected_without_running():
+    """Off is a diagnostic: it shows what the filter is excluding."""
+    result = runner.invoke(app, ["pilot", "--no-eligible-only"])
+    assert result.exit_code == 0
+    assert "ALL (diagnostic)" in result.output
+    assert "branches covered : 10" in result.output
+    assert "LEAKAGE" in result.output

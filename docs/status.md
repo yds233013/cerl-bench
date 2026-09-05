@@ -3,7 +3,7 @@
 One canonical status. `README.md` and `MORNING_REPORT.md` both defer to this
 file; where any other document disagrees, this one is correct.
 
-Last updated 2026-09-05, after the pilot implementation.
+Last updated 2026-09-05, after the pre-pilot holdout and crash-safety checks.
 
 ## Two different kinds of "not done"
 
@@ -38,6 +38,7 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Control baselines (5 unprivileged, 2 privileged references) | **MEASURED** | `docs/baselines.md`, pinned in `tests/eval/test_controls.py` |
 | Control metrics separated (task / harm / decision) | **IMPLEMENTED** | a single "safe" column conflated task success with harmlessness |
 | Criterion 41 — matched CF/ID pairs | **PASS, on 104 pairs** | see deviation 1 |
+| Criterion 42 — no held-out value in training data | **PASS, via eligibility** | was failing on partition alone: 85/144; see deviation 5 |
 | W1 `identity_evidence` generalization | **NOT TESTED** | see deviation 1 |
 | Pilot selection + split audit | **IMPLEMENTED** | `cerl pilot --dry-run`; `docs/pilot-split-audit.md` |
 | Pilot execution path | **IMPLEMENTED** | `cerl pilot --execute --synthetic`, 20/20 episodes offline |
@@ -46,8 +47,10 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
 | **Live pilot execution** | **BLOCKED_EXTERNAL** | see deviation 2 — built, tested, awaiting authorisation |
-| Per-request ledger persistence | **NOT_IMPLEMENTED** | saved per episode; ≤1 episode of spend can be lost from the record |
-| Evaluation-partition pilot with full branch coverage | **NOT_IMPLEMENTED** (corpus) | 4 branches have no evaluation instances; conflict reported, not resolved |
+| Per-request ledger persistence | **IMPLEMENTED** | write-ahead journal, `fsync`ed before each send; 12 crash-recovery tests |
+| Holdout-vs-training inventory | **IMPLEMENTED** | split 1.1.0; `docs/pilot-split-audit.md` |
+| Ten-branch pilot coverage | **NOT_IMPLEMENTED** (corpus) | 2 W3 branches are reachable only via held-out values; 8/10 eligible, reported not backfilled |
+| Evaluation-partition pilot coverage | **NOT_IMPLEMENTED** (corpus) | 4 branches have no evaluation instances; W3 has no evaluation partition at all |
 | Investigate-then-abstain / -act controls | **NOT_IMPLEMENTED** | `docs/baselines.md` |
 | SFT, GRPO, curriculum arms, HTTP/MCP adapters, frontend | **NOT STARTED** | out of Phase 1B scope by instruction |
 
@@ -105,14 +108,41 @@ full-coverage held-out pilot is impossible with this corpus.
 `cerl pilot --partition evaluation` reports the conflict instead of borrowing
 from another partition. `docs/pilot-split-audit.md` has the detail.
 
+## Deviation 5 — partition membership did not mean training eligibility
+
+An inventory of intervention-axis values by partition found **85 of the 144
+`train` scenarios carry a registered held-out value**. That follows from the
+approved partition rule (a counterfactual and its ID sibling share a partition)
+and is correct for pairing, but it meant Criterion 42 — no held-out value in
+training data — was not actually satisfied by the partition label.
+
+Split **1.1.0** adds an explicit, versioned training-eligibility predicate:
+`train` partition **and** not a registered holdout. **No scenario moved
+partitions and no frozen file was regenerated**; a test recomputes every
+scenario's 1.0.0 partition and asserts it is unchanged. 59 of 190 scenarios are
+eligible.
+
+The cost is stated rather than engineered around: **the pilot reaches 8 of 10
+branches.** Two W3 branches are reachable only through held-out values, and
+importing one to restore coverage is the leakage this check exists to prevent.
+`docs/pilot-split-audit.md` has the inventory, the three both-member groups, and
+what "counterfactual" did and did not mean under 1.0.0.
+
 ## Deviation 4 — no dollar guarantee on spend
 
 A strict dollar guarantee cannot be established from outside the provider. What
 exists is an operational limit: no request is sent unless its worst-case price
 fits the remaining balance, every retry and every ambiguous outcome is charged,
-and spend survives resumption. Five residual exposures are enumerated in
-`docs/budget-accounting.md`. The earlier claim that a character-based estimate
-made overspending impossible has been **withdrawn**.
+and spend survives both resumption and a mid-episode crash. The earlier claim
+that a character-based estimate made overspending impossible has been
+**withdrawn**.
+
+Crash safety was the fifth residual exposure and is now closed: a write-ahead
+journal records each request before it is sent, recovery preserves confirmed
+usage, charges outcomeless reservations as unresolved, never replays them, and
+does not reset the allowance. What remains is that the journal is consistent with
+what *this process observed*, never with what the provider billed —
+`docs/budget-accounting.md` §Remaining limitation.
 
 ## What this candidate does not establish
 
