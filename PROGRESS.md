@@ -33,8 +33,8 @@ SFT, GRPO, later phases, paid infrastructure. No Chrome, no ChatGPT during this 
 | 6 | Scenario coverage + CF/ID pairing across families | DONE - 190 scenarios, pairing green in all 3 |
 | 7 | Evaluation harness + offline replay | DONE - cerl eval / verify-manifest / splits |
 | 8 | Prompt-only baseline (integration) | DONE - live runs BLOCKED_EXTERNAL |
-| 9 | Documentation + executable demonstrations | PENDING |
-| 10 | Clean-clone verification + morning handoff | PENDING |
+| 9 | Documentation + executable demonstrations | DONE |
+| 10 | Clean-clone verification + morning handoff | DONE |
 
 ## Interrupted work preserved (uncommitted at resume)
 
@@ -81,8 +81,12 @@ does not import until that lands. That is the immediate next action.
 
 ## Next action
 
-Documentation and executable demonstrations, then clean-clone verification and
-the morning handoff.
+All authorised Phase 1B work is complete and verified from a clean clone of
+`7904d9f`. See `MORNING_REPORT.md`.
+
+The next useful step is Phase 2 (scale to ~40 templates, pilot variance study,
+prompt-only results across all four tiers), which requires an explicit spending
+budget before any live model run.
 
 **Live model evaluation is BLOCKED_EXTERNAL.** `ANTHROPIC_API_KEY` and
 `GEMINI_API_KEY` are present in the environment, but no spending budget or
