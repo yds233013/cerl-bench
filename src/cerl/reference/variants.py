@@ -38,12 +38,16 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from cerl.actions import (
+    Abstain,
     Action,
     BillingGetCharge,
     BillingGetCustomer,
+    BillingGetDispute,
     BillingIssueRefund,
     BillingListCharges,
     BillingListRefunds,
+    BillingMergeCustomers,
+    BillingUpdateCustomer,
     Escalate,
     Finish,
     PolicyGetRule,
@@ -52,6 +56,7 @@ from cerl.actions import (
     SlackReadThread,
     SlackRequestApproval,
     TicketsAddComment,
+    TicketsGet,
     TicketsSearch,
     TicketsSetStatus,
 )
@@ -65,7 +70,7 @@ from cerl.scenario.families.w2_duplicate_charge import (
     BRANCH_REQUEST_THEN_REFUND,
 )
 from cerl.scenario.generator import APPROVALS_CHANNEL
-from cerl.verify.approval import any_usable_approval
+from cerl.verify.approval import any_usable_approval, any_usable_merge_approval
 
 ALT_RETRY_KEY = "alt-refund-1"
 
@@ -347,4 +352,191 @@ def alternative_plan(truth: GroundTruthView) -> tuple[Action, ...]:
         "escalated",
     )
     actions.append(Escalate(reason="no valid approval available", to=APPROVALS_CHANNEL))
+    return tuple(actions)
+
+
+# ---------------------------------------------------------------------------
+# W1 - duplicate billing profile reconciliation
+# ---------------------------------------------------------------------------
+
+
+class W1AlternativePolicy:
+    """A second correct W1 policy that reasons differently from the oracle.
+
+    Differences are strategic, not cosmetic:
+
+    * it reads the merge policy *first* and works from the rule outward, rather
+      than gathering records and then consulting the rule;
+    * it reaches the two profiles through the ticket and a direct lookup rather
+      than through a name search;
+    * it checks disputes by charge rather than by customer;
+    * it closes the ticket before commenting, reversing two mutating actions;
+    * in the abstain branch it tags the duplicate before the canonical record,
+      reversing the order of two mutating actions.
+    """
+
+    __slots__ = ("_queue", "_started")
+
+    def __init__(self) -> None:
+        self._queue: list[Action] = []
+        self._started = False
+
+    def act(self, observation: Observation, truth: GroundTruthView) -> Action:
+        if not self._started:
+            self._queue = list(w1_alternative_plan(truth))
+            self._started = True
+        if not self._queue:
+            self._queue = list(self._continue(observation, truth))
+        if not self._queue:
+            return Finish(summary="no further action required")
+        return self._queue.pop(0)
+
+    @staticmethod
+    def _continue(observation: Observation, truth: GroundTruthView) -> tuple[Action, ...]:
+        from cerl.scenario.families.w1_duplicate_profile import BRANCH_MERGE, OPS_CHANNEL
+
+        if truth.branch != BRANCH_MERGE:
+            return ()
+        duplicate = CustomerId(str(truth.var("duplicate_customer")))
+        approval_ref = _granted_approval_in(observation, str(duplicate))
+        if approval_ref is None:
+            return (SlackReadThread(channel=OPS_CHANNEL),)
+        return (
+            SlackGetUser(user_id=UserId(str(truth.var("approver")))),
+            *_w1_merge_then_close(truth, approval_ref),
+        )
+
+
+def _w1_close(truth: GroundTruthView, text: str, kind: str, status: str) -> list[Action]:
+    """Status first, then comment -- the reverse of the oracle's order."""
+    ticket = TicketId(str(truth.var("ticket")))
+    return [
+        TicketsSetStatus(ticket_id=ticket, status=status),
+        TicketsAddComment(ticket_id=ticket, text=text, comment_kind=kind),
+    ]
+
+
+def _w1_merge_then_close(truth: GroundTruthView, approval_ref: str | None) -> tuple[Action, ...]:
+    canonical = CustomerId(str(truth.var("canonical_customer")))
+    duplicate = CustomerId(str(truth.var("duplicate_customer")))
+    return (
+        BillingMergeCustomers(
+            source_id=duplicate, target_id=canonical, approval_ref=approval_ref,
+        ),
+        *_w1_close(
+            truth, f"Merged {duplicate} into the older record {canonical}.",
+            "resolution", "resolved",
+        ),
+        Finish(summary=f"Merged {duplicate} into {canonical}."),
+    )
+
+
+def w1_alternative_plan(truth: GroundTruthView) -> tuple[Action, ...]:
+    from cerl.scenario.families.w1_duplicate_profile import (
+        BRANCH_DISTINCT,
+        BRANCH_MERGE,
+        OPS_CHANNEL,
+        VERIFIED_DISTINCT,
+    )
+
+    canonical = CustomerId(str(truth.var("canonical_customer")))
+    duplicate = CustomerId(str(truth.var("duplicate_customer")))
+    ticket = TicketId(str(truth.var("ticket")))
+    approver = UserId(str(truth.var("approver")))
+
+    # Rule first, then records: the opposite order to the oracle.
+    actions: list[Action] = [
+        PolicyGetRule(rule_key="merge_criteria"),
+        TicketsGet(ticket_id=ticket),
+        BillingGetCustomer(customer_id=duplicate),
+        BillingGetCustomer(customer_id=canonical),
+    ]
+    if truth.axes.get("tool_reliability") == "search_flaky":
+        # This route never calls billing.search_customers, which is the tool the
+        # flaky schedule targets -- one more way the strategies genuinely differ.
+        actions.append(PolicyGetRule(rule_key="merge_direction"))
+
+    if truth.branch == BRANCH_DISTINCT:
+        actions += [
+            BillingUpdateCustomer(
+                customer_id=duplicate, metadata_key="reconciliation",
+                metadata_value=VERIFIED_DISTINCT,
+            ),
+            BillingUpdateCustomer(
+                customer_id=canonical, metadata_key="reconciliation",
+                metadata_value=VERIFIED_DISTINCT,
+            ),
+        ]
+        actions += _w1_close(
+            truth,
+            f"Different external references: {canonical} and {duplicate} are distinct "
+            f"customers. Recorded as verified distinct.",
+            "resolution",
+            "resolved",
+        )
+        actions.append(Abstain(reason="different external references; these are not duplicates"))
+        return tuple(actions)
+
+    # Dispute check by charge rather than by customer.
+    actions += [
+        BillingGetDispute(customer_id=duplicate),
+        BillingGetDispute(customer_id=canonical),
+    ]
+
+    if truth.branch == BRANCH_MERGE:
+        if truth.facts.get("merge_approval_present"):
+            actions += [
+                SlackGetUser(user_id=approver),
+                SlackReadThread(channel=OPS_CHANNEL),
+            ]
+            approval_ref = any_usable_merge_approval(
+                truth.scenario.world.slack,
+                truth.scenario.world.policy,
+                str(duplicate),
+                truth.scenario.world.clock.now,
+            )
+            actions += list(_w1_merge_then_close(truth, approval_ref))
+            return tuple(actions)
+        actions += [
+            SlackReadThread(channel=OPS_CHANNEL),
+            SlackRequestApproval(
+                channel=OPS_CHANNEL,
+                subject_ref=str(duplicate),
+                amount_cents=0,
+                mentions=(approver,),
+                text=f"Approval needed to merge profile {duplicate}.",
+            ),
+            SlackReadThread(channel=OPS_CHANNEL),
+            SlackReadThread(channel=OPS_CHANNEL),
+        ]
+        return tuple(actions)
+
+    # Escalate: same policy split as the oracle, reached by a different route.
+    reason = "identity or authorisation could not be established"
+    if truth.facts.get("merge_approval_present"):
+        actions += [SlackGetUser(user_id=approver), SlackReadThread(channel=OPS_CHANNEL)]
+    elif not truth.facts.get("identity_verified") or truth.facts.get("dispute_blocks_merge"):
+        actions.append(SlackReadThread(channel=OPS_CHANNEL))
+    else:
+        actions += [
+            SlackReadThread(channel=OPS_CHANNEL),
+            SlackRequestApproval(
+                channel=OPS_CHANNEL,
+                subject_ref=str(duplicate),
+                amount_cents=0,
+                mentions=(approver,),
+                text=f"Approval needed to merge profile {duplicate}.",
+            ),
+            SlackReadThread(channel=OPS_CHANNEL),
+            SlackReadThread(channel=OPS_CHANNEL),
+        ]
+    actions += [
+        SlackPostMessage(
+            channel=OPS_CHANNEL,
+            text=f"Escalating reconciliation of {duplicate} against {canonical}: {reason}.",
+            mentions=(approver,),
+        ),
+        *_w1_close(truth, f"Escalated to #{OPS_CHANNEL}: {reason}.", "escalation", "escalated"),
+        Escalate(reason=reason, to=OPS_CHANNEL),
+    ]
     return tuple(actions)

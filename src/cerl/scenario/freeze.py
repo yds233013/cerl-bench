@@ -12,18 +12,25 @@ from pathlib import Path
 from typing import Any
 
 from cerl.core import FrozenMap, ScenarioDefect, UserId, canonical_json, content_hash
-from cerl.scenario import axes as ax
-from cerl.scenario.families.w2_duplicate_charge import TEMPLATE as W2_TEMPLATE
-from cerl.scenario.generator import GENERATOR_VERSION, generate
+from cerl.scenario.families import registry
+from cerl.scenario.generator import GENERATOR_VERSION
 from cerl.scenario.schema import FrozenScenario, ScenarioTemplate
-
-TEMPLATES: dict[str, ScenarioTemplate] = {W2_TEMPLATE.id: W2_TEMPLATE}
 
 FROZEN_DIR = Path("scenarios/frozen")
 
 
+def templates() -> dict[str, ScenarioTemplate]:
+    """All registered templates. Kept as a function so registration order is irrelevant."""
+    return registry.all_templates()
+
+
 def scenario_id(template_id: str, axes: FrozenMap[str, str], seed: int) -> str:
-    return f"{template_id}__{ax.axes_slug(axes)}__s{seed}"
+    """A filename that names every axis the family varies.
+
+    Family-specific: see ``registry.register`` for why sharing one family's
+    abbreviation map across families silently collides scenarios.
+    """
+    return f"{template_id}__{registry.slug_for(template_id)(axes)}__s{seed}"
 
 
 def materialize(
@@ -32,15 +39,18 @@ def materialize(
     seed: int,
 ) -> FrozenScenario:
     """Generate, resolve, and return a self-contained frozen scenario."""
-    template = TEMPLATES[template_id]
+    template = registry.template_for(template_id)
     sid = scenario_id(template_id, axes, seed)
-    generated = generate(seed, axes, sid)
+    generated = registry.generator_for(template_id)(seed, axes, sid)
 
     branch = template.resolve_branch(generated.facts)
 
     rubric = tuple(item for item in template.rubric if item.resolves_for(branch.name, axes))
     permitted = tuple(
         spec for spec in template.permitted_diffs if spec.resolves_for(branch.name, axes)
+    )
+    invariants = tuple(
+        spec for spec in template.invariants if spec.resolves_for(branch.name, axes)
     )
     if not rubric:
         raise ScenarioDefect(f"{sid}: branch {branch.name} resolved to an empty rubric")
@@ -63,7 +73,7 @@ def materialize(
         world=generated.world,
         rubric=rubric,
         permitted_diffs=permitted,
-        invariants=template.invariants,
+        invariants=invariants,
         responders=generated.responders,
     )
     _check_responder_declarations(scenario)
@@ -147,6 +157,7 @@ def manifest_entry(scenario: FrozenScenario, path: Path) -> dict[str, Any]:
         "sha256": hash_text(path.read_text(encoding="utf-8")),
         "generator_version": scenario.generator_version,
         "template_id": scenario.template_id,
+        "family": scenario.family,
         "branch": scenario.branch,
         "axes": scenario.axes.to_dict(),
         "root_seed": scenario.root_seed,

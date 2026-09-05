@@ -4,19 +4,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
 from cerl.actions import ActionKind
 from cerl.core import FrozenMap
-from cerl.reference import W2Oracle
 from cerl.reference import gold as gold_module
+from cerl.reference import registry as reference_registry
 from cerl.reference.runner import run_reference
 from cerl.scenario import axes as ax
 from cerl.scenario import freeze as freeze_module
-from cerl.scenario import plan
-from cerl.scenario.families.w2_duplicate_charge import TEMPLATE_ID
+from cerl.scenario.families import registry as family_registry
 from cerl.scenario.schema import FrozenScenario
 from cerl.verify import verify
 
@@ -36,7 +35,7 @@ def _load(scenario_id: str) -> FrozenScenario:
 
 @app.command()
 def freeze(
-    family: Annotated[str, typer.Option(help="Family to freeze.")] = "duplicate_charge_approval",
+    family: Annotated[str, typer.Option(help="Family to freeze, or 'all'.")] = "all",
     out: Annotated[Path, typer.Option(help="Frozen scenario directory.")] = FROZEN,
     gold_out: Annotated[Path, typer.Option(help="Gold trajectory directory.")] = GOLD,
     manifest: Annotated[Path, typer.Option(help="Manifest path.")] = MANIFEST,
@@ -47,16 +46,29 @@ def freeze(
     The oracle pass is not optional: a scenario whose oracle does not score a
     clean 1.0 is a defective scenario and is refused rather than written.
     """
-    if family != "duplicate_charge_approval":
-        raise typer.BadParameter("Phase 1A ships W2 only")
+    known = family_registry.families()
+    if family != "all" and family not in known:
+        raise typer.BadParameter(f"unknown family {family!r}; known: {list(known)}")
+
+    template_ids: list[str] = []
+    for template_id in family_registry.template_ids():
+        owner = family_registry.template_for(template_id).family
+        if family in {"all", owner}:
+            template_ids.append(template_id)
 
     entries = []
     written = 0
-    instances = plan.all_instances()
-    if limit:
-        instances = instances[:limit]
-    for assignment, seed in instances:
-        scenario = freeze_module.materialize(TEMPLATE_ID, assignment, seed)
+    generator_version = ""
+    schema_version = 0
+    work: list[tuple[str, Any, int]] = []
+    for template_id in template_ids:
+        instances = family_registry.plan_for(template_id)()
+        if limit:
+            instances = instances[:limit]
+        work += [(template_id, assignment, seed) for assignment, seed in instances]
+
+    for template_id, assignment, seed in work:
+        scenario = freeze_module.materialize(template_id, assignment, seed)
         episode, gold = gold_module.produce(scenario)
         if not episode.verdict.is_clean_oracle_run:
             typer.secho(
@@ -69,13 +81,16 @@ def freeze(
         path = freeze_module.write(scenario, out)
         gold_module.write(gold, gold_out)
         entries.append(freeze_module.manifest_entry(scenario, path))
+        generator_version = scenario.generator_version
+        schema_version = scenario.schema_version
         written += 1
 
     manifest.write_text(
         json.dumps(
             {
-                "generator_version": scenario.generator_version,
-                "schema_version": scenario.schema_version,
+                "generator_version": generator_version,
+                "schema_version": schema_version,
+                "families": sorted({e["family"] for e in entries}),
                 "count": written,
                 "scenarios": sorted(entries, key=lambda e: e["scenario_id"]),
             },
@@ -85,23 +100,47 @@ def freeze(
         + "\n",
         encoding="utf-8",
     )
+    # A scenario id collision would silently shrink the corpus, so the count of
+    # distinct files written must equal the number of instances planned.
+    distinct_ids = {entry["scenario_id"] for entry in entries}
+    if len(distinct_ids) != written:
+        typer.secho(
+            f"scenario id collision: {written} instances produced only "
+            f"{len(distinct_ids)} distinct ids",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=1)
+
+    by_family: dict[str, int] = {}
+    for entry in entries:
+        by_family[entry["family"]] = by_family.get(entry["family"], 0) + 1
+    for name, count in sorted(by_family.items()):
+        typer.echo(f"  {name}: {count}")
     typer.secho(f"froze {written} scenarios; oracle clean on all of them", fg=typer.colors.GREEN)
 
 
 @app.command()
 def run(
     scenario: Annotated[str, typer.Option(help="Frozen scenario id.")],
-    agent: Annotated[str, typer.Option(help="Policy to run: 'oracle'.")] = "oracle",
+    agent: Annotated[str, typer.Option(help="Policy: 'oracle' or 'alternative'.")] = "oracle",
     show_trace: Annotated[bool, typer.Option("--show-trace")] = False,  # noqa: FBT002
 ) -> None:
     """Run a policy over one frozen scenario and print its verdict."""
-    if agent != "oracle":
-        raise typer.BadParameter("Phase 1A ships the oracle only (no evaluated agents yet)")
+    if agent not in {"oracle", "alternative"}:
+        raise typer.BadParameter(
+            "reference policies only: 'oracle' or 'alternative' (no evaluated agents yet)",
+        )
     frozen = _load(scenario)
-    episode = run_reference(frozen, W2Oracle())
+    policy = (
+        reference_registry.oracle_for(frozen)
+        if agent == "oracle"
+        else reference_registry.alternative_for(frozen)
+    )
+    episode = run_reference(frozen, policy)
     verdict = episode.verdict
 
     typer.echo(f"scenario : {frozen.scenario_id}")
+    typer.echo(f"family   : {frozen.family}  (policy: {agent})")
     typer.echo(f"branch   : {frozen.branch}  (required decision: {frozen.required_decision})")
     typer.echo(f"declared : {verdict.declared_outcome}")
     typer.echo(

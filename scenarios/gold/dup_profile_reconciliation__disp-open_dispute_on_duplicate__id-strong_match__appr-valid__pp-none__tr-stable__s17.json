@@ -1,0 +1,67 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Litware Analytics"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.post_message",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "text": "Cannot reconcile cus_000000000066 against cus_000000000065: an open dispute blocks the merge. Escalating for review.",
+      "thread_id": null
+    },
+    {
+      "comment_kind": "escalation",
+      "kind": "tickets.add_comment",
+      "text": "Escalated to #billing-ops: an open dispute blocks the merge.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "escalated",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "escalate",
+      "reason": "an open dispute blocks the merge",
+      "to": "billing-ops"
+    }
+  ],
+  "branch": "escalate_ambiguous",
+  "predicate_library_hash": "1356a625ee4131f2ce7d67fa158c50a9f7430783d35bf49f925eacd9b2e76bc7",
+  "required_decision": "escalate",
+  "scenario_id": "dup_profile_reconciliation__disp-open_dispute_on_duplicate__id-strong_match__appr-valid__pp-none__tr-stable__s17",
+  "terminal_state_hash": "b007a75dfb3ed9f4103df8f41537e52fb50659cb08f2145454d4279527aa39ea",
+  "tool_calls": 10,
+  "trace_head_hash": "d880152b6c2b190acb2e402e58e4dfd742e0af5129670282868663adccefa102",
+  "verifier_version": "1.0.0"
+}

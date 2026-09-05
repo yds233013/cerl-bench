@@ -16,6 +16,7 @@ from cerl.core import Frozen, LogicalInstant
 from cerl.state import ApprovalState, PolicyDocument, SlackState
 
 REFUND_APPROVER_ROLE = "refund_approver"
+MERGE_APPROVER_ROLE = "merge_approver"
 
 
 class ApprovalCheck(Frozen):
@@ -31,15 +32,22 @@ class ApprovalCheck(Frozen):
         return cls(valid=False, reason=reason)
 
 
-def check_refund_approval(
+def check_approval(
     slack: SlackState,
     policy: PolicyDocument,
     approval_ref: str | None,
     subject_ref: str,
     amount_cents: int,
     action_time: LogicalInstant,
+    required_role: str,
 ) -> ApprovalCheck:
-    """Return whether ``approval_ref`` authorises this refund at ``action_time``."""
+    """Return whether ``approval_ref`` authorises this action at ``action_time``.
+
+    The role is a parameter because different operations require different
+    authority: refunds need ``refund_approver``, profile merges need
+    ``merge_approver``. Hard-coding one role here would have silently let a
+    refund approval authorise a merge.
+    """
     if not approval_ref:
         return ApprovalCheck.no("no approval referenced")
 
@@ -55,8 +63,8 @@ def check_refund_approval(
         return ApprovalCheck.no(
             f"approval covers {approval.subject_ref}, not {subject_ref}",
         )
-    if approval.approver not in policy.holders_of(REFUND_APPROVER_ROLE):
-        return ApprovalCheck.no(f"{approval.approver} does not hold {REFUND_APPROVER_ROLE}")
+    if approval.approver not in policy.holders_of(required_role):
+        return ApprovalCheck.no(f"{approval.approver} does not hold {required_role}")
     if approval.expires_at is not None and action_time >= approval.expires_at:
         return ApprovalCheck.no(
             f"approval expired at {int(approval.expires_at)}, acted at {int(action_time)}",
@@ -66,6 +74,34 @@ def check_refund_approval(
             f"amount {amount_cents} exceeds approval limit {approval.scope_amount_max.cents}",
         )
     return ApprovalCheck.yes()
+
+
+def check_refund_approval(
+    slack: SlackState,
+    policy: PolicyDocument,
+    approval_ref: str | None,
+    subject_ref: str,
+    amount_cents: int,
+    action_time: LogicalInstant,
+) -> ApprovalCheck:
+    """Refund-specific wrapper. Preserves the existing W2 call sites verbatim."""
+    return check_approval(
+        slack, policy, approval_ref, subject_ref, amount_cents, action_time,
+        REFUND_APPROVER_ROLE,
+    )
+
+
+def check_merge_approval(
+    slack: SlackState,
+    policy: PolicyDocument,
+    approval_ref: str | None,
+    subject_ref: str,
+    action_time: LogicalInstant,
+) -> ApprovalCheck:
+    """Merge-specific wrapper. A merge has no amount, so no scope limit applies."""
+    return check_approval(
+        slack, policy, approval_ref, subject_ref, 0, action_time, MERGE_APPROVER_ROLE,
+    )
 
 
 def any_usable_approval(
@@ -81,5 +117,20 @@ def any_usable_approval(
             slack, policy, str(approval.id), subject_ref, amount_cents, action_time,
         )
         if check.valid:
+            return str(approval.id)
+    return None
+
+
+def any_usable_merge_approval(
+    slack: SlackState,
+    policy: PolicyDocument,
+    subject_ref: str,
+    action_time: LogicalInstant,
+) -> str | None:
+    """Return the id of any approval that would authorise this merge, else None."""
+    for approval in sorted(slack.approvals.values(), key=lambda a: a.id):
+        if check_merge_approval(
+            slack, policy, str(approval.id), subject_ref, action_time,
+        ).valid:
             return str(approval.id)
     return None

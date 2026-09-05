@@ -4,8 +4,9 @@ Inert data: ``scenario`` imports no runtime package (import-linter contract 4).
 """
 
 from cerl.scenario import axes
+from cerl.scenario.bootstrap import register_all_families
+from cerl.scenario.families import registry as family_registry
 from cerl.scenario.freeze import (
-    TEMPLATES,
     from_json,
     load,
     manifest_entry,
@@ -40,7 +41,6 @@ __all__ = [
     "ALL_BRANCHES",
     "GENERATOR_VERSION",
     "SCHEMA_VERSION",
-    "TEMPLATES",
     "BranchSpec",
     "EffectKind",
     "EffectSpec",
@@ -54,14 +54,20 @@ __all__ = [
     "ScenarioTemplate",
     "TriggerSpec",
     "axes",
+    "family_registry",
     "from_json",
     "generate",
     "load",
     "manifest_entry",
     "materialize",
     "reachable_responder_rules",
+    "register_all_families",
     "scenario_hash",
     "scenario_id",
     "to_json",
     "write",
 ]
+
+# Registering on import keeps `import cerl.scenario` sufficient for every
+# consumer; nothing has to remember to wire families up first.
+register_all_families()

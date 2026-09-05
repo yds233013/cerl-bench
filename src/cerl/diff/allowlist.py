@@ -48,7 +48,12 @@ class PermittedDiff(Frozen):
         for key, expected in self.constraints.items():
             actual = op.after if key == VALUE_IN else get_field(op.after, key)
             if key == VALUE_IN:
-                if actual not in _as_list(expected):
+                # Resolve scenario variables here too. Without this a permit
+                # written as {"value_in": ["$.canonical_customer"]} silently
+                # matches nothing, and a legitimate change reads as a prohibited
+                # side effect.
+                allowed = [_resolve(item, variables) for item in _as_list(expected)]
+                if actual not in allowed:
                     return False
                 continue
             if not _value_matches(actual, expected, variables):

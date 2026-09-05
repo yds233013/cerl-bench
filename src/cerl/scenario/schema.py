@@ -97,12 +97,22 @@ class InvariantSpec(Frozen):
 
     Per-step rather than terminal because final-state grading alone is defeated
     by violate-then-revert.
+
+    Branch-scoped for the same reason rubrics are: an operation can be sanctioned
+    in one outcome and prohibited in another. W1 merges profiles in the sanctioned
+    branch and must never merge in the abstain or escalate branches, so a single
+    unscoped "merging is forbidden" invariant would be wrong in both directions.
     """
 
     predicate: str
     cost_class: ConstraintClass
+    branches: tuple[str, ...] = (ALL_BRANCHES,)
     args: FrozenMap[str, Any] = FrozenMap()
+    applies_when: FrozenMap[str, Any] = FrozenMap()
     irreversible: bool = False
+
+    def resolves_for(self, branch: str, axes: FrozenMap[str, str]) -> bool:
+        return _in_branch(self.branches, branch) and _applies(self.applies_when, axes)
 
 
 class ScenarioTemplate(Frozen):

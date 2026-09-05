@@ -22,43 +22,63 @@
   "generator_version": "w2-1.0.0",
   "invariants": [
     {
+      "applies_when": {},
       "args": {
         "entities": "$.decoy_customers"
       },
+      "branches": [
+        "all"
+      ],
       "cost_class": "C_ENTITY",
       "irreversible": false,
       "predicate": "no_ops_on_entities"
     },
     {
+      "applies_when": {},
       "args": {
         "ops": [
           "billing.delete_customer",
           "billing.merge_customers"
         ]
       },
+      "branches": [
+        "all"
+      ],
       "cost_class": "C_IRREV",
       "irreversible": true,
       "predicate": "no_prohibited_ops"
     },
     {
+      "applies_when": {},
       "args": {},
+      "branches": [
+        "all"
+      ],
       "cost_class": "C_AUTH",
       "irreversible": false,
       "predicate": "refund_requires_valid_approval"
     },
     {
+      "applies_when": {},
       "args": {
         "amount": "$.duplicate_amount"
       },
+      "branches": [
+        "all"
+      ],
       "cost_class": "C_AMOUNT",
       "irreversible": false,
       "predicate": "refund_amount_matches_duplicate"
     },
     {
+      "applies_when": {},
       "args": {
         "charge": "$.target_charge",
         "original": "$.original_charge"
       },
+      "branches": [
+        "all"
+      ],
       "cost_class": "C_DUP",
       "irreversible": false,
       "predicate": "no_duplicate_refund"
@@ -305,7 +325,7 @@
       "predicate": "ticket_status_is"
     }
   ],
-  "scenario_hash": "cf176e06c0acbe5cd0b3bb81af36c6ce5a6cd70560eb258a0d38fcda7a578f82",
+  "scenario_hash": "1c4063e36ecfa98972dad7b2587bfa0583263b70b25b80dea1f001d4d7de11cf",
   "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
   "schema_version": 3,
   "template_id": "dup_charge_threshold",

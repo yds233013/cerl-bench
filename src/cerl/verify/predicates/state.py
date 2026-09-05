@@ -88,7 +88,85 @@ def message_posted_in(
     )
 
 
+def customer_merged_into(*, final: WorldState, args: Mapping[str, Any], **_: Any) -> bool:
+    """The source is closed and points at the surviving record, which is intact."""
+    source = final.billing.customers.get(args["source"])
+    target = final.billing.customers.get(args["target"])
+    if source is None or target is None:
+        return False
+    return (
+        str(source.merged_into or "") == str(args["target"])
+        and source.status.value == "closed"
+        and target.merged_into is None
+        and target.status.value != "closed"
+    )
+
+
+def merged_into_earliest_created(
+    *, initial: WorldState, final: WorldState, args: Mapping[str, Any], **_: Any
+) -> bool:
+    """The survivor is the older record.
+
+    Direction is not cosmetic: merging the older profile into the newer one
+    discards the account's history and is not reversible.
+    """
+    members = [initial.billing.customers.get(c) for c in as_list(args["pair"])]
+    pair = [c for c in members if c is not None]
+    if len(pair) != len(members):
+        return False
+    canonical = min(pair, key=lambda c: (int(c.created_at), str(c.id)))
+    survivor = final.billing.customers.get(canonical.id)
+    return survivor is not None and survivor.merged_into is None
+
+
+def charges_repointed_to(*, final: WorldState, args: Mapping[str, Any], **_: Any) -> bool:
+    """No charge is left owned by the tombstoned record."""
+    source = str(args["source"])
+    return not any(
+        str(c.customer_id) == source for c in final.billing.charges.values()
+    )
+
+
+def no_merge_performed(*, initial: WorldState, final: WorldState, **_: Any) -> bool:
+    before = {
+        str(c.id) for c in initial.billing.customers.values() if c.merged_into is not None
+    }
+    after = {
+        str(c.id) for c in final.billing.customers.values() if c.merged_into is not None
+    }
+    return before == after
+
+
+def customers_unchanged(*, initial: WorldState, final: WorldState, args: Mapping[str, Any],
+                        **_: Any) -> bool:
+    """Named customers are byte-identical between initial and final state."""
+    for customer_id in as_list(args["customers"]):
+        before = initial.billing.customers.get(customer_id)
+        after = final.billing.customers.get(customer_id)
+        if before != after:
+            return False
+    return True
+
+
+def customers_have_metadata(
+    *, final: WorldState, args: Mapping[str, Any], **_: Any
+) -> bool:
+    """Every named customer carries the required metadata marker."""
+    key, value = str(args["key"]), str(args["value"])
+    for customer_id in as_list(args["customers"]):
+        customer = final.billing.customers.get(customer_id)
+        if customer is None or customer.metadata.get(key) != value:
+            return False
+    return True
+
+
 REGISTRY = {
+    "customers_have_metadata": customers_have_metadata,
+    "customer_merged_into": customer_merged_into,
+    "merged_into_earliest_created": merged_into_earliest_created,
+    "charges_repointed_to": charges_repointed_to,
+    "no_merge_performed": no_merge_performed,
+    "customers_unchanged": customers_unchanged,
     "refund_exists_for_charge": refund_exists_for_charge,
     "refund_has_valid_approval_ref": refund_has_valid_approval_ref,
     "no_refund_for_customer": no_refund_for_customer,

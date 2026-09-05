@@ -12,7 +12,7 @@ import pytest
 from cerl.actions import BillingGetCharge, BillingIssueRefund, TicketsGet
 from cerl.core import ChargeId, ReplayDivergence, TicketId, hash_text
 from cerl.env import CerlEnv, replay
-from cerl.reference import W2Oracle, run_reference
+from cerl.reference import W2Oracle, oracle_for, run_reference
 from cerl.reference.gold import load as load_gold
 from cerl.scenario import freeze as freeze_module
 from cerl.scenario.plan import all_instances
@@ -86,8 +86,8 @@ def test_permanently_failing_tool_never_succeeds_on_retry(all_frozen):
 
 def test_oracle_is_byte_identical_within_a_process(all_frozen):
     for scenario in all_frozen[:12]:
-        a = run_reference(scenario, W2Oracle())
-        b = run_reference(scenario, W2Oracle())
+        a = run_reference(scenario, oracle_for(scenario))
+        b = run_reference(scenario, oracle_for(scenario))
         assert a.final.state_hash() == b.final.state_hash()
         assert a.trace.head_hash == b.trace.head_hash
 
@@ -101,12 +101,13 @@ def test_oracle_is_byte_identical_across_processes():
     """
     script = (
         "from cerl.scenario import freeze;"
-        "from cerl.reference import W2Oracle, run_reference;"
+        "from cerl.reference import W2Oracle, oracle_for, run_reference;"
         "from pathlib import Path;"
         "import json;"
         "ps = sorted(Path('scenarios/frozen').glob('*.json'))[:12];"
         "out = [];"
-        "[out.append(run_reference(freeze.load(p), W2Oracle()).final.state_hash()) for p in ps];"
+        "[out.append(run_reference(s, oracle_for(s)).final.state_hash()) "
+        "for s in (freeze.load(p) for p in ps)];"
         "print(json.dumps(out))"
     )
     runs = []
@@ -170,9 +171,12 @@ def test_every_frozen_scenario_regenerates_byte_exactly():
 def test_manifest_matches_files_on_disk():
     manifest = json.loads(Path("scenarios/manifest.json").read_text(encoding="utf-8"))
     assert manifest["count"] == len(frozen_paths())
+    families = set()
     for entry in manifest["scenarios"]:
         path = Path("scenarios/frozen") / entry["file"]
         assert hash_text(path.read_text(encoding="utf-8")) == entry["sha256"]
+        families.add(entry["family"])
+    assert families == set(manifest["families"])
 
 
 # --------------------------------------------------------------------------
@@ -182,7 +186,7 @@ def test_manifest_matches_files_on_disk():
 
 def test_replay_reproduces_every_entry_including_responders(all_frozen):
     for scenario in all_frozen:
-        episode = run_reference(scenario, W2Oracle())
+        episode = run_reference(scenario, oracle_for(scenario))
         world = replay(scenario, episode.trace)
         assert world.state_hash() == episode.final.state_hash()
         assert [e.entry_hash for e in world.trace.entries] == [
@@ -376,7 +380,7 @@ def test_full_oracle_suite_runs_with_every_ambient_source_disabled(monkeypatch, 
     # The complete oracle suite, over every frozen scenario, with all of the
     # above disabled.
     for scenario in all_frozen:
-        episode = run_reference(scenario, W2Oracle())
+        episode = run_reference(scenario, oracle_for(scenario))
         assert episode.verdict.is_clean_oracle_run, scenario.scenario_id
         replay(scenario, episode.trace)
 
@@ -418,7 +422,7 @@ def test_episode_completes_within_the_env_time_budget(all_frozen):
 
     scenario = max(all_frozen, key=lambda s: len(s.world.billing.charges))
     for _ in range(3):
-        run_reference(scenario, W2Oracle())  # warm import and validation caches
+        run_reference(scenario, oracle_for(scenario))  # warm import and validation caches
 
     # Minimum of several batches rather than a single mean: inside a full test
     # session the mean picks up GC pauses and scheduler noise from neighbouring
@@ -428,7 +432,7 @@ def test_episode_completes_within_the_env_time_budget(all_frozen):
     for _ in range(5):
         start = time.perf_counter()
         for _ in range(10):
-            run_reference(scenario, W2Oracle())
+            run_reference(scenario, oracle_for(scenario))
         batches.append((time.perf_counter() - start) / 10 * 1000)
     per_episode_ms = min(batches)
     assert per_episode_ms < 50, (

@@ -16,6 +16,7 @@ from cerl.trace import ActionTrace, TraceEntry
 from cerl.verify.args import as_list
 
 ISSUE_REFUND = str(ActionKind.BILLING_ISSUE_REFUND)
+MERGE_CUSTOMERS = str(ActionKind.BILLING_MERGE_CUSTOMERS)
 LIST_REFUNDS = str(ActionKind.BILLING_LIST_REFUNDS)
 
 
@@ -97,7 +98,42 @@ def retry_is_safe(*, trace: ActionTrace, args: Mapping[str, Any], **_: Any) -> b
     return True
 
 
+def trace_contains_all(*, trace: ActionTrace, args: Mapping[str, Any], **_: Any) -> bool:
+    """Every named tool appears at least once among the agent's actions."""
+    kinds = {e.action_kind for e in _agent(trace)}
+    return all(str(tool) in kinds for tool in as_list(args["tools"]))
+
+
+def merge_approval_valid(
+    *, final: Any, trace: ActionTrace, args: Mapping[str, Any], **_: Any
+) -> bool:
+    """Every merge cited an approval that was valid *at the moment it was made*.
+
+    Evaluated per trace entry rather than against terminal state, so an approval
+    that expired mid-episode cannot retroactively authorise an earlier action --
+    nor an earlier one a later action.
+    """
+    from cerl.verify.approval import check_merge_approval
+
+    merges = [e for e in _agent(trace) if e.action_kind == MERGE_CUSTOMERS]
+    if not merges:
+        return False
+    subject = str(args["subject"])
+    return all(
+        check_merge_approval(
+            final.slack,
+            final.policy,
+            getattr(entry.action, "approval_ref", None),
+            subject,
+            entry.logical_time,
+        ).valid
+        for entry in merges
+    )
+
+
 REGISTRY = {
+    "trace_contains_all": trace_contains_all,
+    "merge_approval_valid": merge_approval_valid,
     "trace_contains": trace_contains,
     "trace_ordering": trace_ordering,
     "retry_is_safe": retry_is_safe,

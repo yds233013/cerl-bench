@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from cerl.reference import W2Oracle, run_actions, run_reference
+from cerl.reference import oracle_for, run_actions, run_reference
 from cerl.reference.gold import load as load_gold
 from cerl.scenario import freeze as freeze_module
 from cerl.verify import VERIFIER_VERSION
@@ -80,7 +80,7 @@ def test_golden_verdicts_are_unchanged():
     for path in frozen_paths():
         scenario = freeze_module.load(path)
         actual[scenario.scenario_id] = _verdict_fingerprint(
-            run_reference(scenario, W2Oracle()).verdict,
+            run_reference(scenario, oracle_for(scenario)).verdict,
         )
     assert actual == expected
 

@@ -271,15 +271,31 @@ def merge_customers(
             interlocks.MERGE_UNDER_DISPUTE, f"customer {source.id} has an open dispute",
         )
 
+    # Approved merge semantics: charges, invoices and payment methods repoint to
+    # the surviving record, and the source is *tombstoned* rather than deleted --
+    # a merge that destroyed records would make the diff unauditable.
     charges = world.billing.charges
     for charge in list(charges.values()):
         if charge.customer_id == source.id:
             charges = charges.set(charge.id, evolve(charge, customer_id=target.id))
+
+    invoices = world.billing.invoices
+    for invoice in list(invoices.values()):
+        if invoice.customer_id == source.id:
+            invoices = invoices.set(invoice.id, evolve(invoice, customer_id=target.id))
+
+    methods = world.billing.payment_methods
+    for method in list(methods.values()):
+        if method.customer_id == source.id:
+            methods = methods.set(method.id, evolve(method, customer_id=target.id))
+
     merged_source = evolve(source, status=CustomerStatus.CLOSED, merged_into=target.id)
     billing = evolve(
         world.billing,
         customers=world.billing.customers.set(source.id, merged_source),
         charges=charges,
+        invoices=invoices,
+        payment_methods=methods,
     )
     return evolve(world, billing=billing), committed(
         {"merged": str(source.id), "into": str(target.id)},

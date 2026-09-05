@@ -19,7 +19,7 @@ from cerl.agents.base import Agent, ScriptedAgent, is_unprivileged_agent
 from cerl.core import PrivilegeViolation
 from cerl.env import CerlEnv, render_observation
 from cerl.env.observation import Observation
-from cerl.reference import W2Oracle, run_reference
+from cerl.reference import W2Oracle, oracle_for, run_reference
 from cerl.reference.ground_truth import GroundTruthView, ReferencePolicy
 from cerl.scenario.axes import AXIS_VALUES
 from tests.helpers import REPO
@@ -205,7 +205,7 @@ def test_no_ground_truth_in_observations(all_frozen):
         env = CerlEnv(scenario)
         observation = env.reset()
         rendered = [render_observation(observation)]
-        oracle = W2Oracle()
+        oracle = oracle_for(scenario)
         from cerl.reference.ground_truth import ground_truth_for
 
         truth = ground_truth_for(scenario)

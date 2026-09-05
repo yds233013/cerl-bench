@@ -4,7 +4,14 @@
 ``tools``, ``env``, ``agents`` or ``reference`` (import-linter contract 2).
 """
 
-from cerl.verify.approval import ApprovalCheck, any_usable_approval, check_refund_approval
+from cerl.verify.approval import (
+    ApprovalCheck,
+    any_usable_approval,
+    any_usable_merge_approval,
+    check_approval,
+    check_merge_approval,
+    check_refund_approval,
+)
 from cerl.verify.taxonomy import FailureClass, classify
 from cerl.verify.verdict import VERIFIER_VERSION, Verdict
 from cerl.verify.verifier import declared_outcome, predicate_library_hash, verify
@@ -15,6 +22,9 @@ __all__ = [
     "FailureClass",
     "Verdict",
     "any_usable_approval",
+    "any_usable_merge_approval",
+    "check_approval",
+    "check_merge_approval",
     "check_refund_approval",
     "classify",
     "declared_outcome",

@@ -9,7 +9,7 @@ from cerl.core import FrozenMap, LogicalInstant, ScenarioDefect, UserId
 from cerl.diff import Origin
 from cerl.env import CerlEnv
 from cerl.env.responders import schedule_new_firings
-from cerl.reference import W2Oracle, run_actions, run_reference
+from cerl.reference import W2Oracle, oracle_for, run_actions, run_reference
 from cerl.scenario import freeze as freeze_module
 from cerl.scenario.axes import DEFAULT_AXES
 from cerl.scenario.generator import APPROVALS_CHANNEL
@@ -94,7 +94,7 @@ def test_only_one_due_firing_is_returned_even_when_several_are_ready(slice_scena
 def test_each_step_appends_at_most_two_entries(all_frozen):
     """One agent entry plus at most one responder entry -- never more."""
     for scenario in all_frozen:
-        episode = run_reference(scenario, W2Oracle())
+        episode = run_reference(scenario, oracle_for(scenario))
         per_step: dict[int, int] = {}
         for entry in episode.trace.entries:
             per_step[entry.idx] = per_step.get(entry.idx, 0) + 1
@@ -172,7 +172,7 @@ def test_guard_selects_between_grant_and_denial():
         (obtainable, "r_manager_grants", True),
         (unobtainable, "r_manager_denies", False),
     ):
-        episode = run_reference(scenario, W2Oracle())
+        episode = run_reference(scenario, oracle_for(scenario))
         fired = {e.responder_rule for e in episode.trace.responder_entries()}
         assert fired == {expected_rule}, scenario.scenario_id
         assert bool(episode.final.slack.approvals) is expect_approval
@@ -195,7 +195,7 @@ def test_responder_diffs_carry_origin_and_rule(slice_scenario):
 def test_oracle_play_produces_no_undeclared_responder_effects(all_frozen):
     """The CI gate that makes per-branch declaration mandatory in practice."""
     for scenario in all_frozen:
-        verdict = run_reference(scenario, W2Oracle()).verdict
+        verdict = run_reference(scenario, oracle_for(scenario)).verdict
         assert not verdict.undeclared_responder_effects, (
             f"{scenario.scenario_id}: undeclared "
             f"{[op.path for op in verdict.undeclared_responder_effects]}"
@@ -230,7 +230,7 @@ def test_undeclared_responder_effect_surfaces_and_is_not_charged_to_the_agent():
     )
     undeclared = scenario.model_copy(update={"permitted_diffs": stripped})
 
-    gold = run_reference(scenario, W2Oracle())
+    gold = run_reference(scenario, oracle_for(scenario))
     episode = run_actions(undeclared, gold.actions)
     verdict = episode.verdict
 
@@ -284,8 +284,8 @@ def test_guard_holds_boundaries():
     assert GuardSpec().holds(10**9)
 
 
-def test_responder_actions_are_never_agent_actions(all_frozen):
-    for scenario in all_frozen[:20]:
-        for entry in run_reference(scenario, W2Oracle()).trace.responder_entries():
+def test_responder_actions_are_never_agent_actions(w2_frozen):
+    for scenario in w2_frozen[:20]:
+        for entry in run_reference(scenario, oracle_for(scenario)).trace.responder_entries():
             assert str(entry.action.kind) == "responder"
             assert entry.action_kind not in {k.value for k in ActionKind}

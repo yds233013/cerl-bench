@@ -128,12 +128,7 @@ def sibling_closure(
     """
     from cerl.scenario import siblings
 
-    extra = [
-        (siblings.sibling_axes(assignment), seed)
-        for assignment, seed in instances
-        if siblings.is_held_out(assignment)
-    ]
-    return _dedup((*instances, *tuple(extra)))
+    return siblings.close_over_siblings("dup_charge_threshold", instances)
 
 
 def all_instances() -> tuple[tuple[FrozenMap[str, str], int], ...]:

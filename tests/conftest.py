@@ -141,8 +141,25 @@ from tests.helpers import FROZEN_DIR, load_all_frozen  # noqa: E402
 
 @pytest.fixture(scope="session")
 def all_frozen():
+    """Every frozen scenario, across all families."""
     scenarios = load_all_frozen()
     assert scenarios, f"no frozen scenarios in {FROZEN_DIR}; run `uv run cerl freeze`"
+    return scenarios
+
+
+@pytest.fixture(scope="session")
+def w2_frozen(all_frozen):
+    """W2 only, for tests that reason about the duplicate-charge axes."""
+    scenarios = [s for s in all_frozen if s.family == "duplicate_charge_approval"]
+    assert scenarios
+    return scenarios
+
+
+@pytest.fixture(scope="session")
+def w1_frozen(all_frozen):
+    """W1 only, for tests that reason about the profile-reconciliation axes."""
+    scenarios = [s for s in all_frozen if s.family == "duplicate_billing_profile"]
+    assert scenarios
     return scenarios
 
 

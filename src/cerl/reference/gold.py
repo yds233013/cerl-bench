@@ -19,7 +19,8 @@ from pathlib import Path
 
 from cerl.actions import Action
 from cerl.core import Frozen
-from cerl.reference.oracle.w2_refund import W2Oracle
+from cerl.reference.ground_truth import ReferencePolicy
+from cerl.reference.registry import oracle_for as _oracle_for
 from cerl.reference.runner import Episode, run_reference
 from cerl.scenario.schema import FrozenScenario
 
@@ -38,10 +39,9 @@ class GoldTrajectory(Frozen):
     predicate_library_hash: str
 
 
-def oracle_for(scenario: FrozenScenario) -> W2Oracle:
-    if scenario.family != "duplicate_charge_approval":
-        raise KeyError(f"no oracle for family {scenario.family!r}")
-    return W2Oracle()
+def oracle_for(scenario: FrozenScenario) -> ReferencePolicy:
+    """The registered reference policy for this scenario's family."""
+    return _oracle_for(scenario)
 
 
 def produce(scenario: FrozenScenario) -> tuple[Episode, GoldTrajectory]:

@@ -1,0 +1,72 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Litware Analytics"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
+      "approval_ref": "apr_000000000001",
+      "kind": "billing.merge_customers",
+      "source_id": "cus_000000000066",
+      "target_id": "cus_000000000065"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Verified duplicate: merged cus_000000000066 into cus_000000000065 under apr_000000000001.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Merged cus_000000000066 into cus_000000000065."
+    }
+  ],
+  "branch": "merge_sanctioned",
+  "predicate_library_hash": "1356a625ee4131f2ce7d67fa158c50a9f7430783d35bf49f925eacd9b2e76bc7",
+  "required_decision": "act",
+  "scenario_id": "dup_profile_reconciliation__disp-none__id-strong_match__appr-valid__pp-none__tr-stable__s17",
+  "terminal_state_hash": "2b176347af4c4a3d2f65c51b00a6c23fd0df6a4f97e8fb4d759bc4255bdb9efd",
+  "tool_calls": 12,
+  "trace_head_hash": "3c75d84f26b3ba5b4c086a31bc25be45c730dcb644873cdc37be17d65c0cc350",
+  "verifier_version": "1.0.0"
+}

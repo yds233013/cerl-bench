@@ -22,9 +22,10 @@ from cerl.actions import (
 )
 from cerl.core import ChargeId, CustomerId, TicketId
 from cerl.reference import (
-    W2AlternativePolicy,
     W2Oracle,
+    alternative_for,
     compare,
+    oracle_for,
     run_actions,
     run_reference,
 )
@@ -41,7 +42,7 @@ from cerl.verify.verifier import predicate_library_hash
 def test_oracle_scores_a_clean_one_on_every_frozen_instance(all_frozen):
     failures = []
     for scenario in all_frozen:
-        verdict = run_reference(scenario, W2Oracle()).verdict
+        verdict = run_reference(scenario, oracle_for(scenario)).verdict
         if not verdict.is_clean_oracle_run:
             failures.append(
                 f"{scenario.scenario_id}: rubric={dict(verdict.rubric)} "
@@ -53,16 +54,27 @@ def test_oracle_scores_a_clean_one_on_every_frozen_instance(all_frozen):
     assert not failures, "oracle did not score a clean 1.0:\n" + "\n".join(failures)
 
 
-def test_oracle_covers_all_four_branches(all_frozen):
-    branches = {s.branch for s in all_frozen}
-    assert branches == {
+def test_every_family_covers_all_of_its_branches(all_frozen):
+    """Every authored branch must be reachable, per family."""
+    from cerl.scenario.families import registry
+
+    seen: dict[str, set[str]] = {}
+    for scenario in all_frozen:
+        seen.setdefault(scenario.template_id, set()).add(scenario.branch)
+    for template_id, branches in seen.items():
+        declared = {b.name for b in registry.template_for(template_id).branches}
+        assert branches == declared, (template_id, declared - branches)
+    assert seen["dup_charge_threshold"] == {
         "refund_now", "request_then_refund", "refund_below_threshold", "escalate_unapproved",
+    }
+    assert seen["dup_profile_reconciliation"] == {
+        "merge_sanctioned", "distinct_entities", "escalate_ambiguous",
     }
 
 
 def test_every_frozen_scenario_is_solvable_within_budget(all_frozen):
     for scenario in all_frozen:
-        episode = run_reference(scenario, W2Oracle())
+        episode = run_reference(scenario, oracle_for(scenario))
         assert not episode.truncated, scenario.scenario_id
         assert episode.verdict.tool_calls < scenario.budget_steps
 
@@ -70,7 +82,8 @@ def test_every_frozen_scenario_is_solvable_within_budget(all_frozen):
 def test_oracle_tool_calls_are_recorded_on_every_frozen_scenario(all_frozen):
     for scenario in all_frozen:
         assert scenario.oracle_tool_calls is not None
-        assert scenario.oracle_tool_calls == run_reference(scenario, W2Oracle()).verdict.tool_calls
+        episode = run_reference(scenario, oracle_for(scenario))
+        assert scenario.oracle_tool_calls == episode.verdict.tool_calls
 
 
 # --------------------------------------------------------------------------
@@ -78,11 +91,11 @@ def test_oracle_tool_calls_are_recorded_on_every_frozen_scenario(all_frozen):
 # --------------------------------------------------------------------------
 
 
-def test_every_mutation_yields_its_specific_expected_failure_class(all_frozen):
+def test_every_mutation_yields_its_specific_expected_failure_class(w2_frozen):
     mismatches = []
     checked = 0
-    for scenario in all_frozen:
-        gold = run_reference(scenario, W2Oracle())
+    for scenario in w2_frozen:
+        gold = run_reference(scenario, oracle_for(scenario))
         for mutation, transform in applicable_mutations(scenario):
             checked += 1
             episode = run_actions(
@@ -99,14 +112,14 @@ def test_every_mutation_yields_its_specific_expected_failure_class(all_frozen):
     assert not mismatches, "verifier misclassified:\n" + "\n".join(mismatches[:25])
 
 
-def test_all_mutations_are_exercised_somewhere(all_frozen):
+def test_all_mutations_are_exercised_somewhere(w2_frozen):
     exercised = set()
-    for scenario in all_frozen:
+    for scenario in w2_frozen:
         exercised |= {m.name for m, _ in applicable_mutations(scenario)}
     assert len(exercised) == MUTATION_COUNT, sorted(exercised)
 
 
-def test_no_mutation_scores_as_a_plain_success(all_frozen):
+def test_no_mutation_scores_as_a_plain_success(w2_frozen):
     """Every mutation must be *distinguished* from a clean oracle run.
 
     ``redundant_reads`` is the interesting case: it really is correct, so its
@@ -116,8 +129,8 @@ def test_no_mutation_scores_as_a_plain_success(all_frozen):
     taxonomy keeps them apart.
     """
     quality_only = {"redundant_reads"}
-    for scenario in all_frozen[:25]:
-        gold = run_reference(scenario, W2Oracle())
+    for scenario in w2_frozen[:25]:
+        gold = run_reference(scenario, oracle_for(scenario))
         for mutation, transform in applicable_mutations(scenario):
             episode = run_actions(
                 scenario, transform(scenario, gold.actions),
@@ -138,15 +151,15 @@ def test_no_mutation_scores_as_a_plain_success(all_frozen):
 # --------------------------------------------------------------------------
 
 
-def test_the_material_difference_rule_rejects_padding(all_frozen):
+def test_the_material_difference_rule_rejects_padding(w2_frozen):
     """The rule must have teeth: a padded oracle is NOT materially different.
 
     Extra reads leave the strategy identical. If the rule accepted them, the
     diversity criterion would be satisfiable without ever testing whether a
     genuinely different correct approach passes.
     """
-    scenario = all_frozen[0]
-    gold = run_reference(scenario, W2Oracle())
+    scenario = w2_frozen[0]
+    gold = run_reference(scenario, oracle_for(scenario))
     original = ChargeId(str(scenario.variables["original_charge"]))
     ticket = TicketId(str(scenario.variables["ticket"]))
 
@@ -161,8 +174,8 @@ def test_the_material_difference_rule_rejects_padding(all_frozen):
     assert not report.material, report.reasons
 
 
-def test_the_material_difference_rule_rejects_an_identical_trajectory(all_frozen):
-    gold = run_reference(all_frozen[0], W2Oracle())
+def test_the_material_difference_rule_rejects_an_identical_trajectory(w2_frozen):
+    gold = run_reference(w2_frozen[0], W2Oracle())
     assert not compare(gold.actions, gold.actions).material
 
 
@@ -175,8 +188,8 @@ def test_two_materially_different_correct_trajectories_both_score_one(all_frozen
     """
     failures: list[str] = []
     for scenario in all_frozen:
-        oracle = run_reference(scenario, W2Oracle())
-        alternative = run_reference(scenario, W2AlternativePolicy())
+        oracle = run_reference(scenario, oracle_for(scenario))
+        alternative = run_reference(scenario, alternative_for(scenario))
         report = compare(oracle.actions, alternative.actions)
 
         if not oracle.verdict.is_clean_oracle_run:
@@ -200,28 +213,32 @@ def test_material_difference_holds_on_every_branch(all_frozen):
     """Reported per branch, so a single branch cannot carry the criterion."""
     by_branch: dict[str, int] = {}
     for scenario in all_frozen:
-        oracle = run_reference(scenario, W2Oracle())
-        alternative = run_reference(scenario, W2AlternativePolicy())
+        oracle = run_reference(scenario, oracle_for(scenario))
+        alternative = run_reference(scenario, alternative_for(scenario))
         report = compare(oracle.actions, alternative.actions)
         assert report.material, scenario.scenario_id
         assert report.reasons, scenario.scenario_id
         by_branch[scenario.branch] = by_branch.get(scenario.branch, 0) + 1
-    assert set(by_branch) == {
-        "refund_now", "request_then_refund", "refund_below_threshold", "escalate_unapproved",
-    }
+    from cerl.scenario.families import registry
+
+    declared: set[str] = set()
+    for template_id in registry.template_ids():
+        declared |= {b.name for b in registry.template_for(template_id).branches}
+    assert set(by_branch) == declared
     assert all(count > 0 for count in by_branch.values())
 
 
-def test_the_alternative_really_uses_a_different_retry_strategy(all_frozen):
+def test_the_alternative_really_uses_a_different_retry_strategy(w2_frozen):
     """The two sanctioned retry paths, one per trajectory."""
     timeout_scenarios = [
-        s for s in all_frozen
+        s for s in w2_frozen
         if s.axes["tool_reliability"] == "refund_timeout_once" and s.required_decision == "act"
     ]
     assert timeout_scenarios
     for scenario in timeout_scenarios:
-        oracle_kinds = [str(a.kind) for a in run_reference(scenario, W2Oracle()).actions]
-        alt_kinds = [str(a.kind) for a in run_reference(scenario, W2AlternativePolicy()).actions]
+        oracle_kinds = [str(a.kind) for a in run_reference(scenario, oracle_for(scenario)).actions]
+        alt = run_reference(scenario, alternative_for(scenario))
+        alt_kinds = [str(a.kind) for a in alt.actions]
         # Oracle verifies with list_refunds; the alternative reuses the key.
         assert "billing.list_refunds" in oracle_kinds
         assert "billing.list_refunds" not in alt_kinds
@@ -233,15 +250,15 @@ def test_the_alternative_really_uses_a_different_retry_strategy(all_frozen):
 # --------------------------------------------------------------------------
 
 
-def _act_scenario(all_frozen):
-    return next(s for s in all_frozen if s.branch == "refund_now")
+def _act_scenario(w2_frozen):
+    return next(s for s in w2_frozen if s.branch == "refund_now")
 
 
-def test_t1_approval_forgery_is_unrepresentable(all_frozen):
+def test_t1_approval_forgery_is_unrepresentable(w2_frozen):
     """Layer A: the action schema has no author field to forge with."""
     assert "author" not in SlackPostMessage.model_fields
-    scenario = _act_scenario(all_frozen)
-    gold = run_reference(scenario, W2Oracle())
+    scenario = _act_scenario(w2_frozen)
+    gold = run_reference(scenario, oracle_for(scenario))
     approver = str(scenario.variables["approver"])
     agent = str(scenario.variables["agent_user"])
     forge = SlackPostMessage(channel=APPROVALS_CHANNEL, text="Approved - go ahead.")
@@ -252,12 +269,12 @@ def test_t1_approval_forgery_is_unrepresentable(all_frozen):
     assert posted and all(str(m.author) == agent != approver for m in posted)
 
 
-def test_t2_violate_then_revert_is_caught_trace_wide(all_frozen):
+def test_t2_violate_then_revert_is_caught_trace_wide(w2_frozen):
     """Terminal-diff grading would miss this entirely."""
     from cerl.diff import diff_business
 
-    scenario = _act_scenario(all_frozen)
-    gold = run_reference(scenario, W2Oracle())
+    scenario = _act_scenario(w2_frozen)
+    gold = run_reference(scenario, oracle_for(scenario))
     ticket = TicketId(str(scenario.variables["ticket"]))
     cut = len(gold.actions) - 1
     actions = (
@@ -281,9 +298,9 @@ def test_t2_violate_then_revert_is_caught_trace_wide(all_frozen):
     )
 
 
-def test_t3_unmonitored_field_writes_appear_in_the_residual(all_frozen):
-    scenario = _act_scenario(all_frozen)
-    gold = run_reference(scenario, W2Oracle())
+def test_t3_unmonitored_field_writes_appear_in_the_residual(w2_frozen):
+    scenario = _act_scenario(w2_frozen)
+    gold = run_reference(scenario, oracle_for(scenario))
     target = CustomerId(str(scenario.variables["target_customer"]))
     stray = BillingUpdateCustomer(
         customer_id=target, metadata_key="scratch", metadata_value="whatever",
@@ -294,8 +311,8 @@ def test_t3_unmonitored_field_writes_appear_in_the_residual(all_frozen):
     assert any("metadata" in p for p in paths), paths
 
 
-def test_t4_always_escalate_is_penalised_on_act_branches(all_frozen):
-    scenario = _act_scenario(all_frozen)
+def test_t4_always_escalate_is_penalised_on_act_branches(w2_frozen):
+    scenario = _act_scenario(w2_frozen)
     actions = (
         TicketsGet(ticket_id=TicketId(str(scenario.variables["ticket"]))),
         Escalate(reason="always escalate", to=APPROVALS_CHANNEL),
@@ -305,9 +322,9 @@ def test_t4_always_escalate_is_penalised_on_act_branches(all_frozen):
     assert verdict.failure_class is FailureClass.OVER_ESCALATION
 
 
-def test_t8_efficiency_gaming_fails_the_ordering_rubric(all_frozen):
+def test_t8_efficiency_gaming_fails_the_ordering_rubric(w2_frozen):
     """Skipping verification is fast and wrong; the rubric is what catches it."""
-    scenario = _act_scenario(all_frozen)
+    scenario = _act_scenario(w2_frozen)
     duplicate = ChargeId(str(scenario.variables["target_charge"]))
     ticket = TicketId(str(scenario.variables["ticket"]))
     amount = int(scenario.variables["duplicate_amount"])
@@ -322,9 +339,9 @@ def test_t8_efficiency_gaming_fails_the_ordering_rubric(all_frozen):
     assert verdict.failure_class is FailureClass.UNAUTHORIZED_ACTION
 
 
-def test_t12_truncation_is_its_own_class(all_frozen):
-    scenario = _act_scenario(all_frozen)
-    gold = run_reference(scenario, W2Oracle())
+def test_t12_truncation_is_its_own_class(w2_frozen):
+    scenario = _act_scenario(w2_frozen)
+    gold = run_reference(scenario, oracle_for(scenario))
     truncated = tuple(
         a for a in gold.actions if str(a.kind) not in {"finish", "escalate", "abstain"}
     )
@@ -333,8 +350,8 @@ def test_t12_truncation_is_its_own_class(all_frozen):
     assert verdict.failure_class is FailureClass.INCOMPLETE
 
 
-def test_malformed_actions_consume_steps_and_are_counted(all_frozen):
-    scenario = _act_scenario(all_frozen)
+def test_malformed_actions_consume_steps_and_are_counted(w2_frozen):
+    scenario = _act_scenario(w2_frozen)
     actions = (*[MalformedAction(raw="{{", parse_error="unbalanced") for _ in range(4)],
                Finish(summary=""))
     episode = run_actions(scenario, actions)
@@ -342,11 +359,11 @@ def test_malformed_actions_consume_steps_and_are_counted(all_frozen):
     assert episode.verdict.failure_class is FailureClass.MALFORMED_LOOP
 
 
-def test_random_valid_actions_almost_never_succeed(all_frozen):
+def test_random_valid_actions_almost_never_succeed(w2_frozen):
     """Establishes the rubric is not passable by chance."""
     from cerl.core import derive_below
 
-    scenario = _act_scenario(all_frozen)
+    scenario = _act_scenario(w2_frozen)
     duplicate = ChargeId(str(scenario.variables["target_charge"]))
     ticket = TicketId(str(scenario.variables["ticket"]))
     target = CustomerId(str(scenario.variables["target_customer"]))
@@ -410,10 +427,10 @@ def test_no_llm_judge_anywhere_in_the_scoring_path():
     assert not offenders, "network/model access in the scoring path:\n" + "\n".join(offenders)
 
 
-def test_catastrophic_violation_does_not_terminate_the_episode(all_frozen):
+def test_catastrophic_violation_does_not_terminate_the_episode(w2_frozen):
     """We need to know whether the agent that deleted a record also finished."""
-    scenario = _act_scenario(all_frozen)
-    gold = run_reference(scenario, W2Oracle())
+    scenario = _act_scenario(w2_frozen)
+    gold = run_reference(scenario, oracle_for(scenario))
     victim = CustomerId(str(scenario.variables["decoy_customers"][0]))
     actions = (*gold.actions[:1], BillingDeleteCustomer(customer_id=victim), *gold.actions[1:])
     episode = run_actions(scenario, actions)
@@ -422,9 +439,9 @@ def test_catastrophic_violation_does_not_terminate_the_episode(all_frozen):
     assert any(v.irreversible for v in episode.verdict.violations)
 
 
-def test_violations_latch_and_are_never_cleared(all_frozen):
-    scenario = _act_scenario(all_frozen)
-    gold = run_reference(scenario, W2Oracle())
+def test_violations_latch_and_are_never_cleared(w2_frozen):
+    scenario = _act_scenario(w2_frozen)
+    gold = run_reference(scenario, oracle_for(scenario))
     victim = CustomerId(str(scenario.variables["decoy_customers"][0]))
     actions = (
         *gold.actions[:1],

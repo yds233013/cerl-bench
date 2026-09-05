@@ -275,11 +275,11 @@ def test_evolve_accepts_a_well_formed_change_and_does_not_alias(world):
 
 def test_every_mutating_tool_produces_a_validatable_world(all_frozen):
     """End-to-end: a full oracle episode leaves state that revalidates cleanly."""
-    from cerl.reference import W2Oracle, run_reference
+    from cerl.reference import oracle_for, run_reference
     from cerl.state import WorldState
 
     for scenario in all_frozen[:10]:
-        final = run_reference(scenario, W2Oracle()).final
+        final = run_reference(scenario, oracle_for(scenario)).final
         revalidated = WorldState.model_validate(final.model_dump(mode="json"))
         assert revalidated.state_hash() == final.state_hash()
 
