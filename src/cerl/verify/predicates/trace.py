@@ -7,7 +7,7 @@ refunded", and only the trace can tell them apart.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from cerl.actions import ActionKind, Outcome
@@ -131,7 +131,10 @@ def merge_approval_valid(
     )
 
 
-REGISTRY = {
+#: Predicate name -> implementation. Heterogeneous keyword signatures, all
+#: returning a verdict boolean; the verifier passes the full kwargs set and each
+#: predicate takes what it needs.
+REGISTRY: dict[str, Callable[..., bool]] = {
     "trace_contains_all": trace_contains_all,
     "merge_approval_valid": merge_approval_valid,
     "trace_contains": trace_contains,

@@ -485,6 +485,7 @@ MUTATION_COUNT = len(MUTATIONS)
 
 W2_FAMILY = "duplicate_charge_approval"
 W1_FAMILY = "duplicate_billing_profile"
+W3_FAMILY = "suspicious_refund_escalation"
 
 
 def _registry_for(family: str) -> tuple[tuple[Mutation, Applicable, Transform], ...]:
@@ -494,6 +495,10 @@ def _registry_for(family: str) -> tuple[tuple[Mutation, Applicable, Transform], 
         from cerl.reference.mutations_w1 import W1_MUTATIONS
 
         return W1_MUTATIONS  # type: ignore[return-value]
+    if family == W3_FAMILY:
+        from cerl.reference.mutations_w3 import W3_MUTATIONS
+
+        return W3_MUTATIONS  # type: ignore[return-value]
     raise KeyError(f"no mutation set registered for family {family!r}")
 
 

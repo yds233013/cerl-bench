@@ -156,6 +156,14 @@ def w2_frozen(all_frozen):
 
 
 @pytest.fixture(scope="session")
+def w3_frozen(all_frozen):
+    """W3 only, for tests that reason about fraud signals and disclosure."""
+    scenarios = [s for s in all_frozen if s.family == "suspicious_refund_escalation"]
+    assert scenarios
+    return scenarios
+
+
+@pytest.fixture(scope="session")
 def w1_frozen(all_frozen):
     """W1 only, for tests that reason about the profile-reconciliation axes."""
     scenarios = [s for s in all_frozen if s.family == "duplicate_billing_profile"]

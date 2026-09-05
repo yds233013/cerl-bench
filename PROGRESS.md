@@ -29,8 +29,8 @@ SFT, GRPO, later phases, paid infrastructure. No Chrome, no ChatGPT during this 
 | 2 | Durable progress file | DONE (this file) |
 | 3 | W2 integrity check + policy-assumption documentation | PARTIAL - code verified, docs pending |
 | 4 | W1 complete (all approved branches) | DONE - 36 frozen, 3 branches, oracle clean |
-| 5 | W3 complete | PENDING |
-| 6 | Scenario coverage + CF/ID pairing across families | PENDING |
+| 5 | W3 complete | DONE - 40 frozen, 3 branches, C_DISCLOSE exercised |
+| 6 | Scenario coverage + CF/ID pairing across families | DONE - 190 scenarios, pairing green in all 3 |
 | 7 | Evaluation harness + offline replay | PENDING |
 | 8 | Prompt-only baseline (integration) | PENDING |
 | 9 | Documentation + executable demonstrations | PENDING |
@@ -81,7 +81,9 @@ does not import until that lands. That is the immediate next action.
 
 ## Next action
 
-W1 mutations + adversarial fixtures + W1-specific tests, then W3.
+Evaluation harness + offline replay (`cerl eval`, `cerl verify-manifest`), then
+the unprivileged prompt-only baseline (integration only; no spending budget
+exists, so live runs are BLOCKED_EXTERNAL).
 
 ## Evidence locations
 

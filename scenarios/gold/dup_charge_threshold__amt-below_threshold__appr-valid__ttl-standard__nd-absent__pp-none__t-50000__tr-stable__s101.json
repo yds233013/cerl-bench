@@ -49,7 +49,7 @@
     }
   ],
   "branch": "refund_below_threshold",
-  "predicate_library_hash": "1356a625ee4131f2ce7d67fa158c50a9f7430783d35bf49f925eacd9b2e76bc7",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
   "required_decision": "act",
   "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
   "terminal_state_hash": "624c68b8a0b042f8a9843aef764d8af2d77194b705107f375498bd9f11133dbd",

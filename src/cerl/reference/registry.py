@@ -18,24 +18,32 @@ from collections.abc import Callable
 from cerl.reference.ground_truth import ReferencePolicy
 from cerl.reference.oracle.w1_profile import W1Oracle
 from cerl.reference.oracle.w2_refund import W2Oracle
-from cerl.reference.variants import W1AlternativePolicy, W2AlternativePolicy
+from cerl.reference.oracle.w3_fraud import W3Oracle
+from cerl.reference.variants import (
+    W1AlternativePolicy,
+    W2AlternativePolicy,
+    W3AlternativePolicy,
+)
 from cerl.scenario.schema import FrozenScenario
 
 PolicyFactory = Callable[[], ReferencePolicy]
 
 W1_FAMILY = "duplicate_billing_profile"
 W2_FAMILY = "duplicate_charge_approval"
+W3_FAMILY = "suspicious_refund_escalation"
 
 #: The policy whose tool-call count defines the registered difficulty metric.
 ORACLES: dict[str, PolicyFactory] = {
     W1_FAMILY: W1Oracle,
     W2_FAMILY: W2Oracle,
+    W3_FAMILY: W3Oracle,
 }
 
 #: A second, materially different correct policy per family.
 ALTERNATIVES: dict[str, PolicyFactory] = {
     W1_FAMILY: W1AlternativePolicy,
     W2_FAMILY: W2AlternativePolicy,
+    W3_FAMILY: W3AlternativePolicy,
 }
 
 

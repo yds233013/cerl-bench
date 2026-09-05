@@ -24,6 +24,20 @@ Intervention axis ``approval``.
 | ``expired`` / ``unauthorized_approver`` / ``scope_exceeded`` | ``valid`` | record exists |
 | ``missing_unobtainable`` / ``missing_unanswered`` | ``missing_obtainable`` | request needed |
 
+## W3 - suspicious refund requests
+
+Intervention axis ``signal_count``. ``0`` signals is in-distribution (the refund
+is legitimate); every non-zero count is held out.
+
+| Held-out CF value | ID sibling | Branch |
+|---|---|---|
+| ``1`` | ``0`` | request_info |
+| ``2`` / ``3`` | ``0`` | escalate_fraud |
+
+The workflow shape is held fixed by construction: all three branches perform the
+same investigation and differ only in the terminal handling, so the counterfactual
+varies what the evidence *says* rather than how much work it takes to read it.
+
 ## W1 - duplicate billing profile reconciliation
 
 Intervention axis ``merge_approval`` -- whether the merge is authorised:
@@ -154,8 +168,19 @@ _W1 = FamilyPairing(
     ),
 )
 
+_W3 = FamilyPairing(
+    template_id="suspicious_refund",
+    interventions=(
+        Intervention(
+            axis="signal_count",
+            id_values=("0",),
+            held_out=FrozenMap({"1": "0", "2": "0", "3": "0"}),
+        ),
+    ),
+)
+
 PAIRINGS: FrozenMap[str, FamilyPairing] = FrozenMap(
-    {_W1.template_id: _W1, _W2.template_id: _W2},
+    {_W1.template_id: _W1, _W2.template_id: _W2, _W3.template_id: _W3},
 )
 
 # Retained for the W2 call sites written before pairing became per-family.

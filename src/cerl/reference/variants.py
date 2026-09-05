@@ -540,3 +540,103 @@ def w1_alternative_plan(truth: GroundTruthView) -> tuple[Action, ...]:
         Escalate(reason=reason, to=OPS_CHANNEL),
     ]
     return tuple(actions)
+
+
+# ---------------------------------------------------------------------------
+# W3 - suspicious refund requests
+# ---------------------------------------------------------------------------
+
+
+class W3AlternativePolicy:
+    """A second correct W3 policy that reasons differently from the oracle.
+
+    Differences are strategic, not cosmetic:
+
+    * it reads the disclosure rule *before* touching any record, so it knows
+      what it may not repeat before it has seen anything worth repeating;
+    * it establishes refund history before the charge, building the picture from
+      the customer's pattern inward rather than from the disputed charge outward;
+    * it closes the ticket before commenting, reversing two mutating actions;
+    * in the escalate branch it posts to trust-and-safety *after* setting the
+      ticket status rather than before.
+    """
+
+    __slots__ = ("_queue", "_started")
+
+    def __init__(self) -> None:
+        self._queue: list[Action] = []
+        self._started = False
+
+    def act(self, observation: Observation, truth: GroundTruthView) -> Action:  # noqa: ARG002
+        if not self._started:
+            self._queue = list(w3_alternative_plan(truth))
+            self._started = True
+        if not self._queue:
+            return Finish(summary="no further action required")
+        return self._queue.pop(0)
+
+
+def w3_alternative_plan(truth: GroundTruthView) -> tuple[Action, ...]:
+    from cerl.reference.oracle.w3_fraud import INFO_REQUEST, NEUTRAL_ACKNOWLEDGEMENT
+    from cerl.scenario.families.w3_suspicious_refund import (
+        BRANCH_REFUND,
+        BRANCH_REQUEST_INFO,
+        TRUST_CHANNEL,
+    )
+
+    ticket = TicketId(str(truth.var("ticket")))
+    customer = CustomerId(str(truth.var("target_customer")))
+    charge = ChargeId(str(truth.var("target_charge")))
+    trust_lead = UserId(str(truth.var("trust_lead")))
+    amount = int(truth.var("charge_amount"))
+
+    # Disclosure rule first, then history, then the charge.
+    actions: list[Action] = [
+        PolicyGetRule(rule_key="disclosure"),
+        TicketsGet(ticket_id=ticket),
+        BillingListRefunds(charge_id=charge),
+    ]
+    if truth.axes.get("tool_reliability") == "search_flaky":
+        actions.append(BillingListRefunds(charge_id=charge))
+    actions += [
+        BillingGetCustomer(customer_id=customer),
+        BillingGetCharge(charge_id=charge),
+        PolicyGetRule(rule_key="fraud_signals"),
+    ]
+
+    if truth.branch == BRANCH_REFUND:
+        actions += [
+            BillingIssueRefund(
+                charge_id=charge, amount_cents=amount, reason="requested_by_customer",
+            ),
+            TicketsSetStatus(ticket_id=ticket, status="resolved"),
+            TicketsAddComment(
+                ticket_id=ticket, text=NEUTRAL_ACKNOWLEDGEMENT, comment_kind="resolution",
+            ),
+            Finish(summary="No fraud signals; refunded."),
+        ]
+        return tuple(actions)
+
+    if truth.branch == BRANCH_REQUEST_INFO:
+        actions += [
+            TicketsSetStatus(ticket_id=ticket, status="pending_customer"),
+            TicketsAddComment(
+                ticket_id=ticket, text=INFO_REQUEST, comment_kind="info_request",
+            ),
+            Abstain(reason="a single signal is not enough to pay or to refuse"),
+        ]
+        return tuple(actions)
+
+    actions += [
+        TicketsSetStatus(ticket_id=ticket, status="escalated"),
+        SlackPostMessage(
+            channel=TRUST_CHANNEL,
+            text=f"Withholding refund on charge {charge}: multiple fraud signals.",
+            mentions=(trust_lead,),
+        ),
+        TicketsAddComment(
+            ticket_id=ticket, text=NEUTRAL_ACKNOWLEDGEMENT, comment_kind="escalation",
+        ),
+        Escalate(reason="multiple fraud signals", to=TRUST_CHANNEL),
+    ]
+    return tuple(actions)

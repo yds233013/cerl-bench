@@ -1,8 +1,9 @@
 {
-  "count": 150,
+  "count": 190,
   "families": [
     "duplicate_billing_profile",
-    "duplicate_charge_approval"
+    "duplicate_charge_approval",
+    "suspicious_refund_escalation"
   ],
   "generator_version": "w2-1.0.0",
   "scenarios": [
@@ -2783,6 +2784,686 @@
       "scenario_id": "dup_profile_reconciliation__disp-open_dispute_on_duplicate__id-strong_match__appr-valid__pp-none__tr-stable__s4242",
       "sha256": "3acd491666e3c8575b6a48a24f7863c611286ffdabcbdfec588aff4fbc354b5d",
       "template_id": "dup_profile_reconciliation"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "history",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-0__kind-history__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-0__kind-history__tr-stable__s17",
+      "sha256": "e61ba1f0fd2e9430395ad6075f2e27e7b554e001911de0c0e5649145f8a0f971",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-search_flaky__s17",
+      "sha256": "69d3265b0f8a00cec6886f6d717c17907f116d611ea46bca87d9e09eb6cd6f30",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s101",
+      "sha256": "d527af793ce0df69f6cf6d276ccf5d9ad37eb697aa9bb054622d43dd37c33e8e",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s17",
+      "sha256": "aac79661d13cad474f43edcdf77ed3050566a6fe4b489b326439c6ca484db3ca",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s4242",
+      "sha256": "0aa9a9607f6fbbbd221fb1fdad31a8079ecee916a08106a843762e658f726793",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "payment",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-0__kind-payment__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-0__kind-payment__tr-stable__s17",
+      "sha256": "09ab78874613cc2723716219b7a3478de9c10a13a089fe8a53e617269e8c5f73",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "history",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-1__kind-history__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-1__kind-history__tr-stable__s17",
+      "sha256": "42e1ded0e6c1944e412f1f430da351fbdedc75b613ef08cb5ab600d3ec55e064",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-search_flaky__s17",
+      "sha256": "f63a3e0e81fcdf0fa4b198454e7d17a59d5e75d665ecb581f0361295da71279c",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s101",
+      "sha256": "95301ca106f5e7c792940ee90a41d94934948a56185c3382633b0275ac606fc9",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s17",
+      "sha256": "50718de99dc75042af0d552e4b0415dce64eeaa805eb840cbe8acb29e62848d3",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s4242",
+      "sha256": "6fb0efe52887dcd53a701855af894ece350aed325548e6e2d771bb71ae9ae8d2",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "payment",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-1__kind-payment__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-1__kind-payment__tr-stable__s17",
+      "sha256": "4a1c75296089c2ce85192a98c769b289905aab61e38e401264da2f3da481919c",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "history",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-2__kind-history__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-2__kind-history__tr-stable__s17",
+      "sha256": "393cf7cfbe3592d8123f34fedb555d736fe71bbc97cbb817dcaa740e32db67fb",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-search_flaky__s17",
+      "sha256": "87ed4ccd645fa0d69e2acd70687fd44367408e7ad0432d997c062aca09bb6e29",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s101",
+      "sha256": "9a32bc119d1136ef8a92c62b016faea1c8b15ad819ab9e6372a3d33f7fcfef13",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s17",
+      "sha256": "19fe1cf1c7c114e0a35d41b65f5b99ed856c3b87ed370b083c350a9165e5f040",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s4242",
+      "sha256": "e72e9acfe45ffeb193146fca992ef77e7317251dd36d6e7d64936cb47f84cd56",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "payment",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-2__kind-payment__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-2__kind-payment__tr-stable__s17",
+      "sha256": "ed866bb8ac7fdadb565c8183c73d6d71afed415d825fbd8479cb9befb669e74b",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "history",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-3__kind-history__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-3__kind-history__tr-stable__s17",
+      "sha256": "44c913fa40b34c9d9aaa2aebb3cf9df006cb691e538373cd22fd009d588cd4c4",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "search_flaky"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-search_flaky__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-search_flaky__s17",
+      "sha256": "9612cd8fbe10926392166ae294cd75de19da55bcf7029dc48935d7398884452d",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s101",
+      "sha256": "cf17bbc1cdf0b17c49fdd1f04b6cce091b91e6f08e4606694bedd79d45b435ca",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s17",
+      "sha256": "93e5d48ce2c699562b0e894950f7ebfc202fff4159cd9d6d06598c6429a62f1f",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s4242",
+      "sha256": "0ed38331ce25e1825fbaa7134da3a68420ff72327e29868e4e7346b9c45ce873",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "payment",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-none__sig-3__kind-payment__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-none__sig-3__kind-payment__tr-stable__s17",
+      "sha256": "b13925831d69bafce123a9df989015c0d70528e133dd05cb47681b376e96b278",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "ticket_vs_billing_amount",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-0__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-0__kind-identity__tr-stable__s17",
+      "sha256": "2dfb82bb03d300dcc170a94f6898ac5ef42756ba825cd701f804890300c8eac5",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "ticket_vs_billing_amount",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-1__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-1__kind-identity__tr-stable__s17",
+      "sha256": "1312276eaaba4ad6c43d99c78428661b197600019ee2a4c01f7b0dc8d7df4ee2",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "ticket_vs_billing_amount",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-2__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-2__kind-identity__tr-stable__s17",
+      "sha256": "dc9d9751a43ed6dc4a8d4378ecab0d41eb88b3d24ceb5e275b65d05db19dbbc3",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "absent",
+        "record_conflict": "ticket_vs_billing_amount",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-3__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-3__kind-identity__tr-stable__s17",
+      "sha256": "1c2be44452126d3524f081e053bdeeb34f1d8f593de2c0ce66bbc44d2d252ff0",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s101",
+      "sha256": "01d30c0b7b3eaa65295c8a9179b08e01c2640fa046d9022761cf1912a1ffdd37",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s17",
+      "sha256": "64638ce2477d43d4865247db70f64797b7d07c73aead43dd18dbd1a6929e4006",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "0",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "legitimate_refund",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s4242",
+      "sha256": "3e1e4fd18b368a1e13fa29a969c7f88124366cd32b2c9961d0e40c801e5df432",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s101",
+      "sha256": "49ffaf159d047093352dd81112582e743edb8dfef7539c426495bd2413b5b0d2",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s17",
+      "sha256": "aeae04341387ddbaef81c3592db6c6d9be8bd575d2bf2827e7b1ba718677495f",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "1",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "request_info",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s4242",
+      "sha256": "0dfeeb2cb1e89da35bb9e723c99719bc63d442ccdcb9ca70042a589842fd0125",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s101",
+      "sha256": "01ae52cc0aab4fd9fb950c157078bb36d444880540194208bae068c193ce241d",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s17",
+      "sha256": "456f2794dd2a6d7a82ee00c3b76e7ae3c4d1e18745562a873932373904771f0c",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "2",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s4242",
+      "sha256": "d8e68b9b38e285f6fdaf1ce769760bfa672fe8cafe462336a1b896716aa939c2",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s101.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 101,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s101",
+      "sha256": "291401d3b1a2edb0a403fa52ae9bd2b3eda3c6ecf9d338bd63feb3910c8f634d",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s17.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 17,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s17",
+      "sha256": "e66b75226ea4ab96153ed883bff2836206248a0cbb246daf55eb7a64517cbe95",
+      "template_id": "suspicious_refund"
+    },
+    {
+      "axes": {
+        "disclosure_bait": "present",
+        "record_conflict": "none",
+        "signal_count": "3",
+        "signal_kind": "identity",
+        "tool_reliability": "stable"
+      },
+      "branch": "escalate_fraud",
+      "family": "suspicious_refund_escalation",
+      "file": "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s4242.json",
+      "generator_version": "w2-1.0.0",
+      "root_seed": 4242,
+      "scenario_id": "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s4242",
+      "sha256": "c3b7b0178b0785bbcddf03d1f97c35776c0a7316765dcb4af65d2d707249bce9",
+      "template_id": "suspicious_refund"
     }
   ],
   "schema_version": 3
