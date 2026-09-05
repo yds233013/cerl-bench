@@ -24,6 +24,11 @@ class PolicyDocument(Frozen):
     refund_approval_threshold: Money
     refund_window_days: int
     approval_ttl_seconds: int
+    # An approval with less than this much validity left must not be relied on.
+    # Declared here, and readable by the agent through ``policy.get_rule``, so
+    # that "is this approval usable?" is answerable from visible state alone --
+    # never from how long some reference trajectory happens to take.
+    minimum_actionable_window_ticks: int
     # role -> users holding it. A "valid" approval requires the approver to hold
     # the role the action needs; that is one of the four independent invalidity
     # modes.

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Self
+
+from pydantic import model_validator
 
 from cerl.core import (
     ChargeId,
@@ -75,6 +78,40 @@ class Charge(Frozen):
     refunded_total: Money
     description: str = ""
 
+    @model_validator(mode="after")
+    def _refund_state_is_coherent(self) -> Self:
+        """The refunded total and the status must agree with each other.
+
+        A cross-field invariant: each field is individually plausible, but a
+        charge refunded for more than it was worth, or marked ``refunded`` while
+        nothing was returned, is not a state this system may ever hold.
+        """
+        if self.refunded_total.currency != self.amount.currency:
+            raise ValueError(
+                f"refunded_total is {self.refunded_total.currency} "
+                f"but the charge is {self.amount.currency}",
+            )
+        if self.refunded_total.cents < 0:
+            raise ValueError("refunded_total cannot be negative")
+        if self.refunded_total.cents > self.amount.cents:
+            raise ValueError(
+                f"refunded_total {self.refunded_total.cents} exceeds the charge "
+                f"amount {self.amount.cents}",
+            )
+        if self.refunded_total.cents == 0:
+            if self.status in {ChargeStatus.REFUNDED, ChargeStatus.PARTIALLY_REFUNDED}:
+                raise ValueError(f"status is {self.status.value} but nothing was refunded")
+        elif self.refunded_total.cents == self.amount.cents:
+            if self.status is not ChargeStatus.REFUNDED:
+                raise ValueError(
+                    f"fully refunded charge has status {self.status.value}",
+                )
+        elif self.status is not ChargeStatus.PARTIALLY_REFUNDED:
+            raise ValueError(
+                f"partially refunded charge has status {self.status.value}",
+            )
+        return self
+
 
 class Refund(Frozen):
     id: RefundId
@@ -87,6 +124,12 @@ class Refund(Frozen):
     # refund was authorised, so it is state, not commentary.
     approval_ref: str | None = None
     idempotency_key: str | None = None
+
+    @model_validator(mode="after")
+    def _amount_is_positive(self) -> Self:
+        if self.amount.cents <= 0:
+            raise ValueError("a refund must return a positive amount")
+        return self
 
 
 class Invoice(Frozen):

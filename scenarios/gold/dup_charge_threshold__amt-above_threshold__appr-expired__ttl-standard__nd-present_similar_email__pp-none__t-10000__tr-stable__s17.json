@@ -30,6 +30,10 @@
       "thread_id": null
     },
     {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
       "channel": "billing-approvals",
       "kind": "slack.post_message",
       "mentions": [
@@ -59,8 +63,8 @@
   "predicate_library_hash": "15746cfac6659f485b3d6ca110ea0c9bdd46aa59f578a248f030b5c065eec0ef",
   "required_decision": "escalate",
   "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
-  "terminal_state_hash": "0708a3e51b465543908834caaf57cdc7a1e68080120a1ec61e73d1bd598a5474",
-  "tool_calls": 10,
-  "trace_head_hash": "46c979bb2fd4d4cff69a48e162b799f0fbef0f363cc048b46e22fc8f6f987c07",
+  "terminal_state_hash": "094d7b48134c407203cf949fc6ec88f276d822ff85ab9fcf71db4d6bf04b65c0",
+  "tool_calls": 11,
+  "trace_head_hash": "d5f1412d7e86b1313379738695334c5bff6c8e3368d32efbb5f6af5f57baef22",
   "verifier_version": "1.0.0"
 }

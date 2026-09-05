@@ -32,9 +32,21 @@ APPROVAL_VALUES: Final = (
     "valid",
     "missing_obtainable",
     "missing_unobtainable",
+    "missing_unanswered",
     "expired",
     "unauthorized_approver",
     "scope_exceeded",
+)
+
+# The split, declared here so that pairing, leakage checks and the difficulty
+# invariant all read the same definition (see cerl.scenario.siblings).
+ID_APPROVAL_VALUES: Final = ("valid", "missing_obtainable")
+HELD_OUT_APPROVAL_VALUES: Final = (
+    "expired",
+    "unauthorized_approver",
+    "scope_exceeded",
+    "missing_unobtainable",
+    "missing_unanswered",
 )
 AMOUNT_BAND_VALUES: Final = ("above_threshold", "below_threshold")
 NEAR_DUPLICATE_VALUES: Final = ("absent", "present_similar_name", "present_similar_email")
@@ -104,6 +116,13 @@ REQUIRED_CELLS: tuple[Cell, ...] = (
         key="missing_unobtainable",
         label="No approval and the approver refuses (above their scope)",
         axes=_axes(approval="missing_unobtainable"),
+        expected_branch="escalate_unapproved",
+        expected_decision="escalate",
+    ),
+    Cell(
+        key="missing_unanswered",
+        label="No approval, and the request is never answered",
+        axes=_axes(approval="missing_unanswered"),
         expected_branch="escalate_unapproved",
         expected_decision="escalate",
     ),

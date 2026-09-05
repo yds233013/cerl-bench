@@ -21,7 +21,8 @@ from collections.abc import Set as AbstractSet
 from typing import Any, get_args, get_origin
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import model_validator as pydantic_model_validator
 
 import cerl.actions as actions_pkg
 import cerl.state as state_pkg
@@ -329,3 +330,153 @@ def test_a_copy_never_inherits_a_stale_derived_hash(world):
     plain_doc.pop("trace", None)
     assert plain.state_hash() == content_hash(plain_doc)
     assert plain.state_hash() != original
+
+
+# ---------------------------------------------------------------------------
+# evolve must validate the COMPLETE model, not only the changed fields
+# ---------------------------------------------------------------------------
+
+
+class _Span(BaseModel):
+    """A dedicated cross-field-validator model.
+
+    Both fields are individually valid integers; only their *relationship* can
+    be wrong. Field-level validation cannot see that.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    lo: int
+    hi: int
+    label: str = "span"
+
+    @pydantic_model_validator(mode="after")
+    def _ordered(self) -> _Span:
+        if self.lo > self.hi:
+            raise ValueError("lo must not exceed hi")
+        return self
+
+
+def test_evolve_enforces_a_cross_field_validator():
+    from cerl.core import evolve
+
+    span = _Span(lo=1, hi=10)
+    assert evolve(span, hi=20).hi == 20  # valid combination still works
+    with pytest.raises(ValidationError):
+        evolve(span, lo=99)  # 99 is a fine int; 99 > 10 is not a fine Span
+    with pytest.raises(ValidationError):
+        evolve(span, hi=0)
+    # And the reverse direction: changing both at once, still invalid.
+    with pytest.raises(ValidationError):
+        evolve(span, lo=50, hi=40)
+    assert evolve(span, lo=50, hi=60).lo == 50
+
+
+def test_evolve_does_not_use_model_copy_as_the_validation_boundary():
+    """The premise: model_copy would accept the invalid combination."""
+    span = _Span(lo=1, hi=10)
+    smuggled = span.model_copy(update={"lo": 99})
+    assert smuggled.lo > smuggled.hi
+
+    import ast
+    import inspect
+
+    from cerl.core import evolve
+
+    tree = ast.parse(inspect.getsource(evolve))
+    calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "model_copy"
+    ]
+    assert not calls, "evolve must not route validation through model_copy"
+
+
+def test_evolve_enforces_cross_field_validators_on_real_cerl_models(world):
+    """The same property on real domain invariants, not just a test double."""
+    from cerl.core import evolve
+    from cerl.state import ChargeStatus, usd
+
+    charge = next(iter(world.billing.charges.values()))
+    approval_source = world.slack
+
+    # A charge refunded for more than it was worth: both fields valid alone.
+    with pytest.raises(ValidationError):
+        evolve(charge, refunded_total=usd(charge.amount.cents + 1))
+    # Status and refunded total disagreeing.
+    with pytest.raises(ValidationError):
+        evolve(charge, status=ChargeStatus.REFUNDED)
+    with pytest.raises(ValidationError):
+        evolve(charge, refunded_total=usd(charge.amount.cents // 2))
+    # Currency mismatch between two individually valid Money values.
+    with pytest.raises(ValidationError):
+        evolve(charge, refunded_total={"cents": 5, "currency": "EUR"})
+    # The coherent combination is accepted.
+    partial = evolve(
+        charge,
+        refunded_total=usd(charge.amount.cents // 2),
+        status=ChargeStatus.PARTIALLY_REFUNDED,
+    )
+    assert partial.status is ChargeStatus.PARTIALLY_REFUNDED
+    assert approval_source is world.slack  # untouched
+
+
+def test_evolve_enforces_approval_window_coherence():
+    from cerl.core import ApprovalId, LogicalInstant, MessageId, UserId, evolve
+    from cerl.state import Approval, ApprovalState
+
+    approval = Approval(
+        id=ApprovalId.mint(1),
+        request_message_id=MessageId.mint(1),
+        approver=UserId.mint(2),
+        subject_ref="ch_000000000002",
+        granted_at=LogicalInstant(100),
+        expires_at=LogicalInstant(200),
+        scope_amount_max=None,
+        state=ApprovalState.GRANTED,
+    )
+    # An approval that expires before it was granted: each instant is valid.
+    with pytest.raises(ValidationError):
+        evolve(approval, expires_at=LogicalInstant(50))
+    with pytest.raises(ValidationError):
+        evolve(approval, granted_at=LogicalInstant(500))
+    assert evolve(approval, expires_at=LogicalInstant(300)).expires_at == 300
+
+
+def test_evolve_enforces_ticket_comment_log_coherence(world):
+    from cerl.core import LogicalInstant, evolve
+    from cerl.state import CommentKind, TicketComment
+
+    ticket = next(iter(world.tickets.tickets.values()))
+    author = next(iter(world.slack.users))
+    out_of_order = (
+        TicketComment(index=1, author=author, kind=CommentKind.NOTE, text="b",
+                      posted_at=LogicalInstant(1)),
+        TicketComment(index=0, author=author, kind=CommentKind.NOTE, text="a",
+                      posted_at=LogicalInstant(2)),
+    )
+    with pytest.raises(ValidationError):
+        evolve(ticket, comments=out_of_order)
+
+
+def test_evolve_result_is_a_new_instance_with_reset_memoisation(world):
+    from cerl.core import content_hash, evolve
+
+    world.state_hash()
+    world.as_document()
+    updated = evolve(world, clock=world.clock.advanced(4))
+    assert updated is not world
+    document = dict(updated.model_dump(mode="json"))
+    document.pop("trace", None)
+    assert updated.state_hash() == content_hash(document)
+
+
+def test_evolve_preserves_frozen_container_types_through_full_validation(world):
+    from cerl.core import FrozenMap, evolve
+
+    updated = evolve(world.billing, customers=dict(world.billing.customers))
+    assert isinstance(updated.customers, FrozenMap)
+    revalidated = evolve(updated, refunds={})
+    assert isinstance(revalidated.refunds, FrozenMap)
+    assert isinstance(revalidated.customers, FrozenMap)

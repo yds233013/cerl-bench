@@ -115,6 +115,7 @@ def world() -> WorldState:
             refund_approval_threshold=usd(10000),
             refund_window_days=60,
             approval_ttl_seconds=3600,
+            minimum_actionable_window_ticks=5,
             approver_roles=FrozenMap({"refund_approver": SortedFrozenSet({MANAGER})}),
             prohibited_ops=SortedFrozenSet({"billing.delete_customer", "billing.merge_customers"}),
             rules=FrozenMap(

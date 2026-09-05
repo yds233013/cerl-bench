@@ -28,6 +28,7 @@ from cerl.actions import (
     Escalate,
     Finish,
     PolicyGetRule,
+    SlackGetUser,
     SlackPostMessage,
     SlackReadThread,
     SlackRequestApproval,
@@ -87,7 +88,8 @@ class W2Oracle:
             # Not yet. Polling costs a step, which is the honest price of an
             # asynchronous approval and is reflected in the oracle call count.
             return (SlackReadThread(channel=APPROVALS_CHANNEL),)
-        actions = list(_refund_sequence(truth, approval_ref))
+        actions: list[Action] = [SlackGetUser(user_id=UserId(str(truth.var("approver"))))]
+        actions += _refund_sequence(truth, approval_ref)
         actions += _closure(
             truth,
             f"Refunded the duplicate charge {duplicate} under approval {approval_ref}.",
@@ -128,6 +130,14 @@ def _investigation(truth: GroundTruthView) -> list[Action]:
         PolicyGetRule(rule_key="refund_approval_threshold"),
     ]
     return actions
+
+
+def _approval_approver(truth: GroundTruthView) -> UserId | None:
+    """Whose role must be checked: the approver named on the seeded approval."""
+    approvals = truth.scenario.world.slack.approvals
+    if not approvals:
+        return None
+    return next(iter(sorted(approvals.values(), key=lambda a: a.id))).approver
 
 
 def _customer_query(truth: GroundTruthView) -> str:
@@ -191,6 +201,9 @@ def plan_for(truth: GroundTruthView) -> tuple[Action, ...]:
 
     if branch == BRANCH_REFUND_NOW:
         actions.append(SlackReadThread(channel=APPROVALS_CHANNEL))
+        # policy.approver_role_check: the approval record does not say whether
+        # its approver still holds refund_approver, so this must be checked.
+        actions.append(SlackGetUser(user_id=_approval_approver(truth) or approver))
         approval_ref = any_usable_approval(
             scenario.world.slack,
             scenario.world.policy,
@@ -222,12 +235,17 @@ def plan_for(truth: GroundTruthView) -> tuple[Action, ...]:
         # The tail is reactive: see W2Oracle._continue.
         return tuple(actions)
 
-    # BRANCH_ESCALATE
+    # BRANCH_ESCALATE. The escalation policy rule distinguishes two cases, and
+    # the oracle follows it literally rather than doing whatever is cheapest.
     actions.append(SlackReadThread(channel=APPROVALS_CHANNEL))
-    if not truth.facts.get("approval_present"):
-        # No approval record exists at all, so the right first move is to ask
-        # for one. Escalating without asking would be premature; the approver's
-        # refusal is what establishes that this needs a human decision.
+    if truth.facts.get("approval_present"):
+        # An approval exists but is invalid. Policy: do NOT re-request; escalate
+        # directly. Checking the approver's role is still required, because it
+        # is one of the four conditions and the record alone does not show it.
+        actions.append(SlackGetUser(user_id=_approval_approver(truth) or approver))
+    else:
+        # No approval at all. Policy: request one, and escalate only once it is
+        # refused or fails to arrive.
         actions += [
             SlackRequestApproval(
                 channel=APPROVALS_CHANNEL,

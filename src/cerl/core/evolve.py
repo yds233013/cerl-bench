@@ -64,13 +64,38 @@ def validate_field(model: type[BaseModel], field: str, value: Any) -> Any:
 def evolve(model: ModelT, /, **changes: Any) -> ModelT:
     """Return a copy of ``model`` with ``changes`` applied, fully validated.
 
-    Raises ``UnknownField`` for a field the model does not declare, and
-    ``ValidationError`` for a value that does not satisfy its annotation.
-    Mutable containers are coerced to their immutable declared types rather than
-    being installed as-is.
+    The changed values are checked against their declared annotations first, so
+    a failure names the offending field, and then the **complete reconstructed
+    model is validated through its own class**. That second step is not
+    redundant: field-level validation alone cannot see model-level
+    ``@model_validator`` logic or any invariant spanning two fields, so a
+    combination of individually valid values could otherwise produce an invalid
+    object -- a charge refunded for more than it was worth, an approval that
+    expires before it was granted.
+
+    ``model_copy(update=...)`` is deliberately **not** used as the validation
+    boundary anywhere in this function: it installs values unchecked, which is
+    the whole reason this helper exists. Constructing through
+    ``model_validate`` also yields a genuinely new instance, so any private
+    memoised value (such as ``WorldState``'s cached document and state hash) is
+    reset rather than inherited stale.
+
+    Raises ``UnknownField`` for an undeclared field and ``ValidationError`` for a
+    value -- or a combination of values -- that the model rejects.
     """
     cls = type(model)
+    for field in changes:
+        if field not in cls.model_fields:
+            raise UnknownField(cls, field)
+
+    # Validate each change on its own first: the error then points at the field
+    # rather than at the whole model.
     validated = {
         field: validate_field(cls, field, value) for field, value in changes.items()
     }
-    return model.model_copy(update=validated)
+
+    merged: dict[str, Any] = {
+        name: getattr(model, name) for name in cls.model_fields
+    }
+    merged.update(validated)
+    return cls.model_validate(merged)

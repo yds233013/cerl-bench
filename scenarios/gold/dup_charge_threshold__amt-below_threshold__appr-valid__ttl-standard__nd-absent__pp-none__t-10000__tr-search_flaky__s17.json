@@ -56,8 +56,8 @@
   "predicate_library_hash": "15746cfac6659f485b3d6ca110ea0c9bdd46aa59f578a248f030b5c065eec0ef",
   "required_decision": "act",
   "scenario_id": "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
-  "terminal_state_hash": "b1cf4cef5020257ef15cb110c321acea2b661dead11d3a17a45a31673eac1604",
+  "terminal_state_hash": "f5df95b5c157cffc89bb1f76b13ff73719000b1727e251e92b85453f169c3e33",
   "tool_calls": 10,
-  "trace_head_hash": "01f8b1df5f8abec1b074bacc8896d8851fdceb979eac3d7f18e01c4426e0234e",
+  "trace_head_hash": "342d28cfa5e5785cb08241e97d1b3f2b0fcff331ecc8cbee79b8cca331c919a7",
   "verifier_version": "1.0.0"
 }

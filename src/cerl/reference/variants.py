@@ -47,6 +47,7 @@ from cerl.actions import (
     Escalate,
     Finish,
     PolicyGetRule,
+    SlackGetUser,
     SlackPostMessage,
     SlackReadThread,
     SlackRequestApproval,
@@ -183,7 +184,10 @@ class W2AlternativePolicy:
         approval_ref = _granted_approval_in(observation, str(duplicate))
         if approval_ref is None:
             return (SlackReadThread(channel=APPROVALS_CHANNEL),)
-        return _refund_then_close(truth, approval_ref)
+        return (
+            SlackGetUser(user_id=UserId(str(truth.var("approver")))),
+            *_refund_then_close(truth, approval_ref),
+        )
 
 
 def _granted_approval_in(observation: Observation, subject_ref: str) -> str | None:
@@ -276,8 +280,9 @@ def alternative_plan(truth: GroundTruthView) -> tuple[Action, ...]:
             scenario.world.clock.now,
         )
         actions = [
+            PolicyGetRule(rule_key="approver_role_check"),
+            SlackGetUser(user_id=approver),
             SlackReadThread(channel=APPROVALS_CHANNEL),
-            PolicyGetRule(rule_key="approval_validity"),
         ]
         actions += _locate(truth)
         actions += [BillingGetCharge(charge_id=duplicate), BillingGetCharge(charge_id=original)]
@@ -297,18 +302,35 @@ def alternative_plan(truth: GroundTruthView) -> tuple[Action, ...]:
             ),
             BillingGetCharge(charge_id=duplicate),
             BillingGetCharge(charge_id=original),
-            PolicyGetRule(rule_key="approval_validity"),
+            PolicyGetRule(rule_key="escalation"),
             SlackReadThread(channel=APPROVALS_CHANNEL),
         ]
         return tuple(actions)  # tail is reactive
 
-    # BRANCH_ESCALATE: escalate directly, without requesting an approval first.
+    # BRANCH_ESCALATE. Same policy split as the oracle -- request first only when
+    # no approval exists at all -- reached by a different route.
     actions = [PolicyGetRule(rule_key="escalation")]
     actions += _locate(truth)
     actions += [
         BillingGetCharge(charge_id=duplicate),
         BillingListRefunds(charge_id=duplicate),
         SlackReadThread(channel=APPROVALS_CHANNEL),
+    ]
+    if truth.facts.get("approval_present"):
+        actions.append(SlackGetUser(user_id=approver))
+    else:
+        actions += [
+            SlackRequestApproval(
+                channel=APPROVALS_CHANNEL,
+                subject_ref=str(duplicate),
+                amount_cents=amount,
+                mentions=(approver,),
+                text=f"Approval needed to refund duplicate charge {duplicate}.",
+            ),
+            SlackReadThread(channel=APPROVALS_CHANNEL),
+            SlackReadThread(channel=APPROVALS_CHANNEL),
+        ]
+    actions += [
         SlackPostMessage(
             channel=APPROVALS_CHANNEL,
             text=(

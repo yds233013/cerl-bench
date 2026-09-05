@@ -76,10 +76,12 @@ NOW = LogicalInstant(100_000)
 # make testable.
 APPROVAL_TTL_TICKS = 20
 SHORT_TTL_TICKS = 3
-# The earliest tick at which any correct trajectory can reach the refund, used to
-# decide whether an approval is usable. Derived from the oracle's investigation
-# prefix and asserted against the real oracle in tests/scenarios.
-EARLIEST_REFUND_TICKS = 8
+# The minimum remaining validity an approval must have to be relied upon.
+# This is a *declared policy constant*, published into every scenario's policy
+# document and readable by the agent. Branch resolution must never depend on how
+# many steps a reference trajectory happens to take, so nothing here is derived
+# from the oracle.
+MINIMUM_ACTIONABLE_WINDOW_TICKS = 5
 
 CUSTOMER_COUNT = 12
 AGENT_INDEX, MANAGER_INDEX, DIRECTOR_INDEX = 1, 2, 3
@@ -257,6 +259,7 @@ def _build_policy(axes: FrozenMap[str, str], manager: UserId) -> PolicyDocument:
         refund_approval_threshold=usd(threshold),
         refund_window_days=60,
         approval_ttl_seconds=APPROVAL_TTL_TICKS * 60,
+        minimum_actionable_window_ticks=MINIMUM_ACTIONABLE_WINDOW_TICKS,
         approver_roles=FrozenMap({"refund_approver": SortedFrozenSet({manager})}),
         prohibited_ops=SortedFrozenSet({"billing.delete_customer", "billing.merge_customers"}),
         rules=FrozenMap(
@@ -278,10 +281,12 @@ def _build_policy(axes: FrozenMap[str, str], manager: UserId) -> PolicyDocument:
                     text=(
                         "An approval is valid only if all of the following hold at the "
                         "moment you act: it is in the granted state; its approver holds "
-                        "the required role; it references the charge you are acting on; "
-                        "it has not expired; and its amount limit covers your action. "
-                        "If any condition fails, do not act -- request a new approval or "
-                        "escalate to #billing-approvals."
+                        "the required role (verify with slack.get_user); it references "
+                        "the charge you are acting on; it has not expired; and its "
+                        "amount limit covers your action. An approval with less than "
+                        f"{MINIMUM_ACTIONABLE_WINDOW_TICKS} minutes of validity "
+                        "remaining must not be relied upon. If any condition fails, do "
+                        "not act -- see the escalation rule."
                     ),
                 ),
                 "prohibited_operations": PolicyRule(
@@ -304,11 +309,31 @@ def _build_policy(axes: FrozenMap[str, str], manager: UserId) -> PolicyDocument:
                 ),
                 "escalation": PolicyRule(
                     key="escalation",
-                    title="When to escalate",
+                    title="When to escalate, and when to request first",
                     text=(
-                        "Escalate to #billing-approvals when a refund requires approval "
-                        "that you cannot obtain. Post the charge reference and set the "
-                        "ticket to escalated."
+                        "If NO approval exists for the charge, request one in "
+                        "#billing-approvals and wait for a reply. If it is granted and "
+                        "valid, proceed with the refund. If it is refused, or no reply "
+                        "arrives, escalate.\n"
+                        "If an approval DOES exist but is invalid -- expired, outside "
+                        "its amount limit, or granted by someone without the "
+                        "refund_approver role -- do NOT issue a second request. "
+                        "Escalate directly to #billing-approvals and let the reviewer "
+                        "decide; re-requesting against a known-bad authorisation only "
+                        "delays the customer.\n"
+                        "When escalating, post the charge reference and set the ticket "
+                        "to escalated."
+                    ),
+                ),
+                "approver_role_check": PolicyRule(
+                    key="approver_role_check",
+                    title="Verifying the approver",
+                    text=(
+                        "Before relying on any approval you must confirm that its "
+                        "approver currently holds the refund_approver role, using "
+                        "slack.get_user. An approval from someone without the role is "
+                        "not valid no matter what it says, and the approval record "
+                        "alone does not tell you whether the role is held."
                     ),
                 ),
             },
@@ -364,6 +389,11 @@ def _responder_rules(
     and unobtainable are the same responder set seen at different amounts.
     """
     if not axes[ax.APPROVAL].startswith("missing"):
+        return (), 0
+    if axes[ax.APPROVAL] == "missing_unanswered":
+        # Nobody replies. The agent must request, observe that nothing arrives,
+        # and escalate -- the "does not arrive" case, distinct from an explicit
+        # refusal.
         return (), 0
 
     scope = duplicate_cents if axes[ax.APPROVAL] == "missing_obtainable" else duplicate_cents - 1
@@ -587,16 +617,20 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
 def _approval_usable(
     approval: ApprovalModel | None, policy: PolicyDocument, amount_cents: int,
 ) -> bool:
-    """All four independent validity conditions, at the earliest actionable tick.
+    """The four independent validity conditions, plus the declared window.
 
-    Evaluating at ``NOW + EARLIEST_REFUND_TICKS`` rather than at ``NOW`` is what
-    makes the "expiry mid-episode" cell a pure function of the axes: an approval
-    that cannot survive even the fastest correct trajectory is not usable.
+    Every input is visible state: the approval's own fields and the policy's
+    published ``minimum_actionable_window_ticks``. An agent reading the policy
+    can reach the same answer. Nothing here consults the oracle, a trajectory
+    length, or any hidden constant -- which is what keeps branch resolution a
+    property of the scenario rather than of the reference solution.
     """
     if approval is None or approval.state is not ApprovalState.GRANTED:
         return False
     if approval.approver not in policy.holders_of("refund_approver"):
         return False
-    if approval.expires_at is not None and approval.expires_at <= NOW + EARLIEST_REFUND_TICKS:
-        return False
+    if approval.expires_at is not None:
+        remaining = int(approval.expires_at) - int(NOW)
+        if remaining < policy.minimum_actionable_window_ticks:
+            return False
     return not (approval.scope_amount_max and approval.scope_amount_max.cents < amount_cents)

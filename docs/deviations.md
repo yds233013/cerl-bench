@@ -132,9 +132,27 @@ wrong-prefix id or an invalid enum could be installed on state unchecked. All
 updates in `state`, `tools` and `env` go through `evolve`, which validates each
 changed field against its declared annotation. Enforced by an AST test.
 
-## 11. Open: Phase 1B criterion 41
+## 11. Criterion 41 — now satisfied
 
-The ±1 oracle-tool-call difficulty invariant is **not** currently satisfied
-between `request_then_refund` and the other act-branches. This is stated, not
-waived — see `docs/criterion-41.md` for the analysis and proposal. No Phase 1B
-work has been done.
+The ±1 oracle-tool-call difficulty invariant **is** satisfied: 59/59 declared
+CF/ID pairs, no exemption, no widened tolerance. The temporary ±4 allowance has
+been removed. See `docs/criterion-41.md`.
+
+Reaching it required four W2 changes, all of them independently justified:
+the approver-role check (a real gap — `unauthorized_approver` was undetectable
+without it), policy-governed reauthorization, the `missing_unanswered` axis
+value, and replacing the oracle-derived `EARLIEST_REFUND_TICKS` with the
+published `policy.minimum_actionable_window_ticks`.
+
+## 12. `evolve` validates the complete model
+
+Field-level `TypeAdapter` validation alone cannot see `@model_validator` logic
+or any invariant spanning two fields, so `evolve` now validates the changed
+fields (for a precise error) and then reconstructs through
+`cls.model_validate(...)`. `model_copy(update=...)` is not used as the
+validation boundary anywhere, asserted by an AST test over `evolve` itself.
+
+Real cross-field validators were added where the domain has them: a charge's
+refunded total must agree with its amount and status; an approval cannot expire
+before it was granted; a ticket's comment indices must be contiguous from zero;
+a refund must return a positive amount.

@@ -50,6 +50,10 @@
       "thread_id": null
     },
     {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
       "amount_cents": 42000,
       "approval_ref": "apr_6e1ad41f05ba",
       "charge_id": "ch_000000000002",
@@ -77,8 +81,8 @@
   "predicate_library_hash": "15746cfac6659f485b3d6ca110ea0c9bdd46aa59f578a248f030b5c065eec0ef",
   "required_decision": "act",
   "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
-  "terminal_state_hash": "1aa4171d396118e457721699efba98f50a2df506cfa497cfbd25eb511b82f0d9",
-  "tool_calls": 13,
-  "trace_head_hash": "35b72187917e3a948acaf52eefc3eba87595abad35037aae899a1eef7e8da4af",
+  "terminal_state_hash": "19e0f9d0b3ee9dabd77f4f519f57027325986ca2fa6970eac88b1bc508fa3ac9",
+  "tool_calls": 14,
+  "trace_head_hash": "7d3bb4a22b7173714e8b5b70b918984ff4d2b8c0089d2adbd6a909bb9b059376",
   "verifier_version": "1.0.0"
 }

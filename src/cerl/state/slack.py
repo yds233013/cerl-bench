@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Self
+
+from pydantic import model_validator
 
 from cerl.core import (
     ApprovalId,
@@ -72,6 +75,21 @@ class Approval(Frozen):
     expires_at: LogicalInstant | None
     scope_amount_max: Money | None
     state: ApprovalState
+
+    @model_validator(mode="after")
+    def _window_is_coherent(self) -> Self:
+        """An approval cannot expire before it was granted.
+
+        Both instants are individually valid; only their relationship is not.
+        """
+        if self.expires_at is not None and self.expires_at <= self.granted_at:
+            raise ValueError(
+                f"approval expires at {int(self.expires_at)} but was granted at "
+                f"{int(self.granted_at)}",
+            )
+        if self.scope_amount_max is not None and self.scope_amount_max.cents < 0:
+            raise ValueError("an approval limit cannot be negative")
+        return self
 
 
 class SlackState(Frozen):

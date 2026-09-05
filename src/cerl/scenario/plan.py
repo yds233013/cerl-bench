@@ -102,20 +102,50 @@ def threshold_instances() -> tuple[tuple[FrozenMap[str, str], int], ...]:
     return tuple(out)
 
 
-def all_instances() -> tuple[tuple[FrozenMap[str, str], int], ...]:
-    """Cells plus the product, de-duplicated on (axes, seed)."""
+def _dedup(
+    instances: tuple[tuple[FrozenMap[str, str], int], ...],
+) -> tuple[tuple[FrozenMap[str, str], int], ...]:
     seen: set[tuple[tuple[tuple[str, str], ...], int]] = set()
     out = []
-    for assignment, seed in (
-        *cell_instances(),
-        *product_instances(),
-        *reliability_instances(),
-        *prior_progress_instances(),
-        *threshold_instances(),
-    ):
+    for assignment, seed in instances:
         key = (tuple(sorted(assignment.items())), seed)
         if key in seen:
             continue
         seen.add(key)
         out.append((assignment, seed))
     return tuple(out)
+
+
+def sibling_closure(
+    instances: tuple[tuple[FrozenMap[str, str], int], ...],
+) -> tuple[tuple[FrozenMap[str, str], int], ...]:
+    """Add the ID sibling of every held-out instance.
+
+    The difficulty invariant compares each counterfactual instance against a
+    specific in-distribution one. If that sibling were not frozen, the pair would
+    be unmeasurable and the invariant would quietly cover only the subset that
+    happened to have a partner -- which is how a confound survives.
+    """
+    from cerl.scenario import siblings
+
+    extra = [
+        (siblings.sibling_axes(assignment), seed)
+        for assignment, seed in instances
+        if siblings.is_held_out(assignment)
+    ]
+    return _dedup((*instances, *tuple(extra)))
+
+
+def all_instances() -> tuple[tuple[FrozenMap[str, str], int], ...]:
+    """Cells, product and axis sweeps, closed under ID-sibling pairing."""
+    return sibling_closure(
+        _dedup(
+            (
+                *cell_instances(),
+                *product_instances(),
+                *reliability_instances(),
+                *prior_progress_instances(),
+                *threshold_instances(),
+            ),
+        ),
+    )

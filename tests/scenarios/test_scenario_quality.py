@@ -35,7 +35,10 @@ def test_exactly_one_branch_matches_across_the_full_axis_product():
         matching = [b for b in TEMPLATE.branches if b.matches(scenario.facts)]
         assert len(matching) == 1, (dict(assignment), [b.name for b in matching])
         checked += 1
-    assert checked == 6 * 2 * 3 * 2 * 3 * 3 * 2
+    expected = 1
+    for values in ax.AXIS_VALUES.values():
+        expected *= len(values)
+    assert checked == expected
 
 
 def test_resolved_rubric_is_byte_exact_against_re_resolution(all_frozen):
@@ -235,44 +238,175 @@ def test_act_correct_branches_exist_so_always_escalate_is_penalised(all_frozen):
     assert len(escalate) >= 10
 
 
-def test_difficulty_invariants_between_counterfactual_siblings(all_frozen):
-    """CF variants must not simply be harder than their ID siblings.
+def _declared_pairs(all_frozen):
+    """Every held-out instance paired with its declared ID sibling."""
+    from cerl.scenario import siblings
 
-    If they were, the ID/CF gap would measure difficulty rather than
-    overfitting -- the single largest threat to this benchmark's validity.
-
-    NOTE: the tool-call allowance below is **wider than Phase 1B criterion 41
-    requires** for the branches where an approval must be obtained. That is an
-    open, documented violation, not a satisfied criterion -- see
-    ``docs/criterion-41.md`` for the measured spread and the proposal to reach
-    the required +/-1 without padding. Structural parity (entity counts, brief
-    length) is enforced strictly here.
-    """
-    baseline = {
-        s.axes["approval"]: s
-        for s in all_frozen
-        if s.root_seed == 17
-        and s.axes["amount_band"] == "above_threshold"
-        and s.axes["near_duplicate"] == "absent"
-        and s.axes["tool_reliability"] == "stable"
-        and s.axes["prior_progress"] == "none"
-        and s.axes["approval_ttl"] == "standard"
-    }
-    reference = baseline["valid"]
-    ref_calls = reference.oracle_tool_calls or 0
-    ref_entities = len(reference.world.billing.customers)
-    ref_brief = len(reference.brief)
-
-    for approval, scenario in baseline.items():
-        if approval == "valid":
+    by_axes = {(tuple(sorted(s.axes.items())), s.root_seed): s for s in all_frozen}
+    pairs = []
+    for scenario in all_frozen:
+        if not siblings.is_held_out(scenario.axes):
             continue
-        calls = scenario.oracle_tool_calls or 0
-        # Obtaining an approval genuinely costs turns; everything else must be
-        # within one call of the reference.
-        allowance = 4 if approval.startswith("missing") else 1
-        assert abs(calls - ref_calls) <= allowance, (approval, calls, ref_calls)
-        assert len(scenario.world.billing.customers) == ref_entities, approval
-        assert abs(len(scenario.brief) - ref_brief) <= 0.15 * ref_brief, approval
+        key = (tuple(sorted(siblings.sibling_axes(scenario.axes).items())), scenario.root_seed)
+        assert key in by_axes, (
+            f"{scenario.scenario_id} has no frozen ID sibling; the difficulty "
+            f"invariant would silently skip it"
+        )
+        pairs.append((scenario, by_axes[key]))
+    return pairs
+
+
+def test_every_held_out_instance_has_exactly_one_declared_sibling(all_frozen):
+    from cerl.scenario import siblings
+
+    pairs = _declared_pairs(all_frozen)
+    assert pairs, "no held-out instances were frozen"
+    held_out = [s for s in all_frozen if siblings.is_held_out(s.axes)]
+    assert len(pairs) == len(held_out)
+    # The mapping is total over the declared held-out set.
+    assert set(siblings.SIBLING_OF) == set(
+        __import__("cerl.scenario.axes", fromlist=["x"]).HELD_OUT_APPROVAL_VALUES,
+    )
+
+
+def test_pairs_differ_only_in_the_declared_intervention_axis(all_frozen):
+    """A pair must isolate the intervention and nothing else."""
+    from cerl.scenario.siblings import INTERVENTION_AXIS, INVARIANT_AXES, differing_axes
+
+    for cf, sibling in _declared_pairs(all_frozen):
+        differing = differing_axes(cf.axes, sibling.axes)
+        assert differing == (INTERVENTION_AXIS,), (
+            f"{cf.scenario_id} vs {sibling.scenario_id} differ in {differing}, "
+            f"not only in {INTERVENTION_AXIS}"
+        )
+        for axis in INVARIANT_AXES:
+            assert cf.axes[axis] == sibling.axes[axis], (cf.scenario_id, axis)
+        assert cf.root_seed == sibling.root_seed
+        assert cf.template_id == sibling.template_id
+
+
+def test_criterion_41_difficulty_invariant(all_frozen):
+    """|Δ oracle tool calls| <= 1 for every declared CF/ID pair.
+
+    No branch-specific exemption, no widened tolerance. If a pair cannot meet
+    this, the counterfactual is doing more work than its sibling and the ID/CF
+    gap would measure difficulty rather than overfitting.
+    """
+    failures = []
+    for cf, sibling in _declared_pairs(all_frozen):
+        cf_calls, id_calls = cf.oracle_tool_calls, sibling.oracle_tool_calls
+        assert cf_calls is not None and id_calls is not None
+        if abs(cf_calls - id_calls) > 1:
+            failures.append(
+                f"{cf.axes['approval']} -> {sibling.axes['approval']} "
+                f"(seed {cf.root_seed}, {cf.axes['amount_band']}): "
+                f"{cf_calls} vs {id_calls}",
+            )
+    assert not failures, "criterion 41 violated:\n" + "\n".join(failures)
+
+
+def test_pairs_have_equal_entity_cardinality_and_similar_briefs(all_frozen):
+    for cf, sibling in _declared_pairs(all_frozen):
+        assert len(cf.world.billing.customers) == len(sibling.world.billing.customers), (
+            cf.scenario_id
+        )
+        assert len(cf.world.billing.charges) == len(sibling.world.billing.charges), (
+            cf.scenario_id
+        )
+        assert len(cf.world.tickets.tickets) == len(sibling.world.tickets.tickets)
+        delta = abs(len(cf.brief) - len(sibling.brief)) / max(len(sibling.brief), 1)
+        assert delta <= 0.15, f"{cf.scenario_id}: brief length differs by {delta:.1%}"
+
+
+def test_no_padding_calls_in_either_reference_policy(all_frozen):
+    """Every oracle call must change state or acquire needed information.
+
+    Guards the invariant against being met by inserting filler: a repeated
+    read of something already read, with no state change in between, is padding.
+    """
+    from cerl.actions.models import MUTATING_KINDS
+    from cerl.reference import W2AlternativePolicy, W2Oracle, run_reference
+
+    for scenario in all_frozen[:20]:
+        for policy in (W2Oracle(), W2AlternativePolicy()):
+            episode = run_reference(scenario, policy)
+            from cerl.actions import Outcome
+
+            seen: set[str] = set()
+            previous_failed = False
+            for entry in episode.trace.agent_entries():
+                kind = entry.action_kind
+                if kind in MUTATING_KINDS or kind in {"finish", "escalate", "abstain"}:
+                    seen.clear()  # state moved; earlier reads may need repeating
+                    previous_failed = False
+                    continue
+                signature = f"{kind}:{entry.action.model_dump_json()}"
+                repeated = signature in seen
+                # Two repeats are legitimate: retrying a call that failed, and
+                # polling the approval thread for an asynchronous reply. Any
+                # other repeat is a read whose answer the agent already had.
+                excused = previous_failed or kind == "slack.read_thread"
+                if repeated and not excused:
+                    msg = (
+                        f"{scenario.scenario_id}/{type(policy).__name__}: "
+                        f"repeated read {kind} with no intervening state change"
+                    )
+                    raise AssertionError(msg)
+                seen.add(signature)
+                previous_failed = entry.outcome is Outcome.FAILED
+
+
+def test_branch_resolution_uses_only_visible_state(all_frozen):
+    """Branch selection must not depend on the oracle or on trajectory length."""
+    # The decision path: how facts are computed, and how a branch is chosen from
+    # them. ``FrozenScenario.oracle_tool_calls`` exists elsewhere in the package
+    # as a *recorded measurement* for efficiency reporting; what must not happen
+    # is a branch depending on it.
+    import ast
+    import inspect
+    import textwrap
+
+    from cerl.scenario import generator
+    from cerl.scenario.schema import BranchSpec, ScenarioTemplate
+
+    def executable_source(fn) -> str:
+        """Source with docstrings removed.
+
+        Scanned over code rather than prose: these functions' docstrings
+        *explain* that they do not consult the oracle, so a raw text search would
+        match its own rationale.
+        """
+        tree = ast.parse(textwrap.dedent(inspect.getsource(fn)))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
+                body = node.body
+                if (
+                    body
+                    and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)
+                ):
+                    node.body = body[1:] or [ast.Pass()]
+        return ast.unparse(tree)
+
+    decision_path = "\n".join(
+        executable_source(fn)
+        for fn in (
+            generator._approval_usable,
+            generator.generate,
+            BranchSpec.matches,
+            ScenarioTemplate.resolve_branch,
+        )
+    )
+    for token in ("oracle", "trajectory", "EARLIEST_REFUND", "tool_calls", "len(actions)"):
+        assert token not in decision_path, f"branch resolution references {token!r}"
+
+    # Usability reads only the approval's own fields plus a policy value the
+    # agent can retrieve through policy.get_rule.
+    for scenario in all_frozen:
+        assert scenario.world.policy.minimum_actionable_window_ticks > 0
+        assert "approval_validity" in scenario.world.policy.rules
+        assert "approver_role_check" in scenario.world.policy.rules
 
 
 def test_lexicon_shards_are_pairwise_disjoint():

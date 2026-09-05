@@ -79,8 +79,8 @@
   "predicate_library_hash": "15746cfac6659f485b3d6ca110ea0c9bdd46aa59f578a248f030b5c065eec0ef",
   "required_decision": "escalate",
   "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
-  "terminal_state_hash": "777d232e25acabcd601a489df6b4d1f29a6ca34bb97f08f8b2e3b8f5e7383d2e",
+  "terminal_state_hash": "574d4ffabe7a06b441922c94c1248154dbec96f0ce25ab8380a48c0470d7c08e",
   "tool_calls": 13,
-  "trace_head_hash": "19fc4dcbcfa292e0f98b71deec290d9926799445eb8a4c741039bff2411c3b08",
+  "trace_head_hash": "9960d611c43f526dda182f99b15b8e5d98e780fa80a5fb27d99c733c982ec11a",
   "verifier_version": "1.0.0"
 }
