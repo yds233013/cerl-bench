@@ -3,7 +3,7 @@
 One canonical status. `README.md` and `MORNING_REPORT.md` both defer to this
 file; where any other document disagrees, this one is correct.
 
-Last updated 2026-09-05, after the pre-pilot holdout and crash-safety checks.
+Last updated 2026-09-05, after the canonical split 1.2.0 leakage repair.
 
 ## Two different kinds of "not done"
 
@@ -38,7 +38,8 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Control baselines (5 unprivileged, 2 privileged references) | **MEASURED** | `docs/baselines.md`, pinned in `tests/eval/test_controls.py` |
 | Control metrics separated (task / harm / decision) | **IMPLEMENTED** | a single "safe" column conflated task success with harmlessness |
 | Criterion 41 — matched CF/ID pairs | **PASS, on 104 pairs** | see deviation 1 |
-| Criterion 42 — no held-out value in training data | **PASS, via eligibility** | was failing on partition alone: 85/144; see deviation 5 |
+| **Criterion 42** — lexicon disjointness **and** no held-out value in training | **FAIL** | two clauses; the second now passes on the canonical split, the first does not. See deviation 5 |
+| Canonical split 1.2.0 | **IMPLEMENTED** | 44 sibling groups moved; 0 scenario files regenerated |
 | W1 `identity_evidence` generalization | **NOT TESTED** | see deviation 1 |
 | Pilot selection + split audit | **IMPLEMENTED** | `cerl pilot --dry-run`; `docs/pilot-split-audit.md` |
 | Pilot execution path | **IMPLEMENTED** | `cerl pilot --execute --synthetic`, 20/20 episodes offline |
@@ -48,9 +49,10 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
 | **Live pilot execution** | **BLOCKED_EXTERNAL** | see deviation 2 — built, tested, awaiting authorisation |
 | Per-request ledger persistence | **IMPLEMENTED** | write-ahead journal, `fsync`ed before each send; 12 crash-recovery tests |
-| Holdout-vs-training inventory | **IMPLEMENTED** | split 1.1.0; `docs/pilot-split-audit.md` |
-| Ten-branch pilot coverage | **NOT_IMPLEMENTED** (corpus) | 2 W3 branches are reachable only via held-out values; 8/10 eligible, reported not backfilled |
-| Evaluation-partition pilot coverage | **NOT_IMPLEMENTED** (corpus) | 4 branches have no evaluation instances; W3 has no evaluation partition at all |
+| Holdout-vs-training inventory | **IMPLEMENTED** | `docs/pilot-split-audit.md` |
+| Per-partition lexicon shards in the corpus | **NOT_IMPLEMENTED** | shards exist and are disjoint; all scenarios use `core`. Needs corpus regeneration |
+| Ten-branch training coverage | **NOT_IMPLEMENTED** (corpus) | 5/10 branches after the 1.2.0 repair; reported, never backfilled |
+| Evaluation-partition branch coverage | **RESOLVED by 1.2.0** | was 6/10; validation and evaluation now cover 10/10 |
 | Investigate-then-abstain / -act controls | **NOT_IMPLEMENTED** | `docs/baselines.md` |
 | SFT, GRPO, curriculum arms, HTTP/MCP adapters, frontend | **NOT STARTED** | out of Phase 1B scope by instruction |
 
@@ -97,36 +99,43 @@ model result.**
 
 ## Deviation 3 — the pilot is a development smoke test, not a held-out evaluation
 
-The pilot draws only from the `train` partition, because its outcomes may inform
-fixes. It is not a held-out evaluation and no result from it may be reported as
-one. The other 170 scenarios keep their partitions and are **not** relabelled as
-development data.
+The pilot draws only from the canonical training partition, because its outcomes
+may inform fixes. It is not a held-out evaluation and no result from it may be
+reported as one. The other 175 scenarios keep their partitions and are **not**
+relabelled as development data.
 
-One conflict is recorded rather than resolved: the `evaluation` partition cannot
-supply all ten branches — four have zero evaluation instances — so a
-full-coverage held-out pilot is impossible with this corpus.
-`cerl pilot --partition evaluation` reports the conflict instead of borrowing
-from another partition. `docs/pilot-split-audit.md` has the detail.
+Training reaches **5 of 10 branches** under split 1.2.0, so the pilot is 5
+episodes. That limit is reported by `cerl pilot`, which names the five missing
+branches, and it is never resolved by importing a held-out value.
 
-## Deviation 5 — partition membership did not mean training eligibility
+## Deviation 5 — Criterion 42 fails on its lexicon clause
 
-An inventory of intervention-axis values by partition found **85 of the 144
-`train` scenarios carry a registered held-out value**. That follows from the
-approved partition rule (a counterfactual and its ID sibling share a partition)
-and is correct for pairing, but it meant Criterion 42 — no held-out value in
-training data — was not actually satisfied by the partition label.
+Criterion 42 has **two** clauses. They do not have the same answer, and the
+criterion is marked **FAIL** because it may be PASS only when both hold
+literally.
 
-Split **1.1.0** adds an explicit, versioned training-eligibility predicate:
-`train` partition **and** not a registered holdout. **No scenario moved
-partitions and no frozen file was regenerated**; a test recomputes every
-scenario's 1.0.0 partition and asserts it is unchanged. 59 of 190 scenarios are
-eligible.
+**Clause B — no held-out value in the training split: PASS.** An inventory found
+85 of the 144 `train` scenarios under split 1.0.0 carried a registered held-out
+value, a consequence of the approved rule that a counterfactual and its ID
+sibling share a partition. Split **1.1.0** filtered them at the pilot selector,
+which left the split itself broken for every other consumer. Split **1.2.0**
+repairs the split: a sibling group containing any registered held-out value is
+never training data, and such groups move whole so pair integrity survives. 44 of
+86 groups moved; **no scenario file was regenerated** and every committed sha256
+still matches. Training now holds 15 scenarios and **zero** holdouts, asserted
+directly on `partition_of` rather than through the selector.
 
-The cost is stated rather than engineered around: **the pilot reaches 8 of 10
-branches.** Two W3 branches are reachable only through held-out values, and
-importing one to restore coverage is the leakage this check exists to prevent.
-`docs/pilot-split-audit.md` has the inventory, the three both-member groups, and
-what "counterfactual" did and did not mean under 1.0.0.
+**Clause A — lexicon shards pairwise disjoint across splits: FAIL.** Every frozen
+scenario draws from the `core` shard, so partitions share 15–17 entity names. The
+shard pools *are* disjoint; the corpus was generated before they were wired in.
+This cannot be repaired by relabelling — the names are in the frozen files — and
+fixing it means regenerating the corpus with a generator version bump. Recorded
+as `NOT_IMPLEMENTED`, with a test that fails loudly once it is done.
+
+The cost of clause B is stated rather than engineered around: **training coverage
+fell from 8 branches to 5**, and W3 contributes no training scenario at all. The
+development pilot is correspondingly **5 episodes, not 8**. Detail, tables and
+per-group provenance in `docs/pilot-split-audit.md`.
 
 ## Deviation 4 — no dollar guarantee on spend
 

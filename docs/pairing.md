@@ -99,3 +99,29 @@ counterfactual instances were structurally *larger* than their siblings and
 failed the entity-cardinality half of the criterion. Every world now carries the
 same refund history and the signal varies **when** it happened — which is the
 honest counterfactual anyway.
+
+
+## Pairing and the canonical split (1.2.0)
+
+A pair is a comparison, not a partition. Keeping both members together is what
+makes the comparison valid; deciding *which* partition they go to is a separate
+question, and conflating the two is what produced the 1.0.0 leak.
+
+Under **split 1.2.0**:
+
+- Both members of every declared pair remain in the same partition. Unchanged,
+  and asserted on the scenarios themselves rather than on the grouping key.
+- A sibling group containing **any** registered held-out value is never training
+  data. Since every pair contains one by definition, **no complete pair is ever
+  training data** — pairs live in validation and evaluation, which is where the
+  ID/CF contrast is measured anyway.
+- Training therefore contains only pure-ID groups: 15 scenarios, 5 of the 10
+  outcome branches.
+
+This is the design's CF-axis tier made literal. It also means the training
+partition is small, and that is a corpus fact rather than a split defect: 159 of
+190 scenarios live in CF-bearing groups. Enlarging training means freezing more
+in-distribution instances, not relaxing the rule.
+
+Criterion 41 is unaffected — 104 matched pairs, unchanged. Which partition a pair
+occupies does not alter the pair.

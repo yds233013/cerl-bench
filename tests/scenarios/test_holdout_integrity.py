@@ -1,9 +1,10 @@
 """Registered holdouts versus actual training data.
 
-The check that found the leak: a partition label says which side of a *paired
-comparison* a group belongs to, and says nothing about whether a policy may be
-trained on it. Those are different questions, and answering the second with the
-first put 85 registered counterfactuals inside the training partition.
+The check that found the leak. It is retained after the 1.2.0 repair and
+retargeted at ``partition_v1_0_0``, so the historical finding stays asserted
+rather than becoming folklore: under 1.0.0, 85 registered counterfactuals sat in
+the training partition. Assertions about the *canonical* split live in
+``test_canonical_split.py``.
 """
 
 from __future__ import annotations
@@ -24,26 +25,42 @@ def inventory(all_frozen):
 # --------------------------------------------------------------------------
 
 
-def test_the_train_partition_does_contain_registered_held_out_values(all_frozen):
-    """Not a bug in the partition -- a consequence of its approved rule.
+def test_the_1_0_0_train_partition_did_contain_registered_held_out_values(all_frozen):
+    """The historical defect, pinned against the frozen 1.0.0 rule.
 
-    Partition rule 1 puts a counterfactual and its ID sibling together on
-    purpose. So held-out values appear in whichever partition their pair lands
-    in, train included. Asserting it here keeps the eligibility layer's reason
-    for existing visible rather than folkloric.
+    Not a bug in the partition -- a consequence of its approved rule, which puts
+    a counterfactual and its ID sibling together on purpose. It *was* a bug in
+    treating that partition as training data, which is what 1.2.0 fixed.
     """
-    train = splits.select(list(all_frozen), splits.Partition.TRAIN)
+    train = [
+        s for s in all_frozen if splits.partition_v1_0_0(s) is splits.Partition.TRAIN
+    ]
     held_out = [s for s in train if siblings.is_held_out(s.axes, s.template_id)]
     assert len(held_out) == 85, len(held_out)
     assert len(train) == 144
 
 
 def test_training_eligible_scenarios_contain_no_registered_held_out_value(all_frozen):
-    """The assertion the closeout asked for. This is the leakage gate."""
+    """Now trivially true, because the canonical split itself is clean."""
     eligible = splits.training_eligible(list(all_frozen))
     leaked = [s for s in eligible if siblings.is_held_out(s.axes, s.template_id)]
     assert leaked == [], [s.scenario_id for s in leaked]
-    assert len(eligible) == 59
+    assert len(eligible) == 15
+
+
+def test_the_1_1_0_filter_would_have_kept_59_scenarios(all_frozen):
+    """What the runtime filter achieved, kept as the record of why it was not enough.
+
+    59 eligible scenarios under 1.0.0 partitions -- clean at the selector, while
+    the split beneath it still shipped 85 counterfactuals as training data.
+    """
+    filtered = [
+        s
+        for s in all_frozen
+        if splits.partition_v1_0_0(s) is splits.Partition.TRAIN
+        and not siblings.is_held_out(s.axes, s.template_id)
+    ]
+    assert len(filtered) == 59
 
 
 def test_every_eligible_scenario_is_in_the_train_partition(all_frozen):
@@ -52,22 +69,26 @@ def test_every_eligible_scenario_is_in_the_train_partition(all_frozen):
 
 
 def test_ineligibility_names_a_specific_reason(all_frozen):
-    """Two independent reasons; a scenario can be excluded for either."""
+    """Under 1.2.0 only one reason can fire, because the split is clean.
+
+    ``REGISTERED_HELD_OUT`` is kept as a backstop against a split regression, so
+    its absence here is the property under test, not a gap.
+    """
     reasons = {
         splits.training_ineligibility(s)
         for s in all_frozen
         if not splits.is_training_eligible(s)
     }
-    assert reasons == {
-        splits.Ineligibility.NOT_TRAIN_PARTITION,
-        splits.Ineligibility.REGISTERED_HELD_OUT,
-    }
+    assert reasons == {splits.Ineligibility.NOT_TRAIN_PARTITION}
 
 
-def test_the_eligibility_layer_is_versioned(inventory):
+def test_the_split_versions_are_all_preserved(inventory):
+    """1.0.0 and 1.1.0 stay readable; 1.2.0 is canonical."""
+    assert splits.SPLIT_VERSION == "1.1.0"
     assert splits.ELIGIBILITY_VERSION == "1.1.0"
-    assert splits.SPLIT_VERSION == splits.ELIGIBILITY_VERSION
-    assert inventory.version == "1.1.0"
+    assert splits.SPLIT_VERSION_CANONICAL == "1.2.0"
+    assert inventory.version == "1.2.0"
+    assert callable(splits.partition_v1_0_0)
 
 
 # --------------------------------------------------------------------------
@@ -82,15 +103,20 @@ def test_the_inventory_covers_every_family_and_partition(all_frozen, inventory):
     assert sum(inventory.counts.values()) == len(all_frozen)
 
 
-def test_the_inventory_records_which_held_out_values_reach_train(inventory):
-    assert sum(inventory.held_out_in_train.values()) == 85
+def test_the_inventory_shows_no_holdout_reaching_canonical_training(inventory):
+    """The inventory reads the canonical split, so this is now zero."""
+    assert sum(inventory.held_out_in_train.values()) == 0
+    assert inventory.held_out_in_train == {}
     assert len(inventory.held_out_values) == 11
+    assert inventory.eligible == 15
 
 
-def test_no_partition_is_free_of_held_out_values_by_accident(all_frozen):
-    """Validation carries them too, so eligibility is not a train-only concern."""
-    validation = splits.select(list(all_frozen), splits.Partition.VALIDATION)
-    assert any(siblings.is_held_out(s.axes, s.template_id) for s in validation)
+def test_validation_and_evaluation_carry_the_holdouts(all_frozen):
+    """They have to go somewhere; 1.2.0 sends them to the held-out partitions."""
+    for partition in (splits.Partition.VALIDATION, splits.Partition.EVALUATION):
+        members = splits.select(list(all_frozen), partition)
+        held = [s for s in members if siblings.is_held_out(s.axes, s.template_id)]
+        assert held, partition
 
 
 # --------------------------------------------------------------------------
@@ -121,11 +147,11 @@ def test_a_pairs_entities_never_straddle_the_split(all_frozen):
     assert all(len(v) == 1 for v in by_identity.values())
 
 
-def test_no_scenario_moved_partition_in_the_1_1_0_correction(all_frozen):
-    """Provenance: the fix added a layer, it did not relabel anything.
+def test_the_1_1_0_layer_relabelled_nothing(all_frozen):
+    """Provenance: 1.1.0 added a filter and moved no scenario.
 
-    Partition assignment is still a pure function of the pair key, so the 1.0.0
-    partition of every scenario is recomputable and unchanged.
+    Asserted against ``partition_v1_0_0``, which 1.1.0 used unchanged. The
+    partition moves belong to 1.2.0 and are audited in ``test_canonical_split``.
     """
     for scenario in all_frozen:
         bucket = int(splits.pair_key(scenario)[:8], 16) % 100
@@ -136,4 +162,4 @@ def test_no_scenario_moved_partition_in_the_1_1_0_correction(all_frozen):
             if bucket < splits.TRAIN_SHARE + splits.VALIDATION_SHARE
             else splits.Partition.EVALUATION
         )
-        assert splits.partition_of(scenario) is expected
+        assert splits.partition_v1_0_0(scenario) is expected

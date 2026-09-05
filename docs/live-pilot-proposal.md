@@ -15,7 +15,7 @@ reported as one. Re-derive them free with `uv run cerl pilot --dry-run`.
 | | |
 |---|---|
 | Provider | Anthropic first-party API (`anthropic` SDK, an optional extra) |
-| Selection pool | training-eligible only (split 1.1.0) |
+| Selection pool | canonical training partition (split 1.2.0) |
 | Model id | **`claude-opus-5`** |
 | Thinking | `{"type": "adaptive"}` |
 | Effort | `output_config={"effort": "medium"}` |
@@ -36,49 +36,32 @@ byte-reproducible. What *is* reproducible offline is the recorded run: `cerl
 verify-manifest` replays the actions with no model in the loop, and `cerl
 regenerate` replays the transcripts from cache.
 
-## 2. Scenario selection — audited against the split manifest
+## 2. Scenario selection — audited against the canonical split
 
-**Drawn entirely from training-eligible scenarios**: the `train` partition
-*minus* every scenario carrying a value registered as held out. Selection is
+**Drawn from the canonical training partition (split 1.2.0).** Selection is
 deterministic — within each `(family, branch)`, the lowest `scenario_id` values
 in sort order. No sampling, no seed.
 
-**This changed after an audit found leakage.** 85 of the 144 `train` scenarios
-are registered counterfactuals, because a CF and its ID sibling deliberately
-share a partition. The previous 20-scenario selection included five of them.
-Split **1.1.0** adds an explicit eligibility predicate; no scenario moved
-partitions. Full detail in `docs/pilot-split-audit.md`.
+**This shrank twice, both times after finding leakage.** Split 1.0.0 put 85
+registered counterfactuals in training; 1.1.0 filtered them at the selector,
+which left the split itself broken for every other consumer; 1.2.0 repaired the
+split by moving every CF-bearing sibling group out of training, whole. Training
+is now 15 scenarios. Full migration record: `docs/pilot-split-audit.md`.
 
-**Coverage is 8 of 10 branches, not 10.** `suspicious_refund_escalation`'s
-`escalate_fraud` and `request_info` are reachable *only* through held-out values
-— in W3 only `signal_count=0` is in-distribution. Restoring the tenth branch
-would mean importing a holdout, so the gap is reported instead.
-
-**This pilot is a development smoke test.** Its outcomes may inform fixes, which
-is precisely why it draws only from `train`: a run that can change the system
-must not consume scenarios whose value depends on never having influenced
-anything. It is **not** a held-out evaluation and no result from it may be
-reported as one.
-
-The other 170 scenarios keep their partitions (144 train, 22 validation, 24
-evaluation) and are **not** relabelled as development data. They are simply
-unused here.
-
-Full audit, including all 20 scenario IDs, partition membership, sibling-group
-membership and branch coverage: **`docs/pilot-split-audit.md`**. Summary:
+**Coverage is 5 of 10 branches.** `suspicious_refund_escalation` contributes no
+training scenario at all — every W3 branch needs a `signal_count` value and only
+`0` is in-distribution — and W2's `request_then_refund` and W1's
+`distinct_entities` have no training members either. Restoring any of them would
+mean importing a held-out value, so the gap is reported and `cerl pilot` names
+the five missing branches.
 
 | Check | Result |
 |---|---|
-| Pool | training-eligible only (split 1.1.0) |
+| Pool | canonical training partition, split 1.2.0 |
 | Registered held-out scenarios selected | **0** |
-| Branches covered | **8 / 10** (structural limit, reported) |
+| Branches covered | **5 / 10** (structural limit, reported) |
 | Sibling groups | none straddling a partition |
-| Scenarios relabelled or moved | **0** |
-
-**Two coverage limits, reported rather than resolved.** The eligible pool cannot
-supply two W3 branches; the `evaluation` partition cannot supply four, and W3 has
-no evaluation partition at all. `cerl pilot` prints `COVERAGE LIMIT` and names
-them instead of borrowing. Both are corpus decisions for a person.
+| Scenario files regenerated | **0** |
 
 ## 3. Frozen prompt
 
@@ -111,22 +94,20 @@ at `max_tokens`.
 
 | Config | Episodes | Branches | Estimated | Worst case | Cap |
 |---|---|---|---|---|---|
-| A — 2/branch, caching | 16 | 8/10 | $3.53 | $40.78 | $41 |
-| A′ — 2/branch, no caching | 16 | 8/10 | $7.91 | $86.86 | $87 |
-| **B — 1/branch, caching (recommended first run)** | **8** | **8/10** | **$1.77** | **$20.39** | **$21** |
-| B′ — 1/branch, no caching | 8 | 8/10 | $3.98 | $43.43 | $44 |
+| **B — 1/branch, caching (recommended first run)** | **5** | **5/10** | **$1.08** | **$12.82** | **$13** |
+| A — 2/branch, caching | 9 | 5/10 | $2.00 | $23.82 | $24 |
 
-Episode counts fell from 20/10 to 16/8 because the eligible pool reaches eight
-branches. **The smaller configuration is 8 episodes, not 10** — it is one per
-eligible branch, and padding it back to ten would require the held-out scenarios
-the audit just excluded.
+**The 8-episode, 8-branch configuration did not survive the 1.2.0 split repair
+and has not been preserved.** The honest result is **5 episodes across 5
+branches**. The 2-per-branch configuration yields 9 rather than 10, because one
+eligible branch has a single training scenario — and it is not padded to 10.
 
-**Recommended: config B, cap $21** for the first paid run. It touches every
-eligible branch once at the lowest exposure; config A doubles coverage per branch
-for $41 once B has shown the harness behaves.
+**Recommended: config B, cap $13** for the first paid run: one episode per
+eligible training branch at the lowest exposure.
 
 One episode per branch cannot distinguish a branch the policy handles from a
-lucky run, and B claims no more than that.
+lucky run, and B claims no more than that. Neither configuration says anything
+about the five branches with no training scenario.
 
 **Estimated and worst case differ by ~12×.** Input grows quadratically with steps
 because every turn re-sends the transcript, so an agent that flails to the step
@@ -205,9 +186,9 @@ uv run pytest tests/live -q
 ```bash
 export ANTHROPIC_API_KEY=...              # supplied by the operator
 export CERL_LIVE_EVAL_AUTHORIZED=1        # two independent signals, so a
-export CERL_LIVE_EVAL_BUDGET_CENTS=2100   # stray budget cannot start spending
+export CERL_LIVE_EVAL_BUDGET_CENTS=1300   # stray budget cannot start spending
 
-# Config B: 8 episodes, one per eligible branch, cap $21.
+# Config B: 5 episodes, one per eligible training branch, cap $13.
 uv run cerl pilot --execute --per-branch 1 \
     --out runs/pilot_opus5.json \
     --transcripts-out runs/pilot_transcripts.json \
@@ -230,13 +211,13 @@ whether the model emits parseable tool calls; a per-branch signal precise enough
 to decide whether a larger run is worth funding; and a real transcript cache
 enabling free offline replay thereafter.
 
-**Cannot:** any C1–C6 claim. 8 episodes across 8 branches, drawn from
-training-eligible scenarios with no held-out contrast, support no
+**Cannot:** any C1–C6 claim. 5 episodes across 5 branches, drawn from training
+scenarios that by construction contain no counterfactual, support no
 generalization-gap estimate and no confidence interval. **No result from this
-pilot may be reported as a measurement of Δ**, and because it deliberately
-excludes every registered counterfactual it is not an evaluation of
-generalization at all. It also says nothing about the two W3 branches it cannot
-reach.
+pilot may be reported as a measurement of Δ**, and because it excludes every
+registered counterfactual it is not an evaluation of generalization at all. It
+says nothing about the five branches with no training scenario, and nothing about
+W3, which has none.
 
 It is a smoke test with a price tag. Calling it more would be the overclaim the
 rest of this repository is built to prevent.

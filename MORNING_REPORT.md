@@ -8,6 +8,15 @@ Work window: 02:51 → 05:1x PDT (~2.4h of the authorised 10h). The run stopped
 once the authorised milestones were built and verified, rather than filling the
 remaining time.
 
+**Split correction (2026-09-05).** The canonical split was repaired to version
+**1.2.0** after an audit found 85 of the 144 training scenarios carried a
+registered held-out value. 44 sibling groups moved partition; no scenario file
+was regenerated and every committed hash still matches. Training is now 15
+scenarios covering 5 of 10 branches, and **Criterion 42 is marked FAIL** — its
+held-out clause now passes, its lexicon-disjointness clause does not, because
+every scenario draws from the `core` shard. Any partition figure elsewhere in
+this report is a 1.0.0 figure; `docs/pilot-split-audit.md` is authoritative.
+
 **Status correction (2026-09-05 closeout).** This report originally said all
 Phase 1B milestones were "complete and verified". That was too strong. Two scope
 deviations are recorded in [`docs/status.md`](docs/status.md), which is now the

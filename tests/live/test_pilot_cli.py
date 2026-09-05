@@ -44,8 +44,9 @@ def test_the_dry_run_reports_the_split_audit():
     assert "split audit: clean" in result.output
     assert "partition        : train" in result.output
     assert "eligibility      : training-eligible only" in result.output
-    assert "branches covered : 8" in result.output
-    # The two branches the eligible pool cannot supply are named, not hidden.
+    assert "canonical split 1.2.0" in result.output
+    assert "branches covered : 5" in result.output
+    # The five branches the training pool cannot supply are named, not hidden.
     assert "COVERAGE LIMIT" in result.output
     assert "escalate_fraud" in result.output
 
@@ -73,7 +74,7 @@ def test_a_coverage_limit_is_reported_rather_than_worked_around():
 
 def test_synthetic_execution_completes_every_episode(executed):
     _, output = executed
-    assert "completed        : 16/16 episodes" in output
+    assert "completed        : 9/9 episodes" in output
     assert "source           : synthetic" in output
 
 
@@ -146,28 +147,73 @@ def test_verify_manifest_replays_the_actions_offline(executed):
 # --------------------------------------------------------------------------
 
 
-def test_the_eight_episode_configuration_is_selectable():
+def test_the_five_episode_configuration_is_selectable():
     result = runner.invoke(app, ["pilot", "--per-branch", "1"])
     assert result.exit_code == 0, result.output
-    assert "episodes         : 8" in result.output
-    assert "branches covered : 8" in result.output
-    assert "recommended cap  : $21.00" in result.output
+    assert "episodes         : 5" in result.output
+    assert "branches covered : 5" in result.output
+    assert "recommended cap  : $13.00" in result.output
 
 
-def test_execution_is_refused_when_the_selection_leaks():
-    """The gate: a leaking selection cannot be run, even synthetically."""
+def test_execution_is_refused_when_a_selection_would_leak(monkeypatch):
+    """The gate still works; it just has nothing to catch on a clean split.
+
+    Forced by pointing the audit at a partition that does carry holdouts, which
+    is the situation the gate exists for.
+    """
+    from cerl.eval import pilot as pilot_module
+
     result = runner.invoke(
-        app, ["pilot", "--execute", "--synthetic", "--no-eligible-only"],
+        app,
+        ["pilot", "--execute", "--synthetic", "--partition", "validation",
+         "--no-eligible-only"],
     )
-    assert result.exit_code != 0
+    assert result.exit_code != 0, result.output
     assert "LEAKAGE" in result.output
     assert "refusing to execute" in result.output
+    assert pilot_module.PILOT_ELIGIBLE_ONLY is True
 
 
-def test_the_eligibility_filter_can_be_inspected_without_running():
-    """Off is a diagnostic: it shows what the filter is excluding."""
-    result = runner.invoke(app, ["pilot", "--no-eligible-only"])
-    assert result.exit_code == 0
-    assert "ALL (diagnostic)" in result.output
-    assert "branches covered : 10" in result.output
-    assert "LEAKAGE" in result.output
+def test_the_eligibility_filter_is_now_a_no_op_over_a_clean_split():
+    """With the canonical split fixed, turning the filter off changes nothing.
+
+    Under 1.1.0 this flag exposed 85 counterfactuals. That it is now inert is
+    the clearest single demonstration that the split itself was repaired rather
+    than merely filtered.
+    """
+    filtered = runner.invoke(app, ["pilot"])
+    unfiltered = runner.invoke(app, ["pilot", "--no-eligible-only"])
+    assert filtered.exit_code == unfiltered.exit_code == 0
+    assert "LEAKAGE" not in unfiltered.output
+    assert "episodes         : 9" in unfiltered.output
+
+
+def test_a_ledger_from_a_different_cap_is_refused_with_an_instruction(tmp_path):
+    """The guard is right; the traceback was not.
+
+    Reusing a ledger across caps is how a run silently gets a bigger allowance,
+    so the refusal stays. What changed is that the CLI names the two things a
+    person might have meant instead of raising.
+    """
+    ledger = tmp_path / "ledger.json"
+    first = runner.invoke(
+        app,
+        ["pilot", "--execute", "--synthetic", "--per-branch", "1",
+         "--out", str(tmp_path / "a.json"),
+         "--transcripts-out", str(tmp_path / "at.json"),
+         "--ledger-out", str(ledger)],
+    )
+    assert first.exit_code == 0, first.output
+
+    second = runner.invoke(
+        app,
+        ["pilot", "--execute", "--synthetic", "--per-branch", "2",
+         "--out", str(tmp_path / "b.json"),
+         "--transcripts-out", str(tmp_path / "bt.json"),
+         "--ledger-out", str(ledger)],
+    )
+    assert second.exit_code != 0
+    assert "different settings" in second.output
+    assert "fresh --ledger-out" in second.output
+    # The record of prior spend is intact, not discarded to get past the error.
+    assert ledger.exists()

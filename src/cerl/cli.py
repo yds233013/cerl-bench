@@ -336,7 +336,7 @@ def pilot_command(
     pool_label = "training-eligible only" if report.eligible_only else "ALL (diagnostic)"
     typer.echo(
         f"eligibility      : {pool_label}  "
-        f"(split {split_module.ELIGIBILITY_VERSION})",
+        f"(canonical split {split_module.SPLIT_VERSION_CANONICAL})",
     )
     typer.echo(f"episodes         : {len(projection.episodes)}")
     typer.echo(f"branches covered : {len(report.branch_coverage)}")
@@ -416,6 +416,25 @@ def pilot_command(
         )
 
 
+def _open_ledger_or_explain(ledger_path: Path, cap_cents: float) -> Any:
+    """Resume the ledger, turning a refused resume into a usable instruction.
+
+    Refusing to resume under a changed cap is the guard working -- reusing a
+    ledger across caps is how a run silently gets a bigger allowance. But the
+    fix is a person's choice between two different intentions, so say which
+    they are rather than raising a traceback.
+    """
+    try:
+        return pilot_module.open_ledger(ledger_path, cap_cents)
+    except ValueError as exc:
+        raise typer.BadParameter(
+            f"{exc}\n\nThis ledger belongs to a run with different settings. "
+            f"Either resume that run with its original cap, or start a new run "
+            f"by passing a fresh --ledger-out path. Deleting the ledger would "
+            f"discard the record of what has already been spent.",
+        ) from exc
+
+
 def _run_synthetic_pilot(
     scenarios: list[FrozenScenario], cap_cents: int, ledger_path: Path,
 ) -> pilot_module.PilotResult:
@@ -424,7 +443,7 @@ def _run_synthetic_pilot(
     Deliberately symmetric with the live path, ledger persistence included: a
     rehearsal that skips a step is not a rehearsal of that step.
     """
-    ledger = pilot_module.open_ledger(ledger_path, float(cap_cents))
+    ledger = _open_ledger_or_explain(ledger_path, float(cap_cents))
     ledger.counter_name = budget_module.MockTokenCounter.name
     transport = synthetic_transport.SyntheticTransport(
         default=synthetic_transport.text_turn("no scripted turn for this step"),
@@ -452,7 +471,7 @@ def _run_live_pilot(
     # the whole cap again, turning "a $50 cap" into $50 per attempt. Recovery
     # reads the per-request journal, so spend inside an interrupted episode is
     # not lost, and an orphaned request is charged rather than replayed.
-    ledger = pilot_module.open_ledger(ledger_path, float(authorized))
+    ledger = _open_ledger_or_explain(ledger_path, float(authorized))
     client = pilot_module.build_client(ledger)
     return pilot_module.execute(
         scenarios, client, ledger, source="live", ledger_path=ledger_path,
@@ -513,7 +532,42 @@ def verify_manifest_command(
 @app.command(name="splits")
 def splits_command(
     frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+    *,
+    write: Annotated[
+        bool, typer.Option(help="Rebuild and commit the canonical split manifest."),
+    ] = False,
+    show_moves: Annotated[
+        bool, typer.Option(help="List the sibling groups 1.2.0 moved out of training."),
+    ] = False,
 ) -> None:
+    """Report the partition sizes, or rebuild the canonical split manifest."""
+    if write or show_moves:
+        scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+        built = split_module.build_manifest(scenarios)
+        problems = split_module.verify_manifest_totality(scenarios, built)
+        for problem in problems:
+            typer.secho(f"MANIFEST DEFECT {problem}", fg=typer.colors.RED)
+        if problems:
+            raise typer.Exit(code=1)
+        if show_moves:
+            typer.echo(
+                f"{len(built.moved_groups)} of {len(built.groups)} sibling groups "
+                f"moved from their 1.0.0 partition:",
+            )
+            for group in built.moved_groups:
+                typer.echo(
+                    f"  {group.pair_key[:8]}  {group.partition_v1_0_0.value} -> "
+                    f"{group.partition.value}  ({len(group.members)} members)  "
+                    f"{group.reason}",
+                )
+        if write:
+            path = split_module.write_manifest(built)
+            typer.secho(f"wrote {path}", fg=typer.colors.GREEN)
+        return
+    _report_splits(frozen_dir)
+
+
+def _report_splits(frozen_dir: Path) -> None:
     """Report the train/validation/evaluation partition sizes."""
     scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
     summary = split_module.summarize(scenarios)

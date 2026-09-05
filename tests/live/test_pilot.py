@@ -50,24 +50,43 @@ def test_the_audit_reports_a_clean_split(all_frozen, projection):
     assert dict(report.partitions_touched) == {"train": len(projection.episodes)}
 
 
-def test_the_eligible_pool_covers_eight_of_the_ten_branches(all_frozen, projection):
-    """Reported, not engineered around.
+def test_the_canonical_training_pool_covers_five_of_the_ten_branches(
+    all_frozen, projection,
+):
+    """Reported, not engineered around -- and it got worse, honestly.
 
-    Two W3 branches are reachable only through registered held-out values --
-    signal_count 1 gives request_info, 2 and 3 give escalate_fraud, and only 0
-    is in-distribution. Backfilling them would import exactly the leakage the
-    eligibility layer exists to prevent, so the pilot covers 8 and says so.
+    Under the 1.1.0 runtime filter the pilot reached 8 branches. Repairing the
+    canonical split in 1.2.0 moved every CF-bearing sibling group out of
+    training, and training coverage fell to 5. That is the true cost of
+    satisfying Criterion 42 on this corpus: 159 of 190 scenarios live in groups
+    that contain a registered counterfactual.
+
+    Backfilling any of the five would mean importing a holdout, so the pilot
+    covers 5 and says which are missing.
     """
     corpus = {f"{s.family}/{s.branch}" for s in all_frozen}
     assert len(corpus) == 10
     covered = set(projection.audit.branch_coverage)
-    assert len(covered) == 8
+    assert len(covered) == 5
     assert projection.audit.uncoverable_branches == (
+        "duplicate_billing_profile/distinct_entities",
+        "duplicate_charge_approval/request_then_refund",
         "suspicious_refund_escalation/escalate_fraud",
+        "suspicious_refund_escalation/legitimate_refund",
         "suspicious_refund_escalation/request_info",
     )
     assert covered | set(projection.audit.uncoverable_branches) == corpus
-    assert set(projection.audit.branch_coverage.values()) == {pilot.EPISODES_PER_BRANCH}
+
+
+def test_w3_is_absent_from_canonical_training_entirely(all_frozen):
+    """Every W3 branch needs a signal_count value, and only 0 is in-distribution.
+
+    Its pure-ID groups all landed outside training under the unchanged 1.0.0
+    hash, so W3 contributes no training scenario at all. Stated rather than
+    left to be discovered from a coverage table.
+    """
+    train = splits.select(list(all_frozen), splits.Partition.TRAIN)
+    assert not [s for s in train if s.family == "suspicious_refund_escalation"]
 
 
 def test_the_selection_contains_no_registered_held_out_scenario(projection):
@@ -86,15 +105,26 @@ def test_the_audit_surfaces_a_coverage_limit_rather_than_hiding_it(all_frozen):
     assert report.clean
 
 
-def test_disabling_the_eligibility_filter_reintroduces_leakage(all_frozen):
-    """Shows the filter is load-bearing, not decorative.
+def test_disabling_the_eligibility_filter_is_now_inert(all_frozen):
+    """Under 1.1.0 this reintroduced 85 counterfactuals. It no longer can.
 
-    With it off the selection reaches ten branches -- by including registered
-    counterfactuals. That is the trade the pilot refuses.
+    The canonical split has no holdout in training, so the runtime filter and
+    the raw partition now select the same set. That equality is the property
+    that distinguishes a repaired split from a filtered one.
     """
-    report = pilot.audit(list(all_frozen), eligible_only=False)
-    assert len(report.branch_coverage) == 10
-    assert report.held_out_selected, "expected held-out scenarios without the filter"
+    filtered = pilot.audit(list(all_frozen), eligible_only=True)
+    raw = pilot.audit(list(all_frozen), eligible_only=False)
+    assert raw.scenario_ids == filtered.scenario_ids
+    assert raw.held_out_selected == ()
+    assert raw.clean
+
+
+def test_the_filter_still_catches_leakage_where_leakage_exists(all_frozen):
+    """The gate is load-bearing, demonstrated on a partition that has holdouts."""
+    report = pilot.audit(
+        list(all_frozen), splits.Partition.VALIDATION, eligible_only=False,
+    )
+    assert report.held_out_selected, "validation carries holdouts by design"
     assert not report.clean
 
 
@@ -149,21 +179,31 @@ def test_caching_lowers_the_projection(projection):
 
 
 def test_the_published_proposal_figures_still_hold(projection):
-    assert len(projection.episodes) == 16
-    expected = projection.total_cents(worst_case=False, cached=True)
+    assert len(projection.episodes) == 9
     worst = projection.total_cents(worst_case=True, cached=True)
-    assert expected == pytest.approx(353.0, abs=25.0), expected
-    assert worst == pytest.approx(4078.0, abs=200.0), worst
-    assert projection.recommended_cap_cents() == 4100
+    assert worst == pytest.approx(2382.0, abs=200.0), worst
+    assert projection.recommended_cap_cents() == 2400
 
 
-def test_the_smaller_development_configuration_is_eight_episodes(all_frozen):
-    """One per eligible branch. Eight, not ten -- and not padded to ten."""
+def test_the_recommended_development_configuration_is_five_episodes(all_frozen):
+    """One per eligible branch: five, not eight and not ten.
+
+    The 8-episode configuration did not survive the 1.2.0 repair and has not
+    been preserved by relaxing anything.
+    """
     small = pilot.project(list(all_frozen), splits.Partition.TRAIN, 1)
-    assert len(small.episodes) == 8
-    assert len(small.audit.branch_coverage) == 8
+    assert len(small.episodes) == 5
+    assert len(small.audit.branch_coverage) == 5
     assert small.audit.held_out_selected == ()
-    assert small.recommended_cap_cents() == 2100
+    assert small.recommended_cap_cents() == 1300
+
+
+def test_two_per_branch_yields_nine_not_ten(all_frozen):
+    """One eligible branch has a single scenario, so it cannot supply two."""
+    doubled = pilot.project(list(all_frozen), splits.Partition.TRAIN, 2)
+    assert len(doubled.episodes) == 9
+    counts = dict(doubled.audit.branch_coverage)
+    assert sorted(counts.values()) == [1, 2, 2, 2, 2]
 
 
 # --------------------------------------------------------------------------

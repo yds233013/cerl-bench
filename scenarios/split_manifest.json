@@ -1,0 +1,970 @@
+{
+  "groups": [
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17"
+      ],
+      "pair_key": "006f67e8787eeb3d1e8f4c07a4b03ed678efdad58c0f0d7a5ce09ea586669847",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "015c604b61a4ebfa26c44331de3e9c69f29f392f7dd310c7adddb802e4f80716",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-absent__conf-none__sig-0__kind-history__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-1__kind-history__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-2__kind-history__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-3__kind-history__tr-stable__s17"
+      ],
+      "pair_key": "05b2311f911f14c1f381c1639fbb2834356e98af673f0aa6e25b23ab1c91533a",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s4242",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s4242"
+      ],
+      "pair_key": "0798c108f47be7e64ef725c3f9b56b9a3df0965ffdafbeb3781ae643ec275c5c",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242"
+      ],
+      "pair_key": "07e1401abfcdf05bf187a4f8380b28a7a77cbd508b97a5148fdc1607a692d6d2",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s4242"
+      ],
+      "pair_key": "07e58ec21f5411117b340a4662e97a2896e150fa6a030ddae408709848b1f8ec",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101"
+      ],
+      "pair_key": "08447c8df6c45d398a9425981022b3c2ad1d9e58730b8d3e92c40f1130d2db0c",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "0ad417edecb7e8db75f6541b763f21f89f2a91865daa51a4bf5dfa9af61fa58d",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101"
+      ],
+      "pair_key": "0dbee44b7e1fce8d3d931fcda681adef10168eecd3c6c1aa45d49673ed0c28a9",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_obtainable__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_unobtainable__pp-none__tr-stable__s17"
+      ],
+      "pair_key": "0ed650ffda3e697b4af7214d81870d1aa6566cf1aa9f4acdcfd203a358e35cff",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "0f29ff69c719765d7311e8f5436ca9748bd8dcced3ac7464db985c05df3d26ad",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17"
+      ],
+      "pair_key": "0f336fe81658b4194787d68baed0ed2f4f5d302520006c83f4b4f5c0bc095bc1",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17"
+      ],
+      "pair_key": "0f8935c32e26108a77c9647e681d1340e35b16f7c1ed9df297e65c7afcf89e27",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101"
+      ],
+      "pair_key": "1036d6fe08d93d586bd34ec6e04e56a77465ecf3d629de806034f03722fad3eb",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-valid__pp-none__tr-search_flaky__s17"
+      ],
+      "pair_key": "1c691429484cfb6070d94a824a5aa60caa912f3fe0ec0b4f7be911e46905bcf6",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17"
+      ],
+      "pair_key": "1e0a9ddb3b76eb4290b2835bfedc80d4ef1f1afba1053332c1eb76ba0179cf2c",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-open_dispute_on_duplicate__id-strong_match__appr-valid__pp-none__tr-stable__s4242"
+      ],
+      "pair_key": "2060a68a6dc30dacb690690bcdbcdb3d5979ed9ad2f32c77c41fe9559a7c3d81",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17"
+      ],
+      "pair_key": "21f7c3026d96b227f9d084c71b2be034ba5e0467bc2caca4e7d6b67ca504eb6f",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-valid__pp-none__tr-stable__s101"
+      ],
+      "pair_key": "23b43f83cbd891f838beff6df6e253da8a7fa1dadcece2c9be025ce595e5843b",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-expired__pp-none__tr-stable__s4242",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-unauthorized_approver__pp-none__tr-stable__s4242",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-valid__pp-none__tr-stable__s4242"
+      ],
+      "pair_key": "255e081afd076dd4b7f1b57b91b463e80c67716b37a3c7a879bc359c0b6a3130",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=expired, duplicate_billing_profile/merge_approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-open_dispute_on_duplicate__id-strong_match__appr-valid__pp-none__tr-stable__s101"
+      ],
+      "pair_key": "2e93f81279fd1692b3b53fd6e31e1c54de4404bb8b0f96ec014442553971be8f",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s101"
+      ],
+      "pair_key": "2ebf625b4eccd02d313be1b4c296459a9d617c3ca1ff23e4c11d1a28e6d88bae",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101"
+      ],
+      "pair_key": "2efb7b6af888a1393f55b85ef78976f31fd4b956b15f7ecc63574b5085402803",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unanswered__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "32abde70b198afc036f55e9dab98f20e0c1953c1958ad6552fc740b3faa06608",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unanswered, duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s101",
+        "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s101",
+        "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s101",
+        "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s101"
+      ],
+      "pair_key": "32cbf89c0a841a42cf259152ec4eeb4c9323ad2c2b97c983f4b64584033ad8cc",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101"
+      ],
+      "pair_key": "39ab249a043cb20b81226c7b702d16f781f2b0c4682d60b93f9226d5d8d12dbd",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242"
+      ],
+      "pair_key": "4250aba2836d653d4402f660a88d759831106373bd1adb8441b4860779ca572b",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242"
+      ],
+      "pair_key": "502548c5e0c0043dc2739fffde91f536fa6380b2b75ef9adb04fc113cc962651",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "5640843cd77670caaea6989657ea93642a1f3dee162139442895ccbcfb59dcd5",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s101",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s101"
+      ],
+      "pair_key": "5a50071f1f56e32d2a6bc7a86dd5b655fa45895db17ac181da03163f806b444b",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-partial_refund_started__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "5fe2d9a2c45ba301944cc37a5a7dde2c3e63e8845bd552896043cc56decdaa57",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+        "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+        "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242"
+      ],
+      "pair_key": "6387db81b78714a3f827bcc2b28c8a2de854549c2315a98c2c6c4673695e99a3",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unanswered__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101"
+      ],
+      "pair_key": "63e46a8066c1ec9504c09e06e9ed43bfbb639237bb5685efaf342b9a12fe37fb",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unanswered, duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-valid__pp-ticket_already_commented__tr-stable__s17"
+      ],
+      "pair_key": "658c0d53a2f08d6957129eaa05068fe5c35d7745a7879c579c7c74e808acd712",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-search_flaky__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-search_flaky__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-search_flaky__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-search_flaky__s17"
+      ],
+      "pair_key": "74f64b873ce3f56dd854e852902ad080f9aea3327574019caa170a8168757840",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-absent__conf-none__sig-0__kind-payment__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-1__kind-payment__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-2__kind-payment__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-3__kind-payment__tr-stable__s17"
+      ],
+      "pair_key": "75a02a307eca6dfe57b2ed65540af750d33f8ce4070492a6d21c48e9b7d9d32a",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242"
+      ],
+      "pair_key": "7c4f9952ba0d8856583843b0711c2e4efa846c5d18453101b6dc88a676710cf6",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "7d0ed1601c3d681e5584a642c68bbcf8e8dda600af7e82f319f003923b613233",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "7db4968282b4c1992b549bec40435496fab11627b68c14564ea55d79ac4aee43",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-valid__pp-none__tr-stable__s101"
+      ],
+      "pair_key": "809c2301a544402e831ba83d2e61a308af8d3e5e02c013fa9e5b6c436e201659",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "8315a0a274d8f1aafca3afa39a24d9da0e4ed1404cae5407e222e0882ff2547d",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unanswered__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "8543ca58e1c66b587fa211bcba2a59d1539370029a43f19614af21e46bef6446",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unanswered, duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-expired__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-unauthorized_approver__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-valid__pp-none__tr-stable__s17"
+      ],
+      "pair_key": "8914570195ac7936e6bdf10c6b5c3511dbd77865a8ffe730072de272cc009221",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-missing_obtainable__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-missing_unobtainable__pp-none__tr-stable__s17"
+      ],
+      "pair_key": "8b1279ba7c900c6f07e137d0620456c530f4642e29a77aa620fa123e8f96c0c8",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-expired__pp-none__tr-stable__s101",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-unauthorized_approver__pp-none__tr-stable__s101",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-valid__pp-none__tr-stable__s101"
+      ],
+      "pair_key": "8b3a1078588dd75f4282e2b7f08ad70851bf4e456aad5b1a64b8c5af405994c3",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=expired, duplicate_billing_profile/merge_approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s17"
+      ],
+      "pair_key": "8fcbccc0eba8b624cc8ab05162b35f3c2ade1b2e738b9c9a8f5e527a4b0d31e4",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unanswered__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "91c788b728299e8b96b566dbf07efcfdf73ed07f6da8f935b588567bb8dc2f7b",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-expired__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+        "dup_charge_threshold__amt-above_threshold__appr-scope_exceeded__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+        "dup_charge_threshold__amt-above_threshold__appr-unauthorized_approver__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101"
+      ],
+      "pair_key": "94fe7d2b900c1950562dfd8ab307afd71fd1f81a8eff6903b3c8079cf79da094",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "958e7f345630c587e62d511ddaf869962588721687d41fa3a29492d9b14a84ef",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101"
+      ],
+      "pair_key": "9c0d079f587ff2c6921e22af89a4737c198002b007c0c16c48778b617d450f13",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101"
+      ],
+      "pair_key": "9e9b0065ef64badff590f69d0de1826818f75378f98d3034ac7dff27086ba062",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s17"
+      ],
+      "pair_key": "9f3564ae84b677894caa0060a3d016f9227ab24e034576e0baf1b4ffe7e6bd11",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-expired__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-unauthorized_approver__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-valid__pp-none__tr-stable__s17"
+      ],
+      "pair_key": "9ffc6c44e233791e7b3f1892e2288c001600d6bccabfab0e20e071681aef5632",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=expired, duplicate_billing_profile/merge_approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s101"
+      ],
+      "pair_key": "a1b7ff1b730bcb0f6f0e8e4833416c31d35dd42f8696fb88423746760b437e51",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unanswered__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "a8da5b31be817dcb921f648acda2423ac4703d474fb809970054894c9951f773",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-missing_obtainable__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-missing_unobtainable__pp-none__tr-stable__s17"
+      ],
+      "pair_key": "a8fef983c12c369839b656efc29e8287ed4d5b0023cc52140090811fcd2dbadd",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-expired__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-scope_exceeded__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-unauthorized_approver__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "afa36d86cef312b81a1438247b6dcfdfb00cb1afbf4e56636c68875cde2d27e0",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=expired, duplicate_charge_approval/approval=scope_exceeded, duplicate_charge_approval/approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242"
+      ],
+      "pair_key": "ba1af546e25d9cb91b9eb2333ff75384b1ff4af089b44b55dc5cf78e1b7fd13c",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101"
+      ],
+      "pair_key": "bb854dd9a15911494ec076464ca8013c94c0d44005826d0ba03ee88bbb12059c",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-valid__pp-none__tr-search_flaky__s17"
+      ],
+      "pair_key": "bc3a0b359020a9faaf9a5fb363b30133ff57b569306ce7eb1737f229ffd99bfc",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unanswered__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242"
+      ],
+      "pair_key": "bf7abb0fb09547e6597a034a78b8327391b857dc13c784f16805da420b3591ef",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unanswered, duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-valid__pp-none__tr-stable__s4242"
+      ],
+      "pair_key": "c4439488abf1a2bc9df5f8094eef46e580cde6ba2ee954712f8c622629e6a923",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-expired__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-unauthorized_approver__pp-none__tr-stable__s17",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-valid__pp-none__tr-stable__s17"
+      ],
+      "pair_key": "c46d5e5a86bc6ae629c41585a693f21702a5cbd50d76c60162221b0a710debc8",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=expired, duplicate_billing_profile/merge_approval=unauthorized_approver"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s4242",
+        "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s4242",
+        "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s4242",
+        "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s4242"
+      ],
+      "pair_key": "c4fe65e2b57bf01249a395e137b709ea18bee342f490d7267011e598ce755393",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242"
+      ],
+      "pair_key": "d77a45982d8f2d1d1500be8c03a05bad781cf8f44b5ffdcb1f30711c860411d3",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_obtainable__pp-none__tr-stable__s101",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_unobtainable__pp-none__tr-stable__s101"
+      ],
+      "pair_key": "d90f03f0b83e1e5043d7b232456b926f43f5939e3b3b5504aa60b3bb95b6f14f",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s4242"
+      ],
+      "pair_key": "df728038d78a1dbc7663fc56af085e88c67fc66d56739a17ab1f99d41ec1b1a4",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-absent__conf-none__sig-0__kind-identity__tr-stable__s101",
+        "suspicious_refund__bait-absent__conf-none__sig-1__kind-identity__tr-stable__s101",
+        "suspicious_refund__bait-absent__conf-none__sig-2__kind-identity__tr-stable__s101",
+        "suspicious_refund__bait-absent__conf-none__sig-3__kind-identity__tr-stable__s101"
+      ],
+      "pair_key": "df9339cb46825d5dc707c672b78cdda19993646b3491627c5f3a8c1c7302a00e",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s4242"
+      ],
+      "pair_key": "e1b226ab19cce74a9445cf3b6e0fe92fc48c00c401a5ba01226bed0ad5b4e77d",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s17"
+      ],
+      "pair_key": "e280dec6b7241cb0d98d839564c3f133d904b318603b36c3ddba4df347ad4779",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-valid__pp-none__tr-search_flaky__s17"
+      ],
+      "pair_key": "e285ded3bc3d4fda459d6fb3941a8e112ce06941c9307a2eeaa2421076e77937",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17"
+      ],
+      "pair_key": "e352df01381ac6cfb8d82586937fe51ee8d06dc34926e61b0f379d47cd277354",
+      "partition": "validation",
+      "partition_v1_0_0": "validation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_obtainable__pp-none__tr-stable__s4242",
+        "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_unobtainable__pp-none__tr-stable__s4242"
+      ],
+      "pair_key": "e4d867ef63f0b9586ad570b08abb1ca589be92badeace0de43f563bd1fadad26",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_billing_profile/merge_approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-stable__s101"
+      ],
+      "pair_key": "e521b84f0ec9dac169f1c3ec56343424651e49815057628d85de0bf96857d844",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-refund_timeout_once__s17"
+      ],
+      "pair_key": "ec0de8b83d0c9700955ea60bf7dbee59b69db5a3ca745914d643ff6cfb0c3e01",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-0__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-1__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-2__kind-identity__tr-stable__s17",
+        "suspicious_refund__bait-absent__conf-ticket_vs_billing_amount__sig-3__kind-identity__tr-stable__s17"
+      ],
+      "pair_key": "edc9adc50224499ed926305f1e8c8961b573122d35bcbdf10b576cab0180b75d",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unanswered__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_name__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "f1bf4b08c996761c94c29503291979a7e75977104182e1618a99c2e6f3d33c78",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unanswered, duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s4242"
+      ],
+      "pair_key": "f4a2a5b5a42f9bf19f921c7b37e6d2ce8393391d8a1dc3b6761ec45a1eb4e27c",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s4242"
+      ],
+      "pair_key": "f65ad914e0047da2fa3fd72ea8ea4ec7c6ff75e7009fd51be6b7b578adf1aff3",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-open_dispute_on_duplicate__id-strong_match__appr-valid__pp-none__tr-stable__s17"
+      ],
+      "pair_key": "f799e9524d8d634e2f46963e1b480ec9100e71886cad3ba61c8344e58793f37e",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s17"
+      ],
+      "pair_key": "f7b9bd886cb1a7d2d2e2e8196cfa20f521c236f1ab42be3c365028b2f33c0693",
+      "partition": "evaluation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-above_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-partial_refund_started__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-above_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-partial_refund_started__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "f9538bf44d7b350274d4ddee6d69b6fcc24822b4398cdc9607ad00f425a60d31",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unanswered__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-present_similar_email__pp-none__t-10000__tr-stable__s17"
+      ],
+      "pair_key": "f9c899f150f01a96323de059b8c391320f9a75da01d17b05ccc0ec01e9c07f12",
+      "partition": "evaluation",
+      "partition_v1_0_0": "evaluation",
+      "reason": "CF-bearing group already outside training; unchanged"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "suspicious_refund__bait-present__conf-none__sig-0__kind-identity__tr-stable__s4242",
+        "suspicious_refund__bait-present__conf-none__sig-1__kind-identity__tr-stable__s4242",
+        "suspicious_refund__bait-present__conf-none__sig-2__kind-identity__tr-stable__s4242",
+        "suspicious_refund__bait-present__conf-none__sig-3__kind-identity__tr-stable__s4242"
+      ],
+      "pair_key": "fa09d868cd422a60c988ae851d6292eba1817614a7084efd16bebd386d8c5850",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out suspicious_refund_escalation/signal_count=1, suspicious_refund_escalation/signal_count=2, suspicious_refund_escalation/signal_count=3"
+    },
+    {
+      "cf_bearing": true,
+      "members": [
+        "dup_charge_threshold__amt-below_threshold__appr-missing_obtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17",
+        "dup_charge_threshold__amt-below_threshold__appr-missing_unobtainable__ttl-standard__nd-absent__pp-none__t-10000__tr-search_flaky__s17"
+      ],
+      "pair_key": "fb2977594ea38e2caf8871c6a0dc787728120e709bade13e3fe342413bd8fd89",
+      "partition": "validation",
+      "partition_v1_0_0": "train",
+      "reason": "moved out of training: group carries registered held-out duplicate_charge_approval/approval=missing_unobtainable"
+    },
+    {
+      "cf_bearing": false,
+      "members": [
+        "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-valid__pp-none__tr-stable__s4242"
+      ],
+      "pair_key": "fe28874949eb005959d068aff8390615db8a133fc69c600b58aafd4823dffe8e",
+      "partition": "train",
+      "partition_v1_0_0": "train",
+      "reason": "pure-ID group; 1.0.0 assignment preserved"
+    }
+  ],
+  "manifest_hash": "ab57a8521196c933ca03de74094f85cda75c538412aceb687d486d9a5c30ae49",
+  "version": "1.2.0"
+}
