@@ -51,11 +51,21 @@ be exactly the manipulation the criterion forbids, and widening the tolerance
 would gut the control.
 
 So `identity_evidence` is **stratified**: all three values appear in both the
-training and evaluation partitions. An axis whose values are present on both
-sides cannot produce an ID/CF difficulty gap, which is the confound C6 exists to
-exclude. What it cannot then do is serve as a held-out counterfactual, and that
-is recorded as a deliberate scope statement rather than a passed criterion. A
-test asserts the stratification actually holds.
+training and evaluation partitions, and it is reported as a separate **challenge
+set** rather than as matched pairs.
+
+**Stratification does not establish equal difficulty**, and no claim here should
+be read as saying it does. The three values demonstrably differ — 12 / 10 / 9
+oracle calls on three different workflows. What stratification does is ensure no
+held-out ID/CF contrast is computed on this axis, so no Criterion 41 pair is
+formed across mismatched difficulties. It changes which comparison is made; it
+does not equalise the things compared.
+
+The consequence is that `identity_evidence` **contributes to no Criterion 41
+result and to no matched-pair claim**, and its scenarios are reported separately
+with their measured difficulty differences. See `docs/w1-scope.md` for the full
+reconciliation, including what identity-evidence generalization remains
+untested.
 
 ## What is enforced
 

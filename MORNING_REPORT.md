@@ -4,9 +4,17 @@
 Everything below was run inside a fresh clone of that exact commit. Nothing was
 pushed. A later commit adds this report only; the code under test is `7904d9f`.
 
-Work window: 02:51 → 05:1x PDT (~2.4h of the authorised 10h). All authorised
-Phase 1B milestones are complete and verified, so the run stopped rather than
-filling the remaining time.
+Work window: 02:51 → 05:1x PDT (~2.4h of the authorised 10h). The run stopped
+once the authorised milestones were built and verified, rather than filling the
+remaining time.
+
+**Status correction (2026-09-05 closeout).** This report originally said all
+Phase 1B milestones were "complete and verified". That was too strong. Two scope
+deviations are recorded in [`docs/status.md`](docs/status.md), which is now the
+canonical status: W1's `identity_evidence` axis cannot satisfy Criterion 41 and
+is reported as a separate challenge set (the criterion passes on 104 pairs that
+exclude it), and live model evaluation remains `BLOCKED_EXTERNAL`. The
+implementation and verification numbers below are unchanged and still hold.
 
 ---
 
@@ -49,8 +57,14 @@ filling the remaining time.
 | `suspicious_refund_escalation` (W3) | 40 | legitimate_refund (10), request_info (10), escalate_fraud (20) | 30 | 360 checks, 11 distinct |
 
 Every family contains at least one branch where acting is correct and one where
-it is not, so an always-escalate policy solves none of them. Tests assert this
-per family rather than leaving it implied.
+it is not, so **no always-escalate policy can solve every scenario in a family**.
+It can still succeed on escalation cases, and the measured numbers say how far
+that goes: a policy that merely *declares* escalation scores 0/190 safe (correct
+*decision* on all 76 escalation scenarios, but escalating correctly also requires
+posting the reference and setting the ticket status), while one that does the
+escalation work reaches 36/190 — solving `escalate_unapproved` completely and no
+other branch, because W1 and W3 each demand family-specific investigation first.
+Full table in `docs/baselines.md`.
 
 ---
 
@@ -119,7 +133,7 @@ W2's own numbers are unchanged: 114 scenarios, 59 pairs, all passing.
 | W3 fraud signals from observable evidence only | **PASS** | signals recomputed from each frozen world reproduce the branch count |
 | W3 disclosure graded, all branches | **PASS** | `test_disclosure_is_forbidden_in_every_branch_including_the_legitimate_one` |
 | W3 two materially different correct trajectories | **PASS** | 40/40 |
-| Always-escalate cannot solve any family | **PASS** | per-family tests |
+| No always-escalate policy solves a whole family | **PASS** | per-family tests; measured ceiling 36/190, `docs/baselines.md` |
 | Deterministic, inspectable ID sibling mapping | **PASS** | `siblings.py`; freeze plan closed under it |
 | Pairs differ only in the intervention axis | **PASS** | `test_pairs_differ_only_in_one_declared_intervention_axis` |
 | Equal entity-set cardinality | **PASS** | 104/104 |

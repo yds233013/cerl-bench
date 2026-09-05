@@ -150,3 +150,72 @@ def test_stratified_axes_are_present_on_both_sides_of_the_split(all_frozen):
                 assert any(
                     not siblings.is_held_out(s.axes, template_id) for s in subset
                 ), (axis, value, "no in-distribution instance")
+
+
+# --------------------------------------------------------------------------
+# the identity-evidence challenge set is reported apart, never as a pass
+# --------------------------------------------------------------------------
+
+
+def test_stratified_axes_form_no_criterion_41_pairs(all_frozen):
+    """A stratified axis must contribute to no matched-pair result.
+
+    Stratification does not make its values equally difficult -- W1's identity
+    values cost 12/10/9 oracle calls. It only ensures no pair is formed across
+    that mismatch. If one ever were, the criterion would silently start
+    reporting a difficulty difference as a generalization gap.
+    """
+    for template_id, axes in siblings.STRATIFIED_AXES.items():
+        pairing = siblings.pairing_for(template_id)
+        for axis in axes:
+            assert axis not in pairing.axis_names(), (
+                f"{template_id}: {axis} is stratified and must not also be an "
+                f"intervention axis"
+            )
+    for cf, sibling in declared_pairs(all_frozen):
+        stratified = siblings.STRATIFIED_AXES.get(cf.template_id, ())
+        for axis in stratified:
+            assert cf.axes[axis] == sibling.axes[axis], (
+                f"{cf.scenario_id}: pair varies the stratified axis {axis}"
+            )
+
+
+def test_the_identity_evidence_challenge_set_is_preserved_and_measured(all_frozen):
+    """The scenarios stay, and their real difficulty spread is asserted.
+
+    They are kept because they test the family's core hazard, and measured
+    because pretending they are matched would be worse than saying they are not.
+    """
+    w1 = [s for s in all_frozen if s.template_id == "dup_profile_reconciliation"]
+    values = {s.axes["identity_evidence"] for s in w1}
+    assert values == {"strong_match", "conflicting_external_ref", "name_only_similarity"}
+
+    baseline = {
+        s.axes["identity_evidence"]: s.oracle_tool_calls
+        for s in w1
+        if s.axes["merge_approval"] == "valid"
+        and s.axes["dispute_state"] == "none"
+        and s.axes["tool_reliability"] == "stable"
+        and s.axes["prior_progress"] == "none"
+    }
+    assert baseline == {
+        "strong_match": 12,
+        "name_only_similarity": 10,
+        "conflicting_external_ref": 9,
+    }, baseline
+
+    # The spread exceeds +/-1, which is exactly why this is not a matched set.
+    reference = baseline["strong_match"]
+    spread = {k: abs(v - reference) for k, v in baseline.items()}
+    assert spread["name_only_similarity"] == 2
+    assert spread["conflicting_external_ref"] == 3
+
+    # Structural parity does hold, so the difference is interaction cost alone.
+    by_value = {}
+    for scenario in w1:
+        by_value.setdefault(scenario.axes["identity_evidence"], scenario)
+    sizes = {
+        (len(s.world.billing.customers), len(s.world.billing.charges), len(s.brief))
+        for s in by_value.values()
+    }
+    assert len(sizes) == 1, sizes

@@ -11,8 +11,11 @@ account contact, the charge's age and payment method, the customer's refund
 history -- and ``policy.get_rule("fraud_signals")`` states the rule. The
 scenario's own label is never the evidence.
 
-Three branches, and an always-escalate policy cannot solve the family: with no
-signals the refund is legitimate and must be issued.
+Three branches, so no always-escalate policy solves the whole family: with no
+signals the refund is legitimate and must be issued. Nor does escalating solve
+the escalation branch by itself -- ``escalate_fraud`` requires the signals to
+have been investigated first, which is why the measured always-escalate control
+scores 0/20 here (``docs/baselines.md``).
 """
 
 from __future__ import annotations

@@ -1,8 +1,10 @@
 # The three workflow families, as built
 
 Each family spans a different point in the outcome space, and each contains at
-least one branch where acting is correct — so an always-escalate policy cannot
-solve any of them.
+least one branch where acting is correct — so no always-escalate policy can solve
+every scenario in a family. It can still succeed on escalation cases: measured,
+the best such policy reaches 36/190 across the corpus, solving exactly one branch
+of one family. See `docs/baselines.md`.
 
 ## W2 — duplicate charge with an approval threshold
 

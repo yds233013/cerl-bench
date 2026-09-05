@@ -22,7 +22,8 @@ import os
 from collections.abc import Sequence
 from typing import Any, Protocol
 
-from cerl.core import Frozen, FrozenMap, content_hash
+from cerl.agents.budget import BudgetLedger, estimate_input_tokens
+from cerl.core import Frozen, FrozenMap, canonical_json, content_hash
 
 #: Set to a positive integer to authorise live API spend, in whole US cents.
 #: Absent or zero means live evaluation is not authorised.
@@ -157,7 +158,14 @@ class TranscriptCacheClient:
 
 
 class AnthropicClient:
-    """Live Anthropic API client. Refuses to run without an authorised budget."""
+    """Live Anthropic API client, metered by a spend ledger.
+
+    The construction-time authorisation check below is a *gate*, not spending
+    control: it is evaluated once, before anything has been spent. Control comes
+    from :class:`~cerl.agents.budget.BudgetLedger`, which reserves the worst-case
+    cost of every request -- **including every retry** -- before it is issued and
+    refuses the request rather than exceeding the cap.
+    """
 
     name = "anthropic"
 
@@ -166,6 +174,9 @@ class AnthropicClient:
         model: str = DEFAULT_MODEL,
         max_tokens: int = 4096,
         effort: str = "medium",
+        *,
+        ledger: BudgetLedger | None = None,
+        max_retries: int = 2,
     ) -> None:
         if not live_evaluation_authorized():
             raise LiveEvaluationNotAuthorized(
@@ -175,6 +186,18 @@ class AnthropicClient:
         self.model = model
         self.max_tokens = max_tokens
         self.effort = effort
+        self.max_retries = max_retries
+        # The env budget is the cap. A caller may pass a smaller ledger, never a
+        # larger one -- otherwise the authorisation could be widened in code.
+        authorized = live_evaluation_budget()
+        if ledger is None:
+            ledger = BudgetLedger(cap_cents=float(authorized), model=model)
+        elif ledger.cap_cents > authorized:
+            raise LiveEvaluationNotAuthorized(
+                f"ledger cap {ledger.cap_cents}c exceeds the authorised "
+                f"{authorized}c from {BUDGET_ENV}",
+            )
+        self.ledger = ledger
         self._client: Any = None
 
     def _ensure_client(self) -> Any:
@@ -184,6 +207,20 @@ class AnthropicClient:
             self._client = anthropic.Anthropic()
         return self._client
 
+    def _request_size(
+        self,
+        system: str,
+        messages: Sequence[dict[str, Any]],
+        tools: Sequence[dict[str, Any]],
+    ) -> int:
+        """Pessimistic input-token estimate for the pre-flight reservation."""
+        blob = canonical_json({
+            "system": system,
+            "messages": list(messages),
+            "tools": list(tools),
+        })
+        return estimate_input_tokens(len(blob))
+
     def complete(
         self,
         system: str,
@@ -191,28 +228,54 @@ class AnthropicClient:
         tools: Sequence[dict[str, Any]],
     ) -> ModelResponse:
         client = self._ensure_client()
-        response = client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=system,
-            messages=list(messages),
-            tools=list(tools),
-            thinking={"type": "adaptive"},
-            output_config={"effort": self.effort},
-        )
-        text = ""
-        tool_name = None
-        tool_input: dict[str, Any] = {}
-        for block in response.content:
-            if block.type == "text":
-                text += block.text
-            elif block.type == "tool_use":
-                tool_name = block.name
-                tool_input = dict(block.input)
-        return ModelResponse(
-            text=text,
-            tool_name=tool_name,
-            tool_input=FrozenMap(tool_input),
-            stop_reason=str(response.stop_reason),
-            source="live",
-        )
+        estimated_input = self._request_size(system, messages, tools)
+        last_error: Exception | None = None
+
+        # Every attempt reserves independently. A retry is a billable request,
+        # and a retry loop that does not reserve is how a capped run overruns.
+        for attempt in range(self.max_retries + 1):
+            reserved = self.ledger.reserve(estimated_input, self.max_tokens)
+            try:
+                response = client.messages.create(
+                    model=self.model,
+                    max_tokens=self.max_tokens,
+                    system=system,
+                    messages=list(messages),
+                    tools=list(tools),
+                    thinking={"type": "adaptive"},
+                    output_config={"effort": self.effort},
+                )
+            except Exception as exc:
+                # No usage was returned, so nothing was billed to us that we can
+                # measure. Release the reservation and let the next attempt make
+                # its own, which is checked against the cap in turn.
+                self.ledger.release(reserved)
+                last_error = exc
+                if attempt == self.max_retries:
+                    raise
+                continue
+
+            usage = getattr(response, "usage", None)
+            self.ledger.settle(
+                reserved,
+                int(getattr(usage, "input_tokens", estimated_input) or 0),
+                int(getattr(usage, "output_tokens", 0) or 0),
+            )
+            text = ""
+            tool_name = None
+            tool_input: dict[str, Any] = {}
+            for block in response.content:
+                if block.type == "text":
+                    text += block.text
+                elif block.type == "tool_use":
+                    tool_name = block.name
+                    tool_input = dict(block.input)
+            return ModelResponse(
+                text=text,
+                tool_name=tool_name,
+                tool_input=FrozenMap(tool_input),
+                stop_reason=str(response.stop_reason),
+                source="live",
+            )
+
+        raise RuntimeError(f"unreachable: retries exhausted ({last_error})")

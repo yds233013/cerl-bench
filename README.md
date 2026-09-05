@@ -23,8 +23,20 @@ hash-chained traces, exact offline replay, and an evaluation harness.
 | `duplicate_billing_profile` (W1) | 36 | merge_sanctioned (8), distinct_entities (8), escalate_ambiguous (20) |
 | `suspicious_refund_escalation` (W3) | 40 | legitimate_refund (10), request_info (10), escalate_fraud (20) |
 
-**Not implemented**: SFT, GRPO, HTTP/MCP adapters, frontend. **Live model
-evaluation has not been run** — see *Live evaluation* below.
+**Canonical status: [`docs/status.md`](docs/status.md).** In short — Phase 1B is
+implemented and verified with two recorded scope deviations: W1's
+`identity_evidence` axis is a separately reported challenge set rather than a
+matched pair (Criterion 41 passes on 104 pairs, which exclude it), and live model
+evaluation is `BLOCKED_EXTERNAL` with a pilot proposed but not executed.
+
+**Not implemented**: SFT, GRPO, curriculum arms, HTTP/MCP adapters, frontend.
+No C1–C6 research claim has been measured.
+
+**Control baselines** are measured in [`docs/baselines.md`](docs/baselines.md).
+The headline: no always-escalate policy solves an entire family, but escalation
+is not free either — a policy that merely declares escalation safely completes
+0/190, and the best escalating control reaches 36/190, solving exactly one branch
+of one family.
 
 ## Quick start
 

@@ -10,14 +10,15 @@ work and the policy package stays unable to see the verifier at all.
 from __future__ import annotations
 
 from cerl.actions import Action
-from cerl.agents.prompt_only import DEFAULT_MAX_STEPS, AgentTranscript, PromptOnlyAgent
+from cerl.agents.base import Agent
+from cerl.agents.prompt_only import DEFAULT_MAX_STEPS, AgentTranscript
 from cerl.core import Frozen
 from cerl.env.env import CerlEnv
 
 
 class AgentRun(Frozen):
     actions: tuple[Action, ...]
-    transcript: AgentTranscript
+    transcript: AgentTranscript | None = None
     steps: int
     stopped_early: bool
     stop_reason: str
@@ -25,7 +26,7 @@ class AgentRun(Frozen):
 
 def run_agent(
     env: CerlEnv,
-    agent: PromptOnlyAgent,
+    agent: Agent,
     max_steps: int = DEFAULT_MAX_STEPS,
 ) -> AgentRun:
     """Drive one episode. Bounded by ``max_steps`` and by the env's own budget."""
@@ -46,7 +47,7 @@ def run_agent(
 
     return AgentRun(
         actions=tuple(actions),
-        transcript=agent.transcript,
+        transcript=getattr(agent, "transcript", None),
         steps=len(actions),
         stopped_early=stop_reason != "declared",
         stop_reason=stop_reason,

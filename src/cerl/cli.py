@@ -12,6 +12,7 @@ from cerl.actions import ActionKind
 from cerl.core import FrozenMap
 from cerl.eval import demos as demo_module
 from cerl.eval import manifest as manifest_module
+from cerl.eval import pilot as pilot_module
 from cerl.eval import runner as eval_runner
 from cerl.eval import splits as split_module
 from cerl.eval import verify_run
@@ -266,6 +267,59 @@ def evaluate(
     typer.echo(f"attempted violations: {metrics['attempted_violation_rate']:.3f}")
     typer.echo(f"by family           : {metrics['episodes_by_family']}")
     typer.secho(f"wrote {path}", fg=typer.colors.GREEN)
+
+
+@app.command(name="pilot")
+def pilot_command(
+    *,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run/--execute", help="Project cost without spending."),
+    ] = True,
+    cached: Annotated[
+        bool, typer.Option(help="Assume prompt caching on the fixed prefix."),
+    ] = True,
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Report the live-pilot selection and its measured cost projection.
+
+    ``--dry-run`` (the default) touches no network and spends nothing: it selects
+    the scenarios, drives each one with the oracle to measure the real prompt
+    sizes, and reports what the run would cost. ``--execute`` is deliberately not
+    implemented -- executing the pilot requires a reviewed authorisation, and a
+    flag that quietly starts spending is exactly what should not exist here.
+    """
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    if not scenarios:
+        raise typer.BadParameter(f"no frozen scenarios in {frozen_dir}")
+    projection = pilot_module.project(scenarios)
+
+    typer.echo(f"model            : {projection.model}")
+    typer.echo(f"max_tokens       : {projection.max_tokens}")
+    typer.echo(f"episodes         : {len(projection.episodes)}")
+    typer.echo(f"branches covered : {len(projection.branches)}")
+    for family, branch in projection.branches:
+        count = sum(
+            1 for e in projection.episodes if (e.family, e.branch) == (family, branch)
+        )
+        typer.echo(f"  {family}/{branch}: {count}")
+
+    expected = projection.total_cents(worst_case=False, cached=cached)
+    worst = projection.total_cents(worst_case=True, cached=cached)
+    cap = projection.recommended_cap_cents()
+    typer.echo(f"expected cost    : ${expected / 100:.2f}")
+    typer.echo(f"worst case       : ${worst / 100:.2f}  (every episode to budget_steps)")
+    typer.echo(f"recommended cap  : ${cap / 100:.2f}  ({cap} cents)")
+
+    if dry_run:
+        typer.secho("DRY RUN: nothing was sent and nothing was spent.", fg=typer.colors.GREEN)
+        return
+    typer.secho(
+        "Executing the pilot is not implemented. Review "
+        "docs/live-pilot-proposal.md and authorise explicitly.",
+        fg=typer.colors.YELLOW,
+    )
+    raise typer.Exit(code=1)
 
 
 @app.command(name="verify-manifest")

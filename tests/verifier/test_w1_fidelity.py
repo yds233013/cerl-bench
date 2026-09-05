@@ -55,8 +55,14 @@ def test_w1_covers_all_three_branches(w1_frozen):
     }
 
 
-def test_always_escalate_cannot_solve_w1(w1_frozen):
-    """Two of the three branches require something other than escalation."""
+def test_no_always_escalate_policy_solves_the_whole_w1_family(w1_frozen):
+    """Two of the three branches require something other than escalation.
+
+    The claim is bounded deliberately: escalating everything fails *this* family
+    as a whole, and it can still be the correct decision on the third branch.
+    What it cannot do is score there for free -- see the measured control in
+    ``tests/eval/test_controls.py``, which is 0/20 on ``escalate_ambiguous``.
+    """
     decisions = {s.required_decision for s in w1_frozen}
     assert {"act", "abstain", "escalate"} <= decisions
     non_escalate = [s for s in w1_frozen if s.required_decision != "escalate"]
