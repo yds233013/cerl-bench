@@ -125,3 +125,24 @@ in-distribution instances, not relaxing the rule.
 
 Criterion 41 is unaffected — 104 matched pairs, unchanged. Which partition a pair
 occupies does not alter the pair.
+
+
+## Pairing after the corpus 2.0.0 regeneration
+
+Renaming every entity in the corpus left pairing untouched, which is exactly what
+the C6 control predicts: a pair's difficulty is a property of its workflow, not
+of the tokens in it.
+
+| Check | Before | After |
+|---|---|---|
+| Criterion 41 matched pairs | 104 / 104 within ±1 | **104 / 104 within ±1** |
+| W1 identity-evidence spread | 12 / 10 / 9 oracle calls | **12 / 10 / 9** |
+| Entity cardinality within pairs | matched | matched |
+| Brief length within pairs | within ±15% | within ±15% |
+
+Both members of a pair are generated from the same seed **and now from the same
+lexicon shard**, because they share a partition by construction. So a pair's two
+worlds still contain the same customers with the same names, and differ only in
+the counterfactual under test. Had the shard been chosen per scenario rather than
+per group, a pair would have been split across two name pools and the comparison
+would have measured renaming as well as the intervention.

@@ -1,0 +1,67 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Riverbend Packaging"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.post_message",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "text": "Cannot reconcile cus_000000000066 against cus_000000000065: the identity evidence is too weak to verify a match. Escalating for review.",
+      "thread_id": null
+    },
+    {
+      "comment_kind": "escalation",
+      "kind": "tickets.add_comment",
+      "text": "Escalated to #billing-ops: the identity evidence is too weak to verify a match.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "escalated",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "escalate",
+      "reason": "the identity evidence is too weak to verify a match",
+      "to": "billing-ops"
+    }
+  ],
+  "branch": "escalate_ambiguous",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "escalate",
+  "scenario_id": "dup_profile_reconciliation__disp-none__id-name_only_similarity__appr-missing_unobtainable__pp-none__tr-stable__s17",
+  "terminal_state_hash": "cb0fc8a9f2baca5b9e33b798bb0fa5d4380b86d3086d8b639542186a2c750234",
+  "tool_calls": 10,
+  "trace_head_hash": "48e22384973d3ce535df0c66b0a30583141d1b5e5c4b81c05dba9fda939c95a6",
+  "verifier_version": "1.0.0"
+}

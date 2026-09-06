@@ -3,7 +3,7 @@
 One canonical status. `README.md` and `MORNING_REPORT.md` both defer to this
 file; where any other document disagrees, this one is correct.
 
-Last updated 2026-09-05, after the canonical split 1.2.0 leakage repair.
+Last updated 2026-09-05, after the corpus 2.0.0 regeneration.
 
 ## Two different kinds of "not done"
 
@@ -38,8 +38,9 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Control baselines (5 unprivileged, 2 privileged references) | **MEASURED** | `docs/baselines.md`, pinned in `tests/eval/test_controls.py` |
 | Control metrics separated (task / harm / decision) | **IMPLEMENTED** | a single "safe" column conflated task success with harmlessness |
 | Criterion 41 — matched CF/ID pairs | **PASS, on 104 pairs** | see deviation 1 |
-| **Criterion 42** — lexicon disjointness **and** no held-out value in training | **FAIL** | two clauses; the second now passes on the canonical split, the first does not. See deviation 5 |
-| Canonical split 1.2.0 | **IMPLEMENTED** | 44 sibling groups moved; 0 scenario files regenerated |
+| **Criterion 42** — lexicon disjointness **and** no held-out value in training | **PASS** | both clauses hold literally on corpus 2.0.0: 0 shared lexicon values between partitions, 0 holdouts in training |
+| Corpus 2.0.0 (regenerated, partition-aware lexicon) | **IMPLEMENTED** | 190 scenarios, byte-stable re-freeze, oracle clean 190/190 |
+| Canonical split 1.2.0 | **IMPLEMENTED** | 44 sibling groups moved out of training |
 | W1 `identity_evidence` generalization | **NOT TESTED** | see deviation 1 |
 | Pilot selection + split audit | **IMPLEMENTED** | `cerl pilot --dry-run`; `docs/pilot-split-audit.md` |
 | Pilot execution path | **IMPLEMENTED** | `cerl pilot --execute --synthetic`, 20/20 episodes offline |
@@ -50,8 +51,8 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | **Live pilot execution** | **BLOCKED_EXTERNAL** | see deviation 2 — built, tested, awaiting authorisation |
 | Per-request ledger persistence | **IMPLEMENTED** | write-ahead journal, `fsync`ed before each send; 12 crash-recovery tests |
 | Holdout-vs-training inventory | **IMPLEMENTED** | `docs/pilot-split-audit.md` |
-| Per-partition lexicon shards in the corpus | **NOT_IMPLEMENTED** | shards exist and are disjoint; all scenarios use `core`. Needs corpus regeneration |
-| Ten-branch training coverage | **NOT_IMPLEMENTED** (corpus) | 5/10 branches after the 1.2.0 repair; reported, never backfilled |
+| Per-partition lexicon shards in the corpus | **IMPLEMENTED** | company names, email domains, staff handles and display names all sharded |
+| Ten-branch training coverage | **BLOCKED — research decision** | 5/10. Three branches could be added by freezing pure-ID instances; two cannot without changing the hypotheses. Alternatives documented, none chosen |
 | Evaluation-partition branch coverage | **RESOLVED by 1.2.0** | was 6/10; validation and evaluation now cover 10/10 |
 | Investigate-then-abstain / -act controls | **NOT_IMPLEMENTED** | `docs/baselines.md` |
 | SFT, GRPO, curriculum arms, HTTP/MCP adapters, frontend | **NOT STARTED** | out of Phase 1B scope by instruction |
@@ -108,11 +109,53 @@ Training reaches **5 of 10 branches** under split 1.2.0, so the pilot is 5
 episodes. That limit is reported by `cerl pilot`, which names the five missing
 branches, and it is never resolved by importing a held-out value.
 
-## Deviation 5 — Criterion 42 fails on its lexicon clause
+## Deviation 5 — Criterion 42 now passes; the corpus was regenerated to get there
 
-Criterion 42 has **two** clauses. They do not have the same answer, and the
-criterion is marked **FAIL** because it may be PASS only when both hold
-literally.
+**Resolved.** Both clauses hold literally on corpus 2.0.0.
+
+**Clause B — no held-out value in training.** Split 1.0.0 put 85 registered
+counterfactuals in the training partition; 1.1.0 filtered them at the pilot
+selector, which left the split broken for every other consumer; **1.2.0** moved
+every CF-bearing sibling group out of training, whole. Training holds 15
+scenarios and zero holdouts.
+
+**Clause A — lexicon disjointness.** Corpus 1.x decided partitions after
+generation, so every file drew from the `core` pool and partitions shared 15–17
+entity names. That could not be repaired by relabelling. **Corpus 2.0.0** assigns
+partitions from the plan *before* materialising anything, so each scenario is
+generated from its own partition's shard. Measured over the committed files: **0
+shared values** between any two partitions.
+
+Hashes changed because the files changed — that is what the version bump is for.
+Corpus 1.x remains on disk, untouched and re-verified.
+
+**Cost, stated rather than repaired:** training coverage is **5 of 10 branches**,
+and W3 contributes no training scenario. See deviation 6.
+
+## Deviation 6 — training branch coverage is 5/10, pending a research decision
+
+Two different causes:
+
+- `distinct_entities`, `request_then_refund` and `legitimate_refund` are all
+  reachable from in-distribution values. They are absent because of which
+  instances were frozen, not what the axes permit. **Additional pure-ID instances
+  at fresh seeds would add them, with no hypothesis change.**
+- `request_info` and `escalate_fraud` have **no** in-distribution value —
+  reachable only through registered holdouts. Adding them would mean
+  re-registering W3's `signal_count` holdouts, which changes what W3's
+  counterfactual is and therefore changes H0 and C1–C6.
+
+Four alternatives are tabulated in `docs/pilot-split-audit.md`; **none is
+chosen**, because the choice is a research decision about corpus design. Nothing
+was invented and no scenario was moved to improve coverage.
+
+## Deviation 5 (historical) — how Criterion 42 came to fail
+
+Kept as the record of the two-stage failure, since both stages are instructive.
+Superseded by the section above.
+
+Criterion 42 has **two** clauses, and for a while they did not have the same
+answer.
 
 **Clause B — no held-out value in the training split: PASS.** An inventory found
 85 of the 144 `train` scenarios under split 1.0.0 carried a registered held-out

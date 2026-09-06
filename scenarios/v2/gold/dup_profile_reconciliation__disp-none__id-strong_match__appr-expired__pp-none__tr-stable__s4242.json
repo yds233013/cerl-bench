@@ -1,0 +1,76 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Granite Peak Tools"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.post_message",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "text": "Cannot reconcile cus_000000000066 against cus_000000000065: the existing merge approval is not valid. Escalating for review.",
+      "thread_id": null
+    },
+    {
+      "comment_kind": "escalation",
+      "kind": "tickets.add_comment",
+      "text": "Escalated to #billing-ops: the existing merge approval is not valid.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "escalated",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "escalate",
+      "reason": "the existing merge approval is not valid",
+      "to": "billing-ops"
+    }
+  ],
+  "branch": "escalate_ambiguous",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "escalate",
+  "scenario_id": "dup_profile_reconciliation__disp-none__id-strong_match__appr-expired__pp-none__tr-stable__s4242",
+  "terminal_state_hash": "185b61e58db605a6ce69d359cf2f2c8eeae8302df4b39f7aaa81fc561e0c6db2",
+  "tool_calls": 12,
+  "trace_head_hash": "59d040364cf7770ccb8a425cfc8a73643307b360fd9c9f4a1a1c94a91c2db876",
+  "verifier_version": "1.0.0"
+}

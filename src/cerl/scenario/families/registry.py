@@ -20,7 +20,10 @@ from cerl.core import Frozen, FrozenMap
 from cerl.scenario.generator import GeneratedWorld
 from cerl.scenario.schema import ScenarioTemplate
 
-Generator = Callable[[int, FrozenMap[str, str], str], GeneratedWorld]
+#: ``(seed, axes, scenario_id, lexicon_shard) -> world``. The shard is a
+#: required argument: a default is how corpus 1.x drew every scenario from one
+#: pool regardless of partition.
+Generator = Callable[[int, FrozenMap[str, str], str, str], GeneratedWorld]
 InstancePlan = Callable[[], tuple[tuple[FrozenMap[str, str], int], ...]]
 Slugger = Callable[[FrozenMap[str, str]], str]
 

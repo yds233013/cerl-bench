@@ -22,16 +22,19 @@ from cerl.reference import gold as gold_module
 from cerl.reference import registry as reference_registry
 from cerl.reference.runner import run_reference
 from cerl.scenario import axes as ax
+from cerl.scenario import corpus as corpus_module
 from cerl.scenario import freeze as freeze_module
+from cerl.scenario import lexicon as lexicon_module
+from cerl.scenario import partitions as partitions_module
 from cerl.scenario.families import registry as family_registry
 from cerl.scenario.schema import FrozenScenario
 from cerl.verify import verify
 
 app = typer.Typer(add_completion=False, help="CERL-Bench: counterfactual enterprise RL.")
 
-FROZEN = Path("scenarios/frozen")
-GOLD = Path("scenarios/gold")
-MANIFEST = Path("scenarios/manifest.json")
+FROZEN = corpus_module.CANONICAL.frozen
+GOLD = corpus_module.CANONICAL.gold
+MANIFEST = corpus_module.CANONICAL.manifest
 
 
 def _load(scenario_id: str) -> FrozenScenario:
@@ -47,9 +50,23 @@ def freeze(
     out: Annotated[Path, typer.Option(help="Frozen scenario directory.")] = FROZEN,
     gold_out: Annotated[Path, typer.Option(help="Gold trajectory directory.")] = GOLD,
     manifest: Annotated[Path, typer.Option(help="Manifest path.")] = MANIFEST,
+    split_out: Annotated[
+        Path | None,
+        typer.Option(
+            help="Split manifest path. Defaults beside --manifest, never to a "
+                 "fixed location: a partial freeze must not overwrite the "
+                 "committed corpus's split.",
+        ),
+    ] = None,
     limit: Annotated[int, typer.Option(help="Freeze at most N instances (testing).")] = 0,
 ) -> None:
-    """Materialise, verify with the oracle, and commit every Phase 1A instance.
+    """Materialise, verify with the oracle, and commit the corpus.
+
+    **Partitions are assigned before anything is materialised.** The plan --
+    template, axes, seed -- is enough to place every sibling group, so each
+    scenario can be generated from its own partition's lexicon shard. Corpus
+    1.x decided partitions afterwards, which is precisely why every file drew
+    from one pool and Criterion 42's lexicon clause could not be satisfied.
 
     The oracle pass is not optional: a scenario whose oracle does not score a
     clean 1.0 is a defective scenario and is refused rather than written.
@@ -75,8 +92,23 @@ def freeze(
             instances = instances[:limit]
         work += [(template_id, assignment, seed) for assignment, seed in instances]
 
+    # Plan the split first. Every scenario's shard follows from its partition,
+    # and its partition follows from the plan, so nothing is generated until the
+    # question "which pool may this draw from" already has an answer.
+    plan_entries = [
+        partitions_module.PlanEntry(
+            template_id=template_id,
+            family=family_registry.template_for(template_id).family,
+            axes=assignment,
+            seed=seed,
+        )
+        for template_id, assignment, seed in work
+    ]
+    group_plans = partitions_module.assign(plan_entries)
+
     for template_id, assignment, seed in work:
-        scenario = freeze_module.materialize(template_id, assignment, seed)
+        shard = freeze_module.shard_for(template_id, assignment, seed)
+        scenario = freeze_module.materialize(template_id, assignment, seed, shard)
         episode, gold = gold_module.produce(scenario)
         if not episode.verdict.is_clean_oracle_run:
             typer.secho(
@@ -93,11 +125,14 @@ def freeze(
         schema_version = scenario.schema_version
         written += 1
 
+    manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text(
         json.dumps(
             {
+                "corpus_version": corpus_module.CORPUS_VERSION,
                 "generator_version": generator_version,
                 "schema_version": schema_version,
+                "shard_version": lexicon_module.SHARD_VERSION,
                 "families": sorted({e["family"] for e in entries}),
                 "count": written,
                 "scenarios": sorted(entries, key=lambda e: e["scenario_id"]),
@@ -108,16 +143,33 @@ def freeze(
         + "\n",
         encoding="utf-8",
     )
-    # A scenario id collision would silently shrink the corpus, so the count of
-    # distinct files written must equal the number of instances planned.
+    # Three ways a corpus can silently shrink, all checked. An id collision
+    # overwrites a file; a filename collision does the same one level down; and
+    # a count mismatch catches anything else that lost an instance on the way.
+    planned = len(work)
     distinct_ids = {entry["scenario_id"] for entry in entries}
-    if len(distinct_ids) != written:
+    distinct_files = {entry["file"] for entry in entries}
+    for label, distinct in (("id", distinct_ids), ("filename", distinct_files)):
+        if len(distinct) != written:
+            typer.secho(
+                f"scenario {label} collision: {written} instances produced only "
+                f"{len(distinct)} distinct {label}s",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=1)
+    if written != planned:
         typer.secho(
-            f"scenario id collision: {written} instances produced only "
-            f"{len(distinct_ids)} distinct ids",
+            f"corpus shrank: planned {planned} instances, wrote {written}",
             fg=typer.colors.RED,
         )
         raise typer.Exit(code=1)
+
+    split_path = split_out or manifest.parent / "split_manifest.json"
+    split_path.parent.mkdir(parents=True, exist_ok=True)
+    split_module.write_manifest(
+        split_module.manifest_from_plan(group_plans, plan_entries), split_path,
+    )
+    typer.echo(f"  split manifest: {split_path}")
 
     by_family: dict[str, int] = {}
     for entry in entries:

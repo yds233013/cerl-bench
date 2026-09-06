@@ -189,4 +189,7 @@ def slice_scenario():
             "near_duplicate": "present_similar_name",
         },
     )
-    return _freeze.materialize("dup_charge_threshold", axes, 17)
+    return _freeze.materialize(
+        "dup_charge_threshold", axes, 17,
+        _freeze.shard_for("dup_charge_threshold", axes, 17),
+    )

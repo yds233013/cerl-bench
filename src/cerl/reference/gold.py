@@ -22,9 +22,10 @@ from cerl.core import Frozen
 from cerl.reference.ground_truth import ReferencePolicy
 from cerl.reference.registry import oracle_for as _oracle_for
 from cerl.reference.runner import Episode, run_reference
+from cerl.scenario import corpus
 from cerl.scenario.schema import FrozenScenario
 
-GOLD_DIR = Path("scenarios/gold")
+GOLD_DIR = corpus.CANONICAL.gold
 
 
 class GoldTrajectory(Frozen):

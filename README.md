@@ -23,8 +23,14 @@ hash-chained traces, exact offline replay, and an evaluation harness.
 | `duplicate_billing_profile` (W1) | 36 | merge_sanctioned (8), distinct_entities (8), escalate_ambiguous (20) |
 | `suspicious_refund_escalation` (W3) | 40 | legitimate_refund (10), request_info (10), escalate_fraud (20) |
 
+**Corpus 2.0.0.** The frozen corpus lives at `scenarios/v2/frozen`; each
+partition is generated from its own disjoint lexicon shard, so no entity name is
+shared across train, validation and evaluation. Corpus 1.x is preserved at
+`scenarios/frozen` as an immutable historical artifact — every scenario hash
+differs between them, which is what the version bump is for.
+
 **Canonical status: [`docs/status.md`](docs/status.md).** In short — Phase 1B is
-implemented and verified with two recorded scope deviations: W1's
+implemented and verified with recorded scope deviations: W1's
 `identity_evidence` axis is a separately reported challenge set rather than a
 matched pair (Criterion 41 passes on 104 pairs, which exclude it), and live model
 evaluation is `BLOCKED_EXTERNAL` with a pilot proposed but not executed.

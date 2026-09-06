@@ -1,0 +1,68 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Maplecross Energy"
+    },
+    {
+      "customer_id": "cus_000000000001",
+      "kind": "billing.list_charges"
+    },
+    {
+      "charge_id": "ch_000000000001",
+      "kind": "billing.get_charge"
+    },
+    {
+      "charge_id": "ch_000000000002",
+      "kind": "billing.get_charge"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "refund_approval_threshold"
+    },
+    {
+      "channel": "billing-approvals",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
+      "amount_cents": 202000,
+      "approval_ref": "apr_000000000001",
+      "charge_id": "ch_000000000002",
+      "idempotency_key": "oracle-refund-1",
+      "kind": "billing.issue_refund",
+      "reason": "duplicate"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Refunded the duplicate charge ch_000000000002 under approval apr_000000000001.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Refunded the duplicate charge ch_000000000002 under approval apr_000000000001."
+    }
+  ],
+  "branch": "refund_now",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "act",
+  "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-none__t-50000__tr-stable__s101",
+  "terminal_state_hash": "84bd3353b4eb460d00f4a11bf1ce42faa5a807556921a0339553c27bb4fb3303",
+  "tool_calls": 11,
+  "trace_head_hash": "bacab770f4a26a547b2422a8e5c415e651b2267c52154d512ca36ce1501e72e8",
+  "verifier_version": "1.0.0"
+}

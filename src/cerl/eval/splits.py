@@ -23,20 +23,16 @@ from functools import lru_cache
 from pathlib import Path
 
 from cerl.core import Frozen, FrozenMap, content_hash
-from cerl.scenario import siblings
+from cerl.scenario import corpus, partitions, siblings
 from cerl.scenario.schema import FrozenScenario
 
-
-class Partition(StrEnum):
-    TRAIN = "train"
-    VALIDATION = "validation"
-    EVALUATION = "evaluation"
-
-
-#: Fraction of pair-groups assigned to each partition, in units of 1/100.
-TRAIN_SHARE = 60
-VALIDATION_SHARE = 15
-# The remainder is evaluation.
+#: Re-exported from ``scenario.partitions``, where the rule now lives: a split
+#: is a property of the corpus rather than of a consumer, and corpus generation
+#: needs the assignment before any consumer exists.
+Partition = partitions.Partition
+TRAIN_SHARE = partitions.TRAIN_SHARE
+VALIDATION_SHARE = partitions.VALIDATION_SHARE
+CF_VALIDATION_SHARE = partitions.CF_VALIDATION_SHARE
 
 SPLIT_VERSION = "1.1.0"
 
@@ -87,15 +83,8 @@ def pair_key(scenario: FrozenScenario) -> str:
     Both members reduce to the *sibling* assignment, so they always hash to the
     same group and therefore the same partition.
     """
-    axes = scenario.axes
-    if siblings.is_held_out(axes, scenario.template_id):
-        axes = siblings.sibling_axes(axes, scenario.template_id)
-    return content_hash(
-        {
-            "template": scenario.template_id,
-            "axes": dict(axes),
-            "seed": scenario.root_seed,
-        },
+    return partitions.group_key(
+        scenario.template_id, scenario.axes, scenario.root_seed,
     )
 
 
@@ -108,12 +97,7 @@ def partition_v1_0_0(scenario: FrozenScenario) -> Partition:
     because a counterfactual and its ID sibling share a partition and 60% of
     pair groups land in train.
     """
-    bucket = int(pair_key(scenario)[:8], 16) % 100
-    if bucket < TRAIN_SHARE:
-        return Partition.TRAIN
-    if bucket < TRAIN_SHARE + VALIDATION_SHARE:
-        return Partition.VALIDATION
-    return Partition.EVALUATION
+    return partitions.partition_v1_0_0_for_key(pair_key(scenario))
 
 
 def partition_of(scenario: FrozenScenario) -> Partition:
@@ -233,7 +217,8 @@ def inventory(scenarios: list[FrozenScenario]) -> EligibilityInventory:
 # the canonical split manifest -- version 1.2.0
 # --------------------------------------------------------------------------
 
-MANIFEST_PATH = Path("scenarios/split_manifest.json")
+#: The canonical corpus's split manifest. Corpus 1.x keeps its own.
+MANIFEST_PATH = corpus.CANONICAL.split_manifest
 
 
 class GroupAssignment(Frozen):
@@ -283,74 +268,52 @@ class SplitManifest(Frozen):
         return tuple(sorted(m for g in self.groups for m in g.members))
 
 
-def _held_out_labels(group: list[FrozenScenario]) -> set[str]:
-    """``family/axis=value`` for each registered holdout in the group.
+def _reason(plan: partitions.GroupPlan) -> str:
+    """One reason string, used by both construction paths so they cannot drift."""
+    if plan.cf_bearing and plan.held_out_labels:
+        return f"{plan.reason} ({', '.join(plan.held_out_labels)})"
+    return plan.reason
 
-    Namespaced by family and axis on purpose: ``signal_count=1`` and
-    ``approval=expired`` are unrelated facts about different workflows, and a
-    bare value would collide across families the moment two share an axis name.
-    """
-    labels: set[str] = set()
-    for scenario in group:
-        pairing = siblings.pairing_for(scenario.template_id)
-        intervention = pairing.intervention_for(scenario.axes)
-        if intervention is None:
-            continue
-        value = scenario.axes[intervention.axis]
-        labels.add(f"{scenario.family}/{intervention.axis}={value}")
-    return labels
+
+def _assignments(
+    group_plans: dict[str, partitions.GroupPlan], members: dict[str, list[str]],
+) -> tuple[GroupAssignment, ...]:
+    return tuple(
+        GroupAssignment(
+            pair_key=key,
+            partition=plan.partition,
+            members=tuple(sorted(members.get(key, ()))),
+            cf_bearing=plan.cf_bearing,
+            partition_v1_0_0=plan.partition_v1_0_0,
+            reason=_reason(plan),
+        )
+        for key, plan in sorted(group_plans.items())
+    )
 
 
 def build_manifest(scenarios: list[FrozenScenario]) -> SplitManifest:
-    """Derive the canonical split from the corpus. Deterministic and total.
+    """Derive the canonical split from a materialised corpus.
 
-    Total is the operative word: every scenario lands in exactly one group and
-    every group in exactly one partition, so nothing can be silently dropped or
-    counted twice. ``verify_manifest_totality`` checks that against the corpus.
+    Routed through the same plan-level assignment the generator used, so a
+    manifest rebuilt from the files cannot disagree with the shards those files
+    were built from. Total by construction: every scenario lands in exactly one
+    group and every group in one partition, so nothing is dropped or double
+    counted.
     """
-    members: dict[str, list[FrozenScenario]] = {}
+    entries = [
+        partitions.PlanEntry(
+            template_id=s.template_id,
+            family=s.family,
+            axes=s.axes,
+            seed=s.root_seed,
+        )
+        for s in scenarios
+    ]
+    group_plans = partitions.assign(entries)
+    members: dict[str, list[str]] = {}
     for scenario in scenarios:
-        members.setdefault(pair_key(scenario), []).append(scenario)
-
-    assignments: list[GroupAssignment] = []
-    for key in sorted(members):
-        group = members[key]
-        cf_bearing = any(
-            siblings.is_held_out(s.axes, s.template_id) for s in group
-        )
-        original = partition_v1_0_0(group[0])
-
-        if not cf_bearing:
-            partition = original
-            reason = "pure-ID group; 1.0.0 assignment preserved"
-        elif original is not Partition.TRAIN:
-            partition = original
-            reason = "CF-bearing group already outside training; unchanged"
-        else:
-            # Must leave training, and must leave whole.
-            bucket = int(key[8:16], 16) % 100
-            partition = (
-                Partition.VALIDATION
-                if bucket < CF_VALIDATION_SHARE
-                else Partition.EVALUATION
-            )
-            held = sorted(_held_out_labels(group))
-            reason = (
-                f"moved out of training: group carries registered held-out "
-                f"{', '.join(held)}"
-            )
-
-        assignments.append(
-            GroupAssignment(
-                pair_key=key,
-                partition=partition,
-                members=tuple(sorted(s.scenario_id for s in group)),
-                cf_bearing=cf_bearing,
-                partition_v1_0_0=original,
-                reason=reason,
-            ),
-        )
-    return SplitManifest(groups=tuple(assignments))
+        members.setdefault(pair_key(scenario), []).append(scenario.scenario_id)
+    return SplitManifest(groups=_assignments(group_plans, members))
 
 
 def write_manifest(manifest: SplitManifest, path: Path = MANIFEST_PATH) -> Path:
@@ -401,3 +364,22 @@ def verify_manifest_totality(
         f"empty group {group.pair_key}" for group in split.groups if not group.members
     )
     return tuple(problems)
+
+
+def manifest_from_plan(
+    group_plans: dict[str, partitions.GroupPlan],
+    entries: list[partitions.PlanEntry],
+) -> SplitManifest:
+    """Build the split manifest from the pre-generation plan.
+
+    The same assignment the generator used, recorded rather than recomputed --
+    so the manifest cannot drift from the shards the files were built with.
+    """
+    from cerl.scenario.freeze import scenario_id as _sid
+
+    members: dict[str, list[str]] = {}
+    for entry in entries:
+        members.setdefault(entry.key, []).append(
+            _sid(entry.template_id, entry.axes, entry.seed),
+        )
+    return SplitManifest(groups=_assignments(group_plans, members))

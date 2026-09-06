@@ -153,6 +153,15 @@ class FrozenScenario(Frozen):
     family: str
     schema_version: int
     generator_version: str
+    #: Which lexicon shard every name in this file came from. Recorded in the
+    #: scenario rather than only in the manifest so a file carries its own
+    #: provenance: a scenario that ends up in the wrong partition is detectable
+    #: from its contents alone.
+    lexicon_shard: str = ""
+    #: The partition this scenario was generated *for*. Decided before the world
+    #: existed, which is what makes shard correctness possible.
+    partition: str = ""
+    corpus_version: str = ""
     root_seed: int
     axes: FrozenMap[str, str]
     facts: FrozenMap[str, Any]

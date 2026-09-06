@@ -26,7 +26,10 @@ from cerl.state import ScheduledFiring
 
 def _obtainable(seed: int = 17):
     axes = FrozenMap({**DEFAULT_AXES.to_dict(), "approval": "missing_obtainable"})
-    return freeze_module.materialize("dup_charge_threshold", axes, seed)
+    return freeze_module.materialize(
+        "dup_charge_threshold", axes, seed,
+        freeze_module.shard_for("dup_charge_threshold", axes, seed),
+    )
 
 
 # --------------------------------------------------------------------------
@@ -163,10 +166,12 @@ def test_once_rules_do_not_refire_under_spam():
 
 def test_guard_selects_between_grant_and_denial():
     obtainable = _obtainable()
+    axes = FrozenMap({**DEFAULT_AXES.to_dict(), "approval": "missing_unobtainable"})
     unobtainable = freeze_module.materialize(
         "dup_charge_threshold",
-        FrozenMap({**DEFAULT_AXES.to_dict(), "approval": "missing_unobtainable"}),
+        axes,
         17,
+        freeze_module.shard_for("dup_charge_threshold", axes, 17),
     )
     for scenario, expected_rule, expect_approval in (
         (obtainable, "r_manager_grants", True),
@@ -268,10 +273,12 @@ def test_guard_reachability_is_precise():
     obtainable = _obtainable()
     assert reachable_responder_rules(obtainable) == frozenset({"r_manager_grants"})
 
+    axes = FrozenMap({**DEFAULT_AXES.to_dict(), "approval": "missing_unobtainable"})
     unobtainable = freeze_module.materialize(
         "dup_charge_threshold",
-        FrozenMap({**DEFAULT_AXES.to_dict(), "approval": "missing_unobtainable"}),
+        axes,
         17,
+        freeze_module.shard_for("dup_charge_threshold", axes, 17),
     )
     assert reachable_responder_rules(unobtainable) == frozenset({"r_manager_denies"})
 

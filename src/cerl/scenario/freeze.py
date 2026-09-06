@@ -8,15 +8,19 @@ applied here (CLAUDE.md rule 9).
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from cerl.core import FrozenMap, ScenarioDefect, UserId, canonical_json, content_hash
+from cerl.scenario import corpus, partitions
 from cerl.scenario.families import registry
 from cerl.scenario.generator import GENERATOR_VERSION
 from cerl.scenario.schema import FrozenScenario, ScenarioTemplate
 
-FROZEN_DIR = Path("scenarios/frozen")
+#: The canonical corpus. Corpus 1.x remains on disk at
+#: ``corpus.LEGACY.frozen`` and is never written to again.
+FROZEN_DIR = corpus.CANONICAL.frozen
 
 
 def templates() -> dict[str, ScenarioTemplate]:
@@ -33,15 +37,60 @@ def scenario_id(template_id: str, axes: FrozenMap[str, str], seed: int) -> str:
     return f"{template_id}__{registry.slug_for(template_id)(axes)}__s{seed}"
 
 
+@lru_cache(maxsize=1)
+def corpus_group_plans() -> dict[str, partitions.GroupPlan]:
+    """Partition every sibling group in the full authored plan.
+
+    Cached because it is a pure function of the registry, and because callers
+    that materialise one scenario should not each re-plan the corpus. Note it
+    plans the *whole* corpus even for a single scenario: a group's partition
+    depends on whether any sibling is a counterfactual, so a partial plan could
+    place the same scenario differently.
+    """
+    entries = [
+        partitions.PlanEntry(
+            template_id=template_id,
+            family=registry.template_for(template_id).family,
+            axes=axes,
+            seed=seed,
+        )
+        for template_id in registry.template_ids()
+        for axes, seed in registry.plan_for(template_id)()
+    ]
+    return partitions.assign(entries)
+
+
+def shard_for(template_id: str, axes: FrozenMap[str, str], seed: int) -> str:
+    """The lexicon shard this scenario must be generated from.
+
+    One answer, computed the same way the committed corpus was, so a scenario
+    materialised in a test is byte-identical to the one on disk.
+    """
+    key = partitions.group_key(template_id, axes, seed)
+    plans = corpus_group_plans()
+    if key not in plans:
+        raise ScenarioDefect(
+            f"{template_id} seed {seed} is not in the authored plan, so it has no "
+            f"partition and no shard. Add it to the family's instance plan first.",
+        )
+    return partitions.shard_for(plans[key].partition)
+
+
 def materialize(
     template_id: str,
     axes: FrozenMap[str, str],
     seed: int,
+    shard: str,
 ) -> FrozenScenario:
-    """Generate, resolve, and return a self-contained frozen scenario."""
+    """Generate, resolve, and return a self-contained frozen scenario.
+
+    ``shard`` names the lexicon pool, and is required rather than defaulted: the
+    partition is decided from the plan before anything is materialised, so by
+    the time this runs the correct shard is always known.
+    """
     template = registry.template_for(template_id)
     sid = scenario_id(template_id, axes, seed)
-    generated = registry.generator_for(template_id)(seed, axes, sid)
+    generated = registry.generator_for(template_id)(seed, axes, sid, shard)
 
     branch = template.resolve_branch(generated.facts)
 
@@ -61,6 +110,9 @@ def materialize(
         family=template.family,
         schema_version=template.schema_version,
         generator_version=GENERATOR_VERSION,
+        lexicon_shard=shard,
+        partition=shard,
+        corpus_version=corpus.CORPUS_VERSION,
         root_seed=seed,
         axes=axes,
         facts=generated.facts,

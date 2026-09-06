@@ -1,0 +1,92 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Saltmarsh Marine"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "amount_cents": 0,
+      "channel": "billing-ops",
+      "kind": "slack.request_approval",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "subject_ref": "cus_000000000066",
+      "text": "Requesting approval to merge duplicate profile cus_000000000066."
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
+      "approval_ref": "apr_3d53d4ae9e37",
+      "kind": "billing.merge_customers",
+      "source_id": "cus_000000000066",
+      "target_id": "cus_000000000065"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Verified duplicate: merged cus_000000000066 into cus_000000000065 under apr_3d53d4ae9e37.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Merged cus_000000000066 into cus_000000000065."
+    }
+  ],
+  "branch": "merge_sanctioned",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "act",
+  "scenario_id": "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_obtainable__pp-none__tr-stable__s4242",
+  "terminal_state_hash": "38609612214f2dc3a55c006993dc885ff01adc3f6f6827d9c9ef10c16a26c5ad",
+  "tool_calls": 15,
+  "trace_head_hash": "ac9afd890df789b5af2e3ca64a54ca7b64e711e36e2df25445b3cb17de7b99f1",
+  "verifier_version": "1.0.0"
+}

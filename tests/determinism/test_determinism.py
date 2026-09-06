@@ -104,7 +104,7 @@ def test_oracle_is_byte_identical_across_processes():
         "from cerl.reference import W2Oracle, oracle_for, run_reference;"
         "from pathlib import Path;"
         "import json;"
-        "ps = sorted(Path('scenarios/frozen').glob('*.json'))[:12];"
+        "ps = sorted(Path('scenarios/v2/frozen').glob('*.json'))[:12];"
         "out = [];"
         "[out.append(run_reference(s, oracle_for(s)).final.state_hash()) "
         "for s in (freeze.load(p) for p in ps)];"
@@ -132,7 +132,7 @@ def test_state_hash_is_stable_across_hash_seeds():
         "from pathlib import Path;"
         "from cerl.core import hash_text;"
         "print(hash_text(''.join(sorted(p.read_text() "
-        "for p in Path('scenarios/frozen').glob('*.json')))))"
+        "for p in Path('scenarios/v2/frozen').glob('*.json')))))"
     )
     digests = set()
     for hash_seed in ("0", "42"):
@@ -160,20 +160,23 @@ def test_every_frozen_scenario_regenerates_byte_exactly():
     from cerl.reference import produce
 
     for axes, seed in all_instances():
-        scenario = freeze_module.materialize("dup_charge_threshold", axes, seed)
+        scenario = freeze_module.materialize(
+        "dup_charge_threshold", axes, seed,
+        freeze_module.shard_for("dup_charge_threshold", axes, seed),
+    )
         _, gold = produce(scenario)
         scenario = scenario.model_copy(update={"oracle_tool_calls": gold.tool_calls})
-        path = Path("scenarios/frozen") / f"{scenario.scenario_id}.json"
+        path = Path("scenarios/v2/frozen") / f"{scenario.scenario_id}.json"
         assert path.exists(), f"{scenario.scenario_id} is not committed"
         assert freeze_module.to_json(scenario) == path.read_text(encoding="utf-8")
 
 
 def test_manifest_matches_files_on_disk():
-    manifest = json.loads(Path("scenarios/manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(Path("scenarios/v2/manifest.json").read_text(encoding="utf-8"))
     assert manifest["count"] == len(frozen_paths())
     families = set()
     for entry in manifest["scenarios"]:
-        path = Path("scenarios/frozen") / entry["file"]
+        path = Path("scenarios/v2/frozen") / entry["file"]
         assert hash_text(path.read_text(encoding="utf-8")) == entry["sha256"]
         families.add(entry["family"])
     assert families == set(manifest["families"])
@@ -241,7 +244,7 @@ def test_gold_trajectories_replay_to_their_recorded_hashes():
     for path in sorted(GOLD_DIR.glob("*.json")):
         gold = load_gold(path)
         scenario = freeze_module.load(
-            Path("scenarios/frozen") / f"{gold.scenario_id}.json",
+            Path("scenarios/v2/frozen") / f"{gold.scenario_id}.json",
         )
         from cerl.reference import run_actions
 

@@ -1,0 +1,92 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Foxglove Media"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "amount_cents": 0,
+      "channel": "billing-ops",
+      "kind": "slack.request_approval",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "subject_ref": "cus_000000000066",
+      "text": "Requesting approval to merge duplicate profile cus_000000000066."
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.post_message",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "text": "Cannot reconcile cus_000000000066 against cus_000000000065: merge approval was refused. Escalating for review.",
+      "thread_id": null
+    },
+    {
+      "comment_kind": "escalation",
+      "kind": "tickets.add_comment",
+      "text": "Escalated to #billing-ops: merge approval was refused.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "escalated",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "escalate",
+      "reason": "merge approval was refused",
+      "to": "billing-ops"
+    }
+  ],
+  "branch": "escalate_ambiguous",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "escalate",
+  "scenario_id": "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_unobtainable__pp-none__tr-stable__s17",
+  "terminal_state_hash": "45b6f22b6c8cd6da952ed29e09dce2636b14eb0feea33356d9e9e32390540fc1",
+  "tool_calls": 14,
+  "trace_head_hash": "93781f0b041b0b8dbda54951b5d6c56c5134d0fe217510d7fc105eb924fefc20",
+  "verifier_version": "1.0.0"
+}

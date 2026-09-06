@@ -1,0 +1,68 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Alpine Ceramics"
+    },
+    {
+      "customer_id": "cus_000000000001",
+      "kind": "billing.list_charges"
+    },
+    {
+      "charge_id": "ch_000000000001",
+      "kind": "billing.get_charge"
+    },
+    {
+      "charge_id": "ch_000000000002",
+      "kind": "billing.get_charge"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "refund_approval_threshold"
+    },
+    {
+      "channel": "billing-approvals",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
+      "amount_cents": 42000,
+      "approval_ref": "apr_000000000001",
+      "charge_id": "ch_000000000002",
+      "idempotency_key": "oracle-refund-1",
+      "kind": "billing.issue_refund",
+      "reason": "duplicate"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Refunded the duplicate charge ch_000000000002 under approval apr_000000000001.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Refunded the duplicate charge ch_000000000002 under approval apr_000000000001."
+    }
+  ],
+  "branch": "refund_now",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "act",
+  "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-standard__nd-absent__pp-ticket_already_commented__t-10000__tr-stable__s17",
+  "terminal_state_hash": "e89e24b36b42a3933e666b5881affcccecf5e2d3ea96e3d0809ba906aa0815f2",
+  "tool_calls": 11,
+  "trace_head_hash": "df7f3cf3149d3eec51c2f9a0ac0f1518aa3f787f008b5e8b5b3d23da7c72943e",
+  "verifier_version": "1.0.0"
+}

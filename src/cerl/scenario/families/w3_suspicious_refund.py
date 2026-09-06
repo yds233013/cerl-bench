@@ -44,7 +44,8 @@ from cerl.scenario.generator import (
     NOW,
     GeneratedWorld,
 )
-from cerl.scenario.lexicon import companies, slugify
+from cerl.scenario.lexicon import companies, slugify, staff
+from cerl.scenario.lexicon import domain as shard_domain
 from cerl.scenario.schema import (
     ALL_BRANCHES,
     BranchSpec,
@@ -111,6 +112,17 @@ ALL_SIGNALS: Final = (
 VELOCITY_THRESHOLD = 3
 VELOCITY_WINDOW_TICKS = 30 * 24 * 60
 
+
+
+def _who(shard: str, role: str) -> dict[str, str]:
+    """Handle and display name for a role, from this partition's shard.
+
+    Staff are lexicon-backed like any other name: "Billing Manager" appearing in
+    both a training and an evaluation file is exactly the memorisable marker the
+    shards exist to remove.
+    """
+    handle, display_name = staff(shard, role)
+    return {"handle": handle, "display_name": display_name}
 
 def _domain(email: str) -> str:
     return email.rsplit("@", maxsplit=1)[-1].lower()
@@ -515,15 +527,20 @@ def _build_policy(threshold_cents: int) -> PolicyDocument:
     )
 
 
-def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> GeneratedWorld:
+def generate(
+    root_seed: int,
+    axes: FrozenMap[str, str],
+    scenario_id: str,
+    shard: str,
+) -> GeneratedWorld:
     """Materialise one W3 world with the requested number of fraud signals."""
     rng = KeyedRng(root_seed, "w3_world_gen")
     agent = UserId.mint(AGENT_INDEX)
     trust_lead = UserId.mint(TRUST_LEAD_INDEX)
 
-    names = list(companies("core"))
+    names = list(companies(shard))
     base_name = names[root_seed % len(names)]
-    domain = slugify(base_name) + ".example"
+    domain = f"{slugify(base_name)}.{shard_domain(shard)}"
 
     wanted = _signal_plan(int(axes[SIGNAL_COUNT]), axes[SIGNAL_KIND])
     target_id = CustomerId.mint(TARGET_INDEX)
@@ -533,7 +550,7 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
 
     contact_email = f"billing@{domain}"
     requester_email = (
-        f"refunds@{slugify(base_name)}-recovery.example"
+        f"refunds@{slugify(base_name)}-recovery.{shard_domain(shard)}"
         if SIGNAL_DOMAIN_MISMATCH in wanted
         else contact_email
     )
@@ -561,7 +578,7 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
         customers[other] = Customer(
             id=other,
             display_name=name,
-            email=f"billing@{slugify(name)}.example",
+            email=f"billing@{slugify(name)}.{shard_domain(shard)}",
             external_ref=f"REF-{index + 1:04d}",
             created_at=LogicalInstant(NOW - rng.between(2000, 80000)),
             status=CustomerStatus.ACTIVE,
@@ -679,11 +696,10 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
         slack=SlackState(
             users=FrozenMap(
                 {
-                    agent: SlackUser(id=agent, handle="agent", display_name="Support Agent"),
+                    agent: SlackUser(id=agent, **_who(shard, "agent")),
                     trust_lead: SlackUser(
                         id=trust_lead,
-                        handle="trust-lead",
-                        display_name="Trust and Safety Lead",
+                        **_who(shard, "trust_lead"),
                         roles=SortedFrozenSet({"fraud_reviewer"}),
                     ),
                 },

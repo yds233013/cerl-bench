@@ -26,7 +26,8 @@ from cerl.core import (
     UserId,
 )
 from cerl.scenario import axes as ax
-from cerl.scenario.lexicon import companies, slugify
+from cerl.scenario.lexicon import companies, slugify, staff
+from cerl.scenario.lexicon import domain as shard_domain
 from cerl.scenario.responders import (
     EffectKind,
     EffectSpec,
@@ -64,7 +65,9 @@ from cerl.state import (
 )
 from cerl.state.slack import Approval as ApprovalModel
 
-GENERATOR_VERSION = "w2-1.0.0"
+#: Bumped for corpus 2.0.0: generation now takes a lexicon shard, so every
+#: name depends on the partition. Files are not comparable across this bump.
+GENERATOR_VERSION = "w2-2.0.0"
 
 EPOCH = LogicalInstant(0)
 # Episode "now": far enough from the epoch that historical timestamps are
@@ -141,10 +144,21 @@ def _staff() -> tuple[UserId, UserId, UserId]:
     )
 
 
+
+def _who(shard: str, role: str) -> dict[str, str]:
+    """Handle and display name for a role, from this partition's shard.
+
+    Staff are lexicon-backed like any other name: "Billing Manager" appearing in
+    both a training and an evaluation file is exactly the memorisable marker the
+    shards exist to remove.
+    """
+    handle, display_name = staff(shard, role)
+    return {"handle": handle, "display_name": display_name}
+
 def _build_customers(
-    rng: KeyedRng, axes: FrozenMap[str, str],
+    rng: KeyedRng, axes: FrozenMap[str, str], shard: str,
 ) -> tuple[FrozenMap[CustomerId, Customer], CustomerId, tuple[CustomerId, ...]]:
-    names = list(companies("core"))
+    names = list(companies(shard))
     target_id = CustomerId.mint(1)
     built: dict[CustomerId, Customer] = {}
 
@@ -155,7 +169,7 @@ def _build_customers(
         built[customer_id] = Customer(
             id=customer_id,
             display_name=name,
-            email=f"billing@{slug}.example",
+            email=f"billing@{slug}.{shard_domain(shard)}",
             external_ref=f"REF-{index + 1:04d}",
             created_at=LogicalInstant(EPOCH + rng.between(0, 500)),
             status=CustomerStatus.ACTIVE,
@@ -169,7 +183,7 @@ def _build_customers(
             decoy = Customer(
                 id=decoy_id,
                 display_name=f"{target.display_name} Inc",
-                email=f"ap@{slugify(target.display_name)}-inc.example",
+                email=f"ap@{slugify(target.display_name)}-inc.{shard_domain(shard)}",
                 external_ref="REF-9001",
                 created_at=LogicalInstant(int(target.created_at) + 7),
                 status=CustomerStatus.ACTIVE,
@@ -443,12 +457,17 @@ def _responder_rules(
     return (grants, denies), scope
 
 
-def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> GeneratedWorld:
+def generate(
+    root_seed: int,
+    axes: FrozenMap[str, str],
+    scenario_id: str,
+    shard: str,
+) -> GeneratedWorld:
     """Build the complete initial world for one instance."""
     rng = KeyedRng(root_seed, "world_gen")
     agent, manager, director = _staff()
 
-    customers, target_id, decoys = _build_customers(rng.sub("customers"), axes)
+    customers, target_id, decoys = _build_customers(rng.sub("customers"), axes, shard)
     charges, invoices, original_id, duplicate_id = _build_charges(
         rng.sub("charges"), axes, customers, target_id,
     )
@@ -546,17 +565,15 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
         slack=SlackState(
             users=FrozenMap(
                 {
-                    agent: SlackUser(id=agent, handle="agent", display_name="Support Agent"),
+                    agent: SlackUser(id=agent, **_who(shard, "agent")),
                     manager: SlackUser(
                         id=manager,
-                        handle="manager",
-                        display_name="Billing Manager",
+                        **_who(shard, "manager"),
                         roles=SortedFrozenSet({"refund_approver"}),
                     ),
                     director: SlackUser(
                         id=director,
-                        handle="director",
-                        display_name="Finance Director",
+                        **_who(shard, "director"),
                         roles=SortedFrozenSet({"finance_reporting"}),
                     ),
                 },

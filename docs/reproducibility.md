@@ -90,3 +90,40 @@ rather than accepting freshly regenerated output as ground truth. It detects:
 
 One test breaks the socket layer before verifying, so "no network" is asserted
 rather than assumed.
+
+
+## Corpus versions and what "regenerate" means
+
+R4 says a result whose versions differ from current is never silently compared.
+The corpus regeneration is the first time that has actually bitten, so it is
+worth being explicit about what changed and what a stale result now means.
+
+| | Corpus 1.x | Corpus 2.0.0 |
+|---|---|---|
+| Files | `scenarios/frozen` | `scenarios/v2/frozen` |
+| Generator version | `w2-1.0.0` | `w2-2.0.0` |
+| Shard version | — (all scenarios used `core`) | `2.0.0` |
+| Every scenario hash | — | **different** |
+
+**Every hash changed, and that is the point.** Corpus 1.x drew all names from one
+pool regardless of partition, so Criterion 42's lexicon clause failed and could
+not be repaired without regenerating. A rebuild that preserved hashes would have
+meant nothing was fixed.
+
+Consequences, all intended:
+
+- **Results recorded against corpus 1.x are not comparable to 2.0.0 results.**
+  They are not merely stale — they were computed on different worlds. A run
+  manifest records `generator_version`, so the comparison refuses rather than
+  misleading.
+- **Corpus 1.x is preserved, not deleted.** Its files and manifest remain on disk
+  and are re-verified by test. Reproducing a 1.x result means checking out that
+  corpus, which is the pinned-reproduction policy (O9) working as designed.
+- **Determinism is unaffected.** Re-freezing 2.0.0 is byte-identical, cross-process
+  and cross-Python-version hashes agree, and replay reproduces every state hash.
+  What changed is the world, not the machinery that makes it reproducible.
+
+Regeneration is deterministic end to end: the partition is a pure function of
+the plan, the shard is a pure function of the partition, and generation is a pure
+function of `(seed, axes, shard)`. `uv run cerl freeze` twice produces
+byte-identical output, asserted in `tests/scenarios/test_corpus_integrity.py`.

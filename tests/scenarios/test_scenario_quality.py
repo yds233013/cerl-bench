@@ -31,7 +31,11 @@ def test_exactly_one_branch_matches_across_the_full_w2_axis_product():
     checked = 0
     for combo in product(*[ax.AXIS_VALUES[a] for a in sorted(ax.AXIS_VALUES)]):
         assignment = FrozenMap(dict(zip(sorted(ax.AXIS_VALUES), combo, strict=True)))
-        scenario = freeze_module.materialize(TEMPLATE_ID, assignment, 17)
+        # The full axis product includes combinations the corpus never freezes,
+        # so most have no partition and therefore no shard. Branch resolution
+        # reads facts, not names, so an explicit shard is both necessary and
+        # harmless here.
+        scenario = freeze_module.materialize(TEMPLATE_ID, assignment, 17, "train")
         matching = [b for b in TEMPLATE.branches if b.matches(scenario.facts)]
         assert len(matching) == 1, (dict(assignment), [b.name for b in matching])
         checked += 1
@@ -43,7 +47,12 @@ def test_exactly_one_branch_matches_across_the_full_w2_axis_product():
 
 def test_resolved_rubric_is_byte_exact_against_re_resolution(w2_frozen):
     for scenario in w2_frozen:
-        again = freeze_module.materialize(TEMPLATE_ID, scenario.axes, scenario.root_seed)
+        again = freeze_module.materialize(
+            TEMPLATE_ID,
+            scenario.axes,
+            scenario.root_seed,
+            freeze_module.shard_for(TEMPLATE_ID, scenario.axes, scenario.root_seed),
+        )
         assert [i.id for i in again.rubric] == [i.id for i in scenario.rubric]
         assert again.branch == scenario.branch
         assert again.required_decision == scenario.required_decision

@@ -46,7 +46,8 @@ from cerl.scenario.generator import (
     NOW,
     GeneratedWorld,
 )
-from cerl.scenario.lexicon import companies, slugify
+from cerl.scenario.lexicon import companies, slugify, staff
+from cerl.scenario.lexicon import domain as shard_domain
 from cerl.scenario.responders import (
     EffectKind,
     EffectSpec,
@@ -157,6 +158,17 @@ HELD_OUT_IDENTITY_VALUES: Final = ("conflicting_external_ref", "name_only_simila
 ID_APPROVAL_VALUES: Final = ("valid", "missing_obtainable")
 HELD_OUT_APPROVAL_VALUES: Final = ("expired", "unauthorized_approver", "missing_unobtainable")
 
+
+
+def _who(shard: str, role: str) -> dict[str, str]:
+    """Handle and display name for a role, from this partition's shard.
+
+    Staff are lexicon-backed like any other name: "Billing Manager" appearing in
+    both a training and an evaluation file is exactly the memorisable marker the
+    shards exist to remove.
+    """
+    handle, display_name = staff(shard, role)
+    return {"handle": handle, "display_name": display_name}
 
 def axes_slug(axes: FrozenMap[str, str]) -> str:
     short = {
@@ -431,13 +443,15 @@ def _staff() -> tuple[UserId, UserId, UserId]:
     return UserId.mint(AGENT_INDEX), UserId.mint(OPS_LEAD_INDEX), UserId.mint(ANALYST_INDEX)
 
 
-def _identity_fields(evidence: str, base_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
+def _identity_fields(
+    evidence: str, base_name: str, shard: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """The observable evidence the agent reasons from.
 
     Every branch is decidable from ``billing.get_customer`` output alone: the
     email domain and the external reference. Nothing is hidden behind a label.
     """
-    domain = slugify(base_name) + ".example"
+    domain = f"{slugify(base_name)}.{shard_domain(shard)}"
     if evidence == "strong_match":
         # Same domain, same non-null reference: verifiably one customer.
         return (
@@ -455,7 +469,7 @@ def _identity_fields(evidence: str, base_name: str) -> tuple[dict[str, Any], dic
              "external_ref": "ACME-91"},
         )
     # name_only_similarity: similar names, different domains, one reference absent.
-    other = slugify(base_name) + "-group.example"
+    other = f"{slugify(base_name)}-group.{shard_domain(shard)}"
     return (
         {"display_name": base_name, "email": f"billing@{domain}", "external_ref": "ACME-77"},
         {"display_name": f"{base_name} Group", "email": f"ap@{other}",
@@ -636,14 +650,21 @@ def _failure_schedule(axes: FrozenMap[str, str]) -> FrozenMap[str, FrozenMap[str
     return FrozenMap()
 
 
-def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> GeneratedWorld:
+def generate(
+    root_seed: int,
+    axes: FrozenMap[str, str],
+    scenario_id: str,
+    shard: str,
+) -> GeneratedWorld:
     """Materialise one W1 world. Deterministic; no wall clock, no ambient RNG."""
     rng = KeyedRng(root_seed, "w1_world_gen")
     agent, ops_lead, analyst = _staff()
 
-    names = list(companies("core"))
+    names = list(companies(shard))
     base_name = names[root_seed % len(names)]
-    canonical_fields, duplicate_fields = _identity_fields(axes[IDENTITY_EVIDENCE], base_name)
+    canonical_fields, duplicate_fields = _identity_fields(
+        axes[IDENTITY_EVIDENCE], base_name, shard,
+    )
 
     canonical_id = CustomerId.mint(CANONICAL_INDEX)
     duplicate_id = CustomerId.mint(DUPLICATE_INDEX)
@@ -667,7 +688,7 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
         decoy_id: Customer(
             id=decoy_id,
             display_name=f"{base_name} Holdings",
-            email=f"ap@{slugify(base_name)}-holdings.example",
+            email=f"ap@{slugify(base_name)}-holdings.{shard_domain(shard)}",
             external_ref="HOLD-12",
             created_at=LogicalInstant(NOW - DECOY_AGE),
             status=CustomerStatus.ACTIVE,
@@ -679,7 +700,7 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
         customers[other] = Customer(
             id=other,
             display_name=name,
-            email=f"billing@{slugify(name)}.example",
+            email=f"billing@{slugify(name)}.{shard_domain(shard)}",
             external_ref=f"REF-{index + 1:04d}",
             created_at=LogicalInstant(NOW - rng.between(1000, 6000)),
             status=CustomerStatus.ACTIVE,
@@ -786,17 +807,15 @@ def generate(root_seed: int, axes: FrozenMap[str, str], scenario_id: str) -> Gen
         slack=SlackState(
             users=FrozenMap(
                 {
-                    agent: SlackUser(id=agent, handle="agent", display_name="Support Agent"),
+                    agent: SlackUser(id=agent, **_who(shard, "agent")),
                     ops_lead: SlackUser(
                         id=ops_lead,
-                        handle="ops-lead",
-                        display_name="Billing Ops Lead",
+                        **_who(shard, "ops_lead"),
                         roles=SortedFrozenSet({"merge_approver"}),
                     ),
                     analyst: SlackUser(
                         id=analyst,
-                        handle="analyst",
-                        display_name="Billing Analyst",
+                        **_who(shard, "analyst"),
                         roles=SortedFrozenSet({"billing_reporting"}),
                     ),
                 },

@@ -81,39 +81,83 @@ def test_lexicon_shard_definitions_are_pairwise_disjoint():
             assert not shards[left] & shards[right], (left, right)
 
 
-def test_the_corpus_does_not_yet_use_disjoint_shards_across_partitions(all_frozen):
-    """**Criterion 42, first clause, FAILS.** Asserted so it cannot be forgotten.
+def test_the_corpus_uses_disjoint_shards_across_partitions(all_frozen):
+    """**Criterion 42, first clause, PASSES on corpus 2.0.0.**
 
-    Every frozen scenario draws from the ``core`` shard, so partitions share
-    entity names. The shard machinery exists and its pools are disjoint; the
-    corpus was simply generated before it was wired in.
+    The previous version of this test asserted the opposite and said so: corpus
+    1.x drew every scenario from ``core``, and it could not be repaired by
+    relabelling because the names were baked into the files. It was inverted
+    when the corpus was regenerated, which is exactly the signal it was written
+    to give.
 
-    This cannot be repaired by moving groups between partitions -- the names are
-    baked into the frozen files, and every partition would still be drawing from
-    ``core``. Fixing it means regenerating the corpus against per-partition
-    shards, which changes every scenario hash and needs a generator version bump.
-
-    The test asserts the *current* state deliberately. When the corpus is
-    regenerated this test must be inverted, and that is the intended signal.
+    Checked over the committed files, on the values an agent can actually read,
+    rather than over the pool definitions -- disjoint pools are what 1.x already
+    had.
     """
-    by_partition: dict[str, set[str]] = {}
+    by_partition: dict[str, set[tuple[str, str]]] = {}
     for scenario in all_frozen:
         key = splits.partition_of(scenario).value
-        by_partition.setdefault(key, set()).update(
-            customer.display_name
-            for customer in scenario.world.billing.customers.values()
-        )
-    partitions = sorted(by_partition)
-    overlaps = {
-        (left, right): by_partition[left] & by_partition[right]
-        for i, left in enumerate(partitions)
-        for right in partitions[i + 1 :]
-    }
-    assert all(overlaps.values()), (
-        "partitions no longer share entity names -- the corpus was regenerated "
-        "against per-partition shards. Invert this test and mark Criterion 42's "
-        "first clause PASS."
-    )
+        bucket = by_partition.setdefault(key, set())
+        for customer in scenario.world.billing.customers.values():
+            bucket.add(("customer", customer.display_name))
+            bucket.add(("email", customer.email))
+        for user in scenario.world.slack.users.values():
+            bucket.add(("handle", user.handle))
+            bucket.add(("user", user.display_name))
+
+    partitions_seen = sorted(by_partition)
+    assert partitions_seen == ["evaluation", "train", "validation"]
+    for i, left in enumerate(partitions_seen):
+        for right in partitions_seen[i + 1 :]:
+            overlap = by_partition[left] & by_partition[right]
+            assert overlap == set(), (left, right, sorted(overlap)[:5])
+
+
+def test_every_scenario_records_the_shard_it_was_built_from(all_frozen):
+    """Provenance in the file, not only in the manifest.
+
+    A scenario that ended up in the wrong partition is then detectable from its
+    own contents, without trusting the manifest that placed it.
+    """
+    for scenario in all_frozen:
+        assert scenario.corpus_version == "2.0.0", scenario.scenario_id
+        assert scenario.lexicon_shard == scenario.partition
+        assert scenario.partition == splits.partition_of(scenario).value
+
+
+def test_pool_definitions_and_corpus_contents_agree(all_frozen):
+    """Every lexicon value in a file belongs to that partition's pool.
+
+    The other direction from the disjointness test: not merely that partitions
+    do not overlap, but that each draws from the pool it is supposed to.
+    """
+    from cerl.scenario import lexicon
+
+    for scenario in all_frozen:
+        allowed = lexicon.all_values(scenario.lexicon_shard)
+        foreign = {
+            other
+            for other in lexicon.shard_names()
+            if other != scenario.lexicon_shard
+        }
+        text = json.dumps(scenario.model_dump(mode="json"), sort_keys=True)
+        for shard in foreign:
+            for value in lexicon.all_values(shard) - allowed:
+                assert value not in text, (scenario.scenario_id, shard, value)
+
+
+def test_the_legacy_corpus_is_untouched():
+    """Corpus 1.x stays exactly as it was: an immutable historical artifact."""
+    from cerl.core import hash_text
+    from tests.helpers import LEGACY_FROZEN_DIR, LEGACY_MANIFEST
+
+    assert LEGACY_FROZEN_DIR.exists()
+    legacy = json.loads(LEGACY_MANIFEST.read_text(encoding="utf-8"))
+    assert legacy["count"] == 190
+    assert legacy["generator_version"] == "w2-1.0.0"
+    for entry in legacy["scenarios"]:
+        path = LEGACY_FROZEN_DIR / pathlib.Path(entry["file"]).name
+        assert hash_text(path.read_text(encoding="utf-8")) == entry["sha256"]
 
 
 # --------------------------------------------------------------------------
@@ -198,8 +242,9 @@ def test_held_out_values_are_namespaced_by_family_and_axis(manifest):
     for group in manifest.groups:
         if not group.moved:
             continue
-        assert "held-out" in group.reason
-        for label in group.reason.split("held-out ", 1)[1].split(", "):
+        assert "holdout" in group.reason
+        assert "(" in group.reason and group.reason.endswith(")")
+        for label in group.reason.rsplit("(", 1)[1].rstrip(")").split(", "):
             assert "/" in label and "=" in label, label
             family, rest = label.split("/", 1)
             axis, _, value = rest.partition("=")
@@ -250,19 +295,17 @@ def test_the_1_0_0_rule_is_preserved_verbatim(all_frozen):
         assert splits.partition_v1_0_0(scenario) is expected
 
 
-def test_no_scenario_file_changed_in_the_migration():
-    """Only partition labels moved.
-
-    Checked against the corpus manifest rather than by assertion: every frozen
-    file's committed sha256 must still match the bytes on disk. If the migration
-    had regenerated anything, this fails.
-    """
+def test_every_scenario_hash_matches_the_manifest():
+    """The committed sha256 must match the bytes on disk, file by file."""
     from cerl.core import hash_text
 
-    corpus = json.loads(pathlib.Path("scenarios/manifest.json").read_text())
+    corpus = json.loads(pathlib.Path("scenarios/v2/manifest.json").read_text())
     assert corpus["count"] == 190
+    assert corpus["corpus_version"] == "2.0.0"
+    assert corpus["generator_version"] == "w2-2.0.0"
+    assert corpus["shard_version"] == "2.0.0"
     for entry in corpus["scenarios"]:
-        path = pathlib.Path("scenarios/frozen") / pathlib.Path(entry["file"]).name
+        path = pathlib.Path("scenarios/v2/frozen") / pathlib.Path(entry["file"]).name
         actual = hash_text(path.read_text(encoding="utf-8"))
         assert actual == entry["sha256"], entry["scenario_id"]
         assert entry["generator_version"]

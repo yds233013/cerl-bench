@@ -1,0 +1,63 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Riverbend Packaging"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Riverbend Packaging"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.update_customer",
+      "metadata_key": "reconciliation",
+      "metadata_value": "verified_distinct"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.update_customer",
+      "metadata_key": "reconciliation",
+      "metadata_value": "verified_distinct"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "cus_000000000065 and cus_000000000066 carry different external references and are different customers. Marked verified distinct; no merge.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "abstain",
+      "reason": "the profiles are different customers; no merge"
+    }
+  ],
+  "branch": "distinct_entities",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "abstain",
+  "scenario_id": "dup_profile_reconciliation__disp-none__id-conflicting_external_ref__appr-valid__pp-none__tr-search_flaky__s17",
+  "terminal_state_hash": "d09aec69c7e7729d7cff0030e955800aa6e28b400ea06480e590054d0417179e",
+  "tool_calls": 10,
+  "trace_head_hash": "82e6ac2323b50d3396c26e3c586a8821e9cccd254f9df5aa6712bd68262ad0ee",
+  "verifier_version": "1.0.0"
+}

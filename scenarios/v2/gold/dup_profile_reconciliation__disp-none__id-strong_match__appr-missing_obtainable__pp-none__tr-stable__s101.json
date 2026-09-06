@@ -1,0 +1,92 @@
+{
+  "actions": [
+    {
+      "kind": "tickets.get",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "billing.search_customers",
+      "query": "Foxglove Media"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "kind": "billing.get_customer"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "kind": "billing.get_customer"
+    },
+    {
+      "kind": "policy.get_rule",
+      "rule_key": "merge_criteria"
+    },
+    {
+      "customer_id": "cus_000000000065",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "customer_id": "cus_000000000066",
+      "dispute_id": null,
+      "kind": "billing.get_dispute"
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "amount_cents": 0,
+      "channel": "billing-ops",
+      "kind": "slack.request_approval",
+      "mentions": [
+        "u_000000000002"
+      ],
+      "subject_ref": "cus_000000000066",
+      "text": "Requesting approval to merge duplicate profile cus_000000000066."
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "channel": "billing-ops",
+      "kind": "slack.read_thread",
+      "thread_id": null
+    },
+    {
+      "kind": "slack.get_user",
+      "user_id": "u_000000000002"
+    },
+    {
+      "approval_ref": "apr_f77843da7c2d",
+      "kind": "billing.merge_customers",
+      "source_id": "cus_000000000066",
+      "target_id": "cus_000000000065"
+    },
+    {
+      "comment_kind": "resolution",
+      "kind": "tickets.add_comment",
+      "text": "Verified duplicate: merged cus_000000000066 into cus_000000000065 under apr_f77843da7c2d.",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "tickets.set_status",
+      "status": "resolved",
+      "ticket_id": "tkt_000000000001"
+    },
+    {
+      "kind": "finish",
+      "summary": "Merged cus_000000000066 into cus_000000000065."
+    }
+  ],
+  "branch": "merge_sanctioned",
+  "predicate_library_hash": "4d17b60d75e3f5293e47b68016de5dbb49760f3fd0ba6ee201a3216252160034",
+  "required_decision": "act",
+  "scenario_id": "dup_profile_reconciliation__disp-none__id-strong_match__appr-missing_obtainable__pp-none__tr-stable__s101",
+  "terminal_state_hash": "927a6f9342e7fe0975f1a8972f495cad926da68064c4b36ad839e061027b367f",
+  "tool_calls": 15,
+  "trace_head_hash": "c1cd6c791fd42f920a188af94b9f3d47c086ad813c96e947309602e2ee1f2505",
+  "verifier_version": "1.0.0"
+}

@@ -8,13 +8,24 @@ Work window: 02:51 → 05:1x PDT (~2.4h of the authorised 10h). The run stopped
 once the authorised milestones were built and verified, rather than filling the
 remaining time.
 
+**Corpus regeneration (2026-09-05).** The corpus was regenerated as **2.0.0**
+because Criterion 42's lexicon clause could not be satisfied otherwise: 1.x drew
+every scenario from one name pool regardless of partition. Partitions are now
+assigned before materialisation and each scenario is generated from its own
+shard; measured over the committed files, partitions share **0** lexicon values.
+**Every scenario hash changed**, which is what the version bump is for. Corpus
+1.x is preserved untouched at `scenarios/frozen`. **Criterion 42 is now PASS.**
+Training coverage is 5/10 branches and is a documented open research decision,
+not a defect. Any corpus figure elsewhere in this report is a 1.x figure;
+`docs/pilot-split-audit.md` is authoritative.
+
 **Split correction (2026-09-05).** The canonical split was repaired to version
 **1.2.0** after an audit found 85 of the 144 training scenarios carried a
 registered held-out value. 44 sibling groups moved partition; no scenario file
 was regenerated and every committed hash still matches. Training is now 15
-scenarios covering 5 of 10 branches, and **Criterion 42 is marked FAIL** — its
-held-out clause now passes, its lexicon-disjointness clause does not, because
-every scenario draws from the `core` shard. Any partition figure elsewhere in
+scenarios covering 5 of 10 branches. Criterion 42's held-out clause passed at
+that point; its lexicon clause did not, and was resolved by the corpus
+regeneration noted above. Any partition figure elsewhere in
 this report is a 1.0.0 figure; `docs/pilot-split-audit.md` is authoritative.
 
 **Status correction (2026-09-05 closeout).** This report originally said all
