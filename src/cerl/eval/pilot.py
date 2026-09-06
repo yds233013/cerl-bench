@@ -382,7 +382,7 @@ def build_client(
 def execute(
     scenarios: list[FrozenScenario],
     client: ModelClient,
-    ledger: SpendLedger,
+    ledger: SpendLedger | None = None,
     *,
     source: str = "synthetic",
     max_steps: int = PILOT_MAX_STEPS,
@@ -395,10 +395,15 @@ def execute(
     as an auditable line-by-line account. Concurrency would buy wall-clock time
     at the cost of the one property that makes the spending claim checkable.
 
-    An episode that raises -- budget exhausted, an ambiguous request outcome --
-    stops the run and is recorded in ``interrupted``. Episodes already completed
-    are kept and scored: a partial pilot is a real result, and discarding it
-    would waste money already spent.
+    An episode that raises -- budget exhausted, an ambiguous request outcome,
+    a local model running out of context -- stops the run and is recorded in
+    ``interrupted``. Episodes already completed are kept and scored: a partial
+    run is a real result, and discarding it would waste what was already spent
+    or computed.
+
+    ``ledger`` is optional because a locally served model costs nothing to run.
+    Metering something that has no price would produce a spend report that reads
+    as authoritative and means nothing.
     """
     records = []
     transcripts: list[AgentTranscript] = []
@@ -415,21 +420,35 @@ def execute(
             break
         transcripts.append(run.transcript or agent.transcript)
         records.append(record_episode(scenario, _episode_for(scenario, run.actions)))
-        if ledger_path is not None:
+        if ledger is not None and ledger_path is not None:
             ledger.save(ledger_path)
 
-    manifest = _pilot_manifest(records, scenarios, client, ledger, source)
-    if ledger_path is not None:
+    manifest = _pilot_manifest(records, scenarios, client, ledger, source, max_steps)
+    if ledger is not None and ledger_path is not None:
         ledger.save(ledger_path)
     return PilotResult(
         manifest=manifest,
         transcripts=tuple(transcripts),
-        spend=FrozenMap(ledger.report()),
+        spend=FrozenMap(ledger.report() if ledger is not None else {}),
         completed=len(records),
         interrupted=tuple(interrupted),
-        orphaned_requests=tuple(ledger.orphaned_requests),
+        orphaned_requests=tuple(ledger.orphaned_requests) if ledger is not None else (),
         source=source,
     )
+
+
+def _provider_label(client: ModelClient, source: str) -> str:
+    """Who produced these actions, from the object that produced them.
+
+    Never a constant chosen at the call site: a synthetic run labelled
+    ``anthropic``, or a local run labelled ``live``, is the one mistake this
+    field exists to prevent.
+    """
+    if source == "live":
+        return str(getattr(client, "name", "unknown"))
+    if source == "local":
+        return str(getattr(client, "provenance", getattr(client, "name", "local")))
+    return "synthetic-transport"
 
 
 def _episode_for(scenario: FrozenScenario, actions: tuple[Any, ...]) -> Any:
@@ -442,8 +461,9 @@ def _pilot_manifest(
     records: list[Any],
     scenarios: list[FrozenScenario],
     client: ModelClient,
-    ledger: SpendLedger,
+    ledger: SpendLedger | None,
     source: str,
+    max_steps: int,
 ) -> RunManifest:
     from cerl.eval.runner import _manifest
 
@@ -455,11 +475,12 @@ def _pilot_manifest(
             privilege_mode="unprivileged",
             # The transport, not the client class. A synthetic run recorded as
             # "anthropic" would read as a provider call that never happened.
-            provider=(
-                getattr(client, "name", "unknown") if source == "live" else "synthetic-transport"
-            ),
+            provider=_provider_label(client, source),
             model=getattr(client, "model", PILOT_MODEL),
-            max_steps=PILOT_MAX_STEPS,
+            # The cap actually used, not the module default. Regeneration
+            # replays with this number, and a wrong one walks off the end of
+            # the transcript and reports a cache miss that is really a bug here.
+            max_steps=max_steps,
             max_retries=PILOT_MAX_RETRIES,
         ),
         scenarios,
@@ -468,8 +489,13 @@ def _pilot_manifest(
         update={
             # A synthetic run is never a Claim 2 artifact. Recording the source
             # in the manifest means a reader cannot mistake one for the other.
-            "verification_mode": "live" if source == "live" else "synthetic",
-            "metrics": FrozenMap({**dict(manifest.metrics), "spend": ledger.report()}),
+            "verification_mode": source,
+            "metrics": FrozenMap(
+                {
+                    **dict(manifest.metrics),
+                    **({"spend": ledger.report()} if ledger is not None else {}),
+                },
+            ),
         },
     )
 
@@ -514,6 +540,11 @@ def regenerate(
     """
     by_id = {s.scenario_id: s for s in scenarios}
     recorded = {e.scenario_id: e.actions for e in manifest.episodes}
+    # Replay under the run's own step cap. An episode that never declared an
+    # outcome ends by exhausting its budget, so a different cap changes where
+    # it stops -- and replaying past the end looks like a cache miss when it is
+    # really a configuration mismatch.
+    max_steps = manifest.agent.max_steps or PILOT_MAX_STEPS
     mismatched: list[str] = []
     misses: list[str] = []
     matched = 0
@@ -527,7 +558,7 @@ def regenerate(
         agent = PromptOnlyAgent(client, scenario_id=scenario.scenario_id)
         env = CerlEnv(scenario)
         try:
-            run = run_agent(env, agent, max_steps=PILOT_MAX_STEPS)
+            run = run_agent(env, agent, max_steps=max_steps)
         except TranscriptCacheMiss as miss:
             misses.append(f"{transcript.scenario_id}: {miss}")
             continue

@@ -258,15 +258,59 @@ def test_gold_trajectories_replay_to_their_recorded_hashes():
 # --------------------------------------------------------------------------
 
 
+#: The only module permitted to read a wall clock, enumerated by path.
+#:
+#: It measures latency of a process *outside* the simulation -- how long a local
+#: model server spent generating -- which never enters state, a trace, a diff or
+#: a verdict. An episode replays identically whether it first took two seconds
+#: or two hours, which is the property rule 1 protects.
+#:
+#: Enumerating it keeps the gate strict: a wall-clock call anywhere else in
+#: src/cerl still fails, and widening this list is a deliberate edit.
+WALLCLOCK_EXEMPT: tuple[str, ...] = ("src/cerl/eval/latency.py",)
+
+
 def test_no_wallclock_or_random_in_src():
     banned = ("datetime.now(", "time.time(", "time.monotonic(", "uuid4(", "random.")
     offenders = []
     for path in (REPO / "src" / "cerl").rglob("*.py"):
+        relative = str(path.relative_to(REPO))
+        if relative in WALLCLOCK_EXEMPT:
+            continue
         text = path.read_text(encoding="utf-8")
         for token in banned:
             if token in text:
-                offenders.append(f"{path.relative_to(REPO)}: {token}")
+                offenders.append(f"{relative}: {token}")
     assert not offenders, "ambient nondeterminism in src/:\n" + "\n".join(offenders)
+
+
+def test_the_wallclock_exemption_is_exactly_one_documented_module():
+    """The exemption must stay narrow, and must explain itself."""
+    assert len(WALLCLOCK_EXEMPT) == 1
+    path = REPO / WALLCLOCK_EXEMPT[0]
+    assert path.exists()
+    text = path.read_text(encoding="utf-8")
+    # It has to say why it is exempt, not merely be exempt.
+    assert "rule 1" in text
+    assert "outside the simulation" in text
+
+
+def test_the_exempt_module_touches_no_simulation_type():
+    """Latency measurement must not be able to reach state, trace or verdict."""
+    text = (REPO / WALLCLOCK_EXEMPT[0]).read_text(encoding="utf-8")
+    for forbidden in ("WorldState", "TraceEntry", "Verdict", "StateDiff", "LogicalClock"):
+        assert f"import {forbidden}" not in text
+        assert f"{forbidden}(" not in text
+
+
+def test_scenario_generation_still_has_no_wallclock_path():
+    """The packages that build and score worlds stay entirely clock-free."""
+    banned = ("datetime.now(", "time.time(", "time.monotonic(", "uuid4(", "random.")
+    for package in ("scenario", "state", "diff", "trace", "verify", "env", "tools", "core"):
+        for path in (REPO / "src" / "cerl" / package).rglob("*.py"):
+            text = path.read_text(encoding="utf-8")
+            for token in banned:
+                assert token not in text, f"{path.relative_to(REPO)}: {token}"
 
 
 # Every symbol that could inject ambient nondeterminism, patched individually so

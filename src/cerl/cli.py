@@ -10,9 +10,11 @@ import typer
 
 from cerl.actions import ActionKind
 from cerl.agents import budget as budget_module
+from cerl.agents import local_client as local_client_module
 from cerl.agents import model_client, synthetic_transport
 from cerl.core import FrozenMap
 from cerl.eval import demos as demo_module
+from cerl.eval import local_run as local_run_module
 from cerl.eval import manifest as manifest_module
 from cerl.eval import pilot as pilot_module
 from cerl.eval import runner as eval_runner
@@ -527,6 +529,79 @@ def _run_live_pilot(
     client = pilot_module.build_client(ledger)
     return pilot_module.execute(
         scenarios, client, ledger, source="live", ledger_path=ledger_path,
+    )
+
+
+@app.command(name="local-run")
+def local_run_command(
+    limit: Annotated[int, typer.Option(help="Episodes to run.")] = local_run_module.MAX_SCENARIOS,
+    max_steps: Annotated[
+        int, typer.Option(help="Step cap per episode."),
+    ] = local_run_module.DEFAULT_MAX_STEPS,
+    model: Annotated[str, typer.Option(help="Local model tag.")] = "qwen3:4b",
+    num_ctx: Annotated[int, typer.Option(help="Context window, tokens.")] = 16384,
+    num_predict: Annotated[int, typer.Option(help="Output cap, tokens.")] = 640,
+    out: Annotated[Path, typer.Option()] = Path("runs/local_run.json"),
+    transcripts_out: Annotated[Path, typer.Option()] = Path(
+        "runs/local_transcripts.json",
+    ),
+    report_out: Annotated[Path, typer.Option()] = Path("runs/local_report.json"),
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Run the W2 training selection against a locally served model.
+
+    Local only: the client speaks to loopback and holds no credential, so it
+    cannot reach a paid provider by fallback or by accident. Sequential, so the
+    per-episode timings mean something.
+    """
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    client = local_client_module.LocalModelClient(
+        model=model, num_ctx=num_ctx, num_predict=num_predict,
+    )
+    try:
+        info = client.info()
+    except local_client_module.LocalRunnerUnavailable as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    coverage = local_run_module.branch_coverage(scenarios)
+    typer.echo(f"model      : {info.provenance}")
+    typer.echo(f"runner     : ollama {info.runner_version}  quant {info.quantization}")
+    typer.echo(f"context    : num_ctx={info.num_ctx} num_predict={info.num_predict}")
+    typer.echo(f"selection  : {dict(coverage.selected)}")
+    if coverage.unavailable:
+        typer.secho(
+            f"COVERAGE LIMIT: the training partition cannot supply "
+            f"{coverage.unavailable} for {coverage.family}. Reported, not "
+            f"borrowed from validation or evaluation.",
+            fg=typer.colors.YELLOW,
+        )
+
+    result, report = local_run_module.run(
+        scenarios, client, max_steps=max_steps, limit=limit,
+    )
+
+    manifest_path = manifest_module.write(result.manifest, out)
+    transcript_path = pilot_module.write_transcripts(result.transcripts, transcripts_out)
+    report_path = local_run_module.write_report(report, report_out)
+
+    metrics = dict(result.manifest.metrics)
+    typer.echo(f"episodes   : {result.completed}/{limit}")
+    typer.echo(f"safe task  : {metrics.get('safe_completion_rate', 0):.3f}")
+    typer.echo(f"decisions  : {metrics.get('decision_correct_rate', 0):.3f}")
+    typer.echo(f"committed  : {metrics.get('committed_violation_rate', 0):.3f}")
+    typer.echo(f"attempted  : {metrics.get('attempted_violation_rate', 0):.3f}")
+    typer.echo(f"usage      : {dict(report.usage)}")
+    typer.echo(f"wall       : {report.wall_seconds}s")
+    for entry in result.interrupted:
+        typer.secho(f"INTERRUPTED {entry}", fg=typer.colors.YELLOW)
+    typer.secho(
+        f"wrote {manifest_path}, {transcript_path}, {report_path}",
+        fg=typer.colors.GREEN,
+    )
+    typer.secho(
+        f"These are real outputs from {info.provenance}. No paid provider was "
+        f"contacted.",
+        fg=typer.colors.GREEN,
     )
 
 

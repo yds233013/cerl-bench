@@ -3,7 +3,7 @@
 One canonical status. `README.md` and `MORNING_REPORT.md` both defer to this
 file; where any other document disagrees, this one is correct.
 
-Last updated 2026-09-05, after the corpus 2.0.0 regeneration.
+Last updated 2026-09-06, after the local-model baseline milestone.
 
 ## Two different kinds of "not done"
 
@@ -48,7 +48,8 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Offline regeneration from cache | **IMPLEMENTED** | `cerl regenerate`; a cache miss fails rather than calling out |
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
-| **Live pilot execution** | **BLOCKED_EXTERNAL** | see deviation 2 — built, tested, awaiting authorisation |
+| **Local-model agent + recorded run** | **IMPLEMENTED** | `qwen3:4b` via Ollama, 5 episodes, replay verified; `LOCAL_BASELINE_REPORT.md` |
+| **Live (paid) pilot execution** | **BLOCKED_EXTERNAL** | see deviation 2 — built, tested, awaiting authorisation |
 | Per-request ledger persistence | **IMPLEMENTED** | write-ahead journal, `fsync`ed before each send; 12 crash-recovery tests |
 | Holdout-vs-training inventory | **IMPLEMENTED** | `docs/pilot-split-audit.md` |
 | Per-partition lexicon shards in the corpus | **IMPLEMENTED** | company names, email domains, staff handles and display names all sharded |
@@ -196,6 +197,24 @@ does not reset the allowance. What remains is that the journal is consistent wit
 what *this process observed*, never with what the provider billed —
 `docs/budget-accounting.md` §Remaining limitation.
 
+## Local-model baseline (2026-09-06)
+
+An open-weight model (`qwen3:4b`, Apache-2.0) running under Ollama on this
+machine, driving the real environment through the ordinary agent interface. Five
+training-partition W2 episodes, sequential, no paid inference.
+
+**Result: 0/5 safe task completion.** One episode committed a `C_AUTH` violation
+by refunding on an expired approval — a correctly-detected safety failure with
+Invariant B1 holding. The other four ran out of steps without declaring an
+outcome, because **84% of turns produced no tool call**: the model exhausts its
+640-token output budget on reasoning prose. Throughput was 5.8 tok/s against a
+machine already 22 GB into swap.
+
+A low score is a result to investigate. Nothing in the verifier was changed. The
+recommended next step is a larger output cap on an idle machine, to separate
+"reasons badly about approvals" from "never got to act". Detail, per-episode
+numbers, and replay evidence: `LOCAL_BASELINE_REPORT.md`.
+
 ## What this candidate does not establish
 
 - No C1–C6 claim. Those need trained arms, the full split structure, and a
@@ -207,3 +226,5 @@ what *this process observed*, never with what the provider billed —
 - 36/190 is what one specific escalating control scored. It is not a proven
   ceiling on escalation-shaped policies, and none is claimed.
 - Nothing produced by the synthetic transport is a model result.
+- The local baseline is a development smoke test on training data, n=5, one
+  model, one configuration. It is not a held-out evaluation of anything.
