@@ -210,10 +210,21 @@ outcome, because **84% of turns produced no tool call**: the model exhausts its
 640-token output budget on reasoning prose. Throughput was 5.8 tok/s against a
 machine already 22 GB into swap.
 
-A low score is a result to investigate. Nothing in the verifier was changed. The
-recommended next step is a larger output cap on an idle machine, to separate
-"reasons badly about approvals" from "never got to act". Detail, per-episode
-numbers, and replay evidence: `LOCAL_BASELINE_REPORT.md`.
+**Diagnosed 2026-09-06.** The 84% figure conflated three outcomes; separated, it
+is 71% output truncation, 12% completed-without-a-call, **0% invalid arguments
+and 0% unknown tools**. Root cause was a protocol error in our client: the Qwen3
+template primes a `<think>` block on every request, and `think:false` only
+stopped the runner *parsing* it, so reasoning arrived as `content` and was
+appended to conversation history every turn. Token cost is identical either way.
+The 640-token output cap was also marginal — the simplest real turn needs 609.
+With `think=true` and a 2048 cap, executed actions rose 16% → 57%.
+
+Two fixes committed: `think=true` by default with reasoning kept out of history,
+and an invalid enum argument now scored as malformed rather than crashing the
+episode. **No completed episode exists at the corrected configuration** — the
+bounded check was interrupted by that crash, and the 30-minute inference budget
+was exhausted. The ~6 tok/s generation rate remains unexplained; the earlier
+attribution to swap was overstated. Full detail: `LOCAL_BASELINE_REPORT.md` §9.
 
 ## What this candidate does not establish
 

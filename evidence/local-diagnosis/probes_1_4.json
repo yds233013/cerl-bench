@@ -1,0 +1,252 @@
+[
+ {
+  "probe": "P1 answer think=false",
+  "request": {
+   "model": "qwen3:4b",
+   "stream": false,
+   "think": false,
+   "messages": [
+    {
+     "role": "user",
+     "content": "Reply with exactly: READY"
+    }
+   ],
+   "options": {
+    "num_ctx": 8192,
+    "temperature": 0.0,
+    "num_predict": 640
+   }
+  },
+  "raw": {
+   "model": "qwen3:4b",
+   "created_at": "2026-09-06T21:14:07.52509Z",
+   "message": {
+    "role": "assistant",
+    "content": "Hmm, the user just asked me to reply with exactly \"READY\". That's very straightforward. \n\nOkay, let me think about this. The user wants a precise response without any extra words or explanations. They're probably testing if I can follow simple instructions exactly. \n\nI recall that in previous interactions, I've been careful to not add anything beyond what's asked. This time it's even simpler - just the word \"READY\" with no punctuation. \n\nThe user seems to be in a hurry or maybe setting up for something else. Could be a developer testing API responses, or just someone who wants quick confirmation. \n\nI should make sure not to: \n- Add spaces \n- Add periods \n- Add any other characters \nJust the exact string \"READY\" \n\n*checks mental note* Yep, that's what they want. No need to overthink this one. \n\nAlright, time to output exactly as requested. Keeping it clean and minimal.\n</think>\n\nREADY"
+   },
+   "done": true,
+   "done_reason": "stop",
+   "total_duration": 29352995375,
+   "load_duration": 4658515958,
+   "prompt_eval_count": 15,
+   "prompt_eval_cached_count": 0,
+   "prompt_eval_duration": 234184000,
+   "eval_count": 196,
+   "eval_duration": 24457748000
+  },
+  "wall_s": 29.4,
+  "done_reason": "stop",
+  "eval_count": 196,
+  "prompt_eval_count": 15,
+  "prompt_eval_ms": 234,
+  "eval_ms": 24458,
+  "content_len": 896,
+  "thinking_len": 0,
+  "tool_calls": []
+ },
+ {
+  "probe": "P2 answer think=true",
+  "request": {
+   "model": "qwen3:4b",
+   "stream": false,
+   "think": true,
+   "messages": [
+    {
+     "role": "user",
+     "content": "Reply with exactly: READY"
+    }
+   ],
+   "options": {
+    "num_ctx": 8192,
+    "temperature": 0.0,
+    "num_predict": 640
+   }
+  },
+  "raw": {
+   "model": "qwen3:4b",
+   "created_at": "2026-09-06T21:14:31.134385Z",
+   "message": {
+    "role": "assistant",
+    "content": "READY",
+    "thinking": "Hmm, the user just asked me to reply with exactly \"READY\". That's very straightforward. \n\nOkay, let me think about this. The user wants a precise response without any extra words or explanations. They're probably testing if I can follow simple instructions exactly. \n\nI recall that in previous interactions, I've been careful to not add anything beyond what's asked. This time it's even simpler - just the word \"READY\" with no punctuation. \n\nThe user seems to be in a hurry or maybe setting up for something else. Could be a developer testing API responses, or just someone who wants quick confirmation. \n\nI should make sure not to: \n- Add spaces \n- Add periods \n- Add any other characters \nJust the exact string \"READY\" \n\n*checks mental note* Yep, that's what they want. No need to overthink this one. \n\nAlright, time to output exactly as requested. Keeping it clean and minimal.\n"
+   },
+   "done": true,
+   "done_reason": "stop",
+   "total_duration": 23602382625,
+   "load_duration": 3286125,
+   "prompt_eval_count": 15,
+   "prompt_eval_cached_count": 14,
+   "prompt_eval_duration": 93987000,
+   "eval_count": 196,
+   "eval_duration": 23496755000
+  },
+  "wall_s": 23.6,
+  "done_reason": "stop",
+  "eval_count": 196,
+  "prompt_eval_count": 15,
+  "prompt_eval_ms": 94,
+  "eval_ms": 23497,
+  "content_len": 5,
+  "thinking_len": 881,
+  "tool_calls": []
+ },
+ {
+  "probe": "P3 tool think=false",
+  "request": {
+   "model": "qwen3:4b",
+   "stream": false,
+   "think": false,
+   "messages": [
+    {
+     "role": "user",
+     "content": "Read ticket tkt_000000000001."
+    }
+   ],
+   "options": {
+    "num_ctx": 8192,
+    "temperature": 0.0,
+    "num_predict": 640
+   },
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "tickets__get",
+      "description": "Read a support ticket by id.",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "ticket_id": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "ticket_id"
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "raw": {
+   "model": "qwen3:4b",
+   "created_at": "2026-09-06T21:15:29.552675Z",
+   "message": {
+    "role": "assistant",
+    "content": "Okay, the user wants me to read a support ticket with the ID tkt_000001. Let me check the tools provided.\n\nThe tool given is tickets__get, which takes a ticket_id as a string. The function signature says it's a function that reads a ticket by id. The user specified the ticket ID as tkt_000000000001. Wait, the example in the tool shows [ticket_id] with a type string. So I need to make sure the ticket_id is correctly formatted.\n\nWait, the user wrote \"tkt_000000000001\" but in the tool example, maybe it's a typo? Let me check. The tool's example shows ticket_id as a string. The user's input is \"Read ticket tkt_000000000001.\" So the ticket ID they provided is tkt_000000000001. I should use that exact string as the argument.\n\nSo the function call should be tickets__get with arguments {\"ticket_id\": \"tkt_000000000001\"}. Let me make sure there's no mistake here. The tool's function name is tickets__get, and the argument is ticket_id. The user's ticket ID starts with tkt_ followed by numbers. So I think that's correct.\n\nI need to output the tool_call in JSON inside the tool_call tags. The function name is tickets__get, and the arguments are a JSON object with ticket_id as the key and the user's ticket ID as the value.\n\nWait, the user wrote \"tkt_000000000001\" but maybe there's a typo in the number of zeros. But the user's input is what it is, so I should use exactly what they provided. So the tool call is correct.\n</think>\n\n",
+    "tool_calls": [
+     {
+      "id": "call_9lzp4q88",
+      "function": {
+       "index": 0,
+       "name": "tickets__get",
+       "arguments": {
+        "ticket_id": "tkt_000000000001"
+       }
+      }
+     }
+    ]
+   },
+   "done": true,
+   "done_reason": "stop",
+   "total_duration": 58417271084,
+   "load_duration": 4151250,
+   "prompt_eval_count": 152,
+   "prompt_eval_cached_count": 1,
+   "prompt_eval_duration": 1278833000,
+   "eval_count": 447,
+   "eval_duration": 57130837000
+  },
+  "wall_s": 58.4,
+  "done_reason": "stop",
+  "eval_count": 447,
+  "prompt_eval_count": 152,
+  "prompt_eval_ms": 1279,
+  "eval_ms": 57131,
+  "content_len": 1437,
+  "thinking_len": 0,
+  "tool_calls": [
+   "tickets__get"
+  ]
+ },
+ {
+  "probe": "P4 tool think=true",
+  "request": {
+   "model": "qwen3:4b",
+   "stream": false,
+   "think": true,
+   "messages": [
+    {
+     "role": "user",
+     "content": "Read ticket tkt_000000000001."
+    }
+   ],
+   "options": {
+    "num_ctx": 8192,
+    "temperature": 0.0,
+    "num_predict": 640
+   },
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "tickets__get",
+      "description": "Read a support ticket by id.",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "ticket_id": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "ticket_id"
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "raw": {
+   "model": "qwen3:4b",
+   "created_at": "2026-09-06T21:16:27.497103Z",
+   "message": {
+    "role": "assistant",
+    "content": "",
+    "thinking": "Okay, the user wants me to read a support ticket with the ID tkt_000001. Let me check the tools provided.\n\nThe tool given is tickets__get, which takes a ticket_id as a string. The function signature says it's a function that reads a ticket by id. The user specified the ticket ID as tkt_000000000001. Wait, the example in the tool shows [ticket_id] with a type string. So I need to make sure the ticket_id is correctly formatted.\n\nWait, the user wrote \"tkt_000000000001\" but in the tool example, maybe it's a typo? Let me check. The tool's example shows ticket_id as a string. The user's input is \"Read ticket tkt_000000000001.\" So the ticket ID they provided is tkt_000000000001. I should use that exact string as the argument.\n\nSo the function call should be tickets__get with arguments {\"ticket_id\": \"tkt_000000000001\"}. Let me make sure there's no mistake here. The tool's function name is tickets__get, and the argument is ticket_id. The user's ticket ID starts with tkt_ followed by numbers. So I think that's correct.\n\nI need to output a tool_call JSON inside the tool_call tags. The function name is tickets__get, and the arguments are a JSON object with ticket_id as the key and the user's ticket ID as the value.\n\nWait, the user wrote \"tkt_000000000001\" but maybe there's a typo in the number of zeros. But the user's input is what it is, so I should use exactly what they provided. So the tool call should be correct.\n",
+    "tool_calls": [
+     {
+      "id": "call_v6zioekw",
+      "function": {
+       "index": 0,
+       "name": "tickets__get",
+       "arguments": {
+        "ticket_id": "tkt_000000000001"
+       }
+      }
+     }
+    ]
+   },
+   "done": true,
+   "done_reason": "stop",
+   "total_duration": 57942659917,
+   "load_duration": 3211334,
+   "prompt_eval_count": 152,
+   "prompt_eval_cached_count": 151,
+   "prompt_eval_duration": 141252000,
+   "eval_count": 447,
+   "eval_duration": 57781749000
+  },
+  "wall_s": 57.9,
+  "done_reason": "stop",
+  "eval_count": 447,
+  "prompt_eval_count": 152,
+  "prompt_eval_ms": 141,
+  "eval_ms": 57782,
+  "content_len": 0,
+  "thinking_len": 1429,
+  "tool_calls": [
+   "tickets__get"
+  ]
+ }
+]

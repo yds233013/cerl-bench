@@ -285,3 +285,99 @@ def test_truncated_turns_are_counted():
     client.complete("sys", [], [])
     client.complete("sys", [], [])
     assert client.usage()["truncated_turns"] == 1
+
+
+# --------------------------------------------------------------------------
+# the thinking-channel contract (diagnosed 2026-09-06)
+# --------------------------------------------------------------------------
+
+
+def test_thinking_is_requested_so_reasoning_does_not_become_content():
+    """Regression: we sent think=false and got reasoning in ``content``.
+
+    The chat template primes a ``<think>`` block on every request whose last
+    message is not an assistant turn -- every request an agent makes. With
+    think=false the runner does not *parse* that block, so the model's reasoning
+    arrives as ordinary content. It reasons either way; the flag only decides
+    where the text lands.
+    """
+    transport = FakeTransport([_reply(tool="abstain")])
+    _client(transport).complete("sys", [], [])
+    assert transport.calls[0]["think"] is True
+
+
+def test_reasoning_is_never_returned_as_the_turns_content():
+    """The agent appends content to the conversation.
+
+    Returning reasoning here fed the model its own preamble every turn, which is
+    against Qwen3's guidance and is how prompts grew without bound.
+    """
+    transport = FakeTransport(
+        [
+            {
+                "message": {
+                    "content": "FINAL",
+                    "thinking": "Okay, let me think about this at length. " * 40,
+                    "tool_calls": [{"function": {"name": "abstain", "arguments": {}}}],
+                },
+                "done_reason": "stop",
+                "prompt_eval_count": 10,
+                "eval_count": 5,
+            },
+        ],
+    )
+    client = _client(transport)
+    response = client.complete("sys", [], [])
+    assert response.text == "FINAL"
+    assert "Okay, let me think" not in response.text
+    # recorded for diagnosis, but kept out of the conversation
+    assert client.turns[0].thinking_chars > 0
+
+
+def test_thinking_can_be_disabled_explicitly_for_comparison():
+    """Single-factor comparisons need the old behaviour to stay reachable."""
+    transport = FakeTransport([_reply(tool="abstain")])
+    _client(transport, think=False).complete("sys", [], [])
+    assert transport.calls[0]["think"] is False
+
+
+def test_the_think_setting_is_recorded_in_provenance():
+    client = LocalModelClient(transport=FakeTransport(), think=False)
+    assert client.info().think is False
+
+
+def test_timing_is_split_into_prompt_and_generation():
+    """Prompt processing and generation are separate costs and scale differently."""
+    transport = FakeTransport(
+        [
+            {
+                "message": {"content": "", "tool_calls": [
+                    {"function": {"name": "abstain", "arguments": {}}}]},
+                "done_reason": "stop",
+                "prompt_eval_count": 900,
+                "eval_count": 100,
+                "prompt_eval_duration": 3_000_000_000,
+                "eval_duration": 17_000_000_000,
+            },
+        ],
+    )
+    client = _client(transport)
+    client.complete("sys", [], [])
+    usage = client.usage()
+    assert usage["prompt_eval_ms"] == 3000
+    assert usage["eval_ms"] == 17000
+
+
+def test_a_completed_turn_without_a_tool_call_is_not_a_truncated_one():
+    """Two different failures that were being reported as one number."""
+    transport = FakeTransport(
+        [
+            _reply(content="I think we should escalate.", done_reason="stop"),
+            _reply(content="still reasoning", done_reason="length"),
+        ],
+    )
+    client = _client(transport)
+    client.complete("sys", [], [])
+    client.complete("sys", [], [])
+    assert client.usage()["truncated_turns"] == 1
+    assert client.usage()["turns"] == 2

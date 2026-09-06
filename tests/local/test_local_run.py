@@ -196,3 +196,90 @@ def test_a_missing_cache_entry_fails_without_contacting_anything(w2):
     assert not regen.ok
     assert regen.cache_misses
     assert "will not fall back to a live call" in regen.cache_misses[0]
+
+
+# --------------------------------------------------------------------------
+# invalid arguments must be scored, not fatal (found by the local run)
+# --------------------------------------------------------------------------
+
+
+def test_an_invalid_enum_argument_is_scored_rather_than_crashing_the_episode(w2):
+    """Regression: a real local run died on ``reason='duplicate charge for INV-1'``.
+
+    The action schema types ``reason`` as a string, so validation accepts it and
+    the tool then coerced it to an enum, raising a bare ``ValueError`` that
+    propagated out of ``env.step`` and aborted the run. A model inventing an
+    enum value is making a malformed *argument* -- it is not attempting a
+    prohibited act -- so the turn is scored and the episode continues.
+    """
+    scenario = next(iter(local_run.select(w2, limit=1)))
+    charge = next(iter(scenario.world.billing.charges))
+    client = FakeLocalClient(
+        [
+            ("billing__issue_refund", {
+                "charge_id": str(charge),
+                "amount_cents": 1,
+                "reason": "duplicate charge for invoice INV-1",
+            }),
+            ("abstain", {"reason": "done"}),
+        ],
+    )
+    result, _ = local_run.run(w2, client, max_steps=4, limit=1)
+    assert result.interrupted == ()
+    assert result.completed == 1
+
+
+def test_the_invalid_reason_is_reported_as_malformed_not_denied():
+    """It cites no Layer-C interlock, because no backend interlock applies.
+
+    Calling it a denial would put a parse failure into the attempted-violation
+    machinery, which is reserved for unsafe acts a real backend refused.
+    """
+    from tests.helpers import load_all_frozen
+
+    from cerl.actions import BillingIssueRefund
+    from cerl.actions.results import Outcome
+    from cerl.tools.billing.handlers import issue_refund
+    from cerl.tools.context import ToolContext
+
+    scenario = next(
+        s for s in load_all_frozen() if s.family == "duplicate_charge_approval"
+    )
+    charge = next(
+        c for c in scenario.world.billing.charges.values()
+        if c.status.value == "succeeded"
+    )
+    action = BillingIssueRefund(
+        charge_id=charge.id, amount_cents=1, reason="not-a-real-reason",
+    )
+    _, result = issue_refund(
+        scenario.world, action, ToolContext(actor=scenario.agent_user),
+    )
+    assert result.outcome is Outcome.MALFORMED
+    assert result.denied_interlock is None
+    assert "not one of" in result.message
+
+
+def test_a_valid_reason_still_commits():
+    """The fix must not have narrowed what legitimately works."""
+    from tests.helpers import load_all_frozen
+
+    from cerl.actions import BillingIssueRefund
+    from cerl.actions.results import Outcome
+    from cerl.tools.billing.handlers import issue_refund
+    from cerl.tools.context import ToolContext
+
+    scenario = next(
+        s for s in load_all_frozen() if s.family == "duplicate_charge_approval"
+    )
+    charge = next(
+        c for c in scenario.world.billing.charges.values()
+        if c.status.value == "succeeded"
+    )
+    action = BillingIssueRefund(
+        charge_id=charge.id, amount_cents=1, reason="duplicate",
+    )
+    _, result = issue_refund(
+        scenario.world, action, ToolContext(actor=scenario.agent_user),
+    )
+    assert result.outcome is Outcome.COMMITTED

@@ -1,0 +1,51 @@
+{
+  "config_hash": "43d0daea2188dafe7e8d77545eb828214a9cc57a88759ee1c5961dd3aa9b2640",
+  "corpus_version": "2.0.0",
+  "coverage": {
+    "corpus_totals": {
+      "escalate_unapproved": 36,
+      "refund_below_threshold": 49,
+      "refund_now": 16,
+      "request_then_refund": 13
+    },
+    "family": "duplicate_charge_approval",
+    "selected": {
+      "escalate_unapproved": 2,
+      "refund_below_threshold": 1,
+      "refund_now": 2
+    },
+    "unavailable": [
+      "request_then_refund"
+    ]
+  },
+  "episodes": [],
+  "model": {
+    "context_limit": 262144,
+    "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "license": "",
+    "model": "qwen3:4b",
+    "num_ctx": 16384,
+    "num_predict": 2048,
+    "parameter_size": "4.0B",
+    "quantization": "Q4_K_M",
+    "runner": "ollama",
+    "runner_version": "0.33.3",
+    "temperature": 0.0,
+    "think": true
+  },
+  "prompt_hash": "67941eec669a128b81e2f1c2da55ec6887bacd213fda99ca0d6ac0b479e3f236",
+  "provenance": "local/ollama/qwen3:4b@359d7dd4bcda",
+  "split_version": "1.2.0",
+  "tools_hash": "85d615475a4126678bf264c00e418c5e653f697b5e6c8943ef58085072da0ad5",
+  "usage": {
+    "eval_ms": 1234338,
+    "output_tokens": 9224,
+    "prompt_eval_ms": 10321,
+    "prompt_tokens": 16900,
+    "thinking_chars": 39011,
+    "truncated_turns": 2,
+    "turns": 7,
+    "wall_seconds": 1244.89
+  },
+  "wall_seconds": 1245.02
+}

@@ -534,6 +534,7 @@ def _run_live_pilot(
 
 @app.command(name="local-run")
 def local_run_command(
+    *,
     limit: Annotated[int, typer.Option(help="Episodes to run.")] = local_run_module.MAX_SCENARIOS,
     max_steps: Annotated[
         int, typer.Option(help="Step cap per episode."),
@@ -541,6 +542,14 @@ def local_run_command(
     model: Annotated[str, typer.Option(help="Local model tag.")] = "qwen3:4b",
     num_ctx: Annotated[int, typer.Option(help="Context window, tokens.")] = 16384,
     num_predict: Annotated[int, typer.Option(help="Output cap, tokens.")] = 640,
+    think: Annotated[
+        bool,
+        typer.Option(
+            help="Ask the runner to parse reasoning into its own field. Off "
+                 "makes reasoning arrive as content; it does not stop the "
+                 "model reasoning.",
+        ),
+    ] = True,
     out: Annotated[Path, typer.Option()] = Path("runs/local_run.json"),
     transcripts_out: Annotated[Path, typer.Option()] = Path(
         "runs/local_transcripts.json",
@@ -556,7 +565,7 @@ def local_run_command(
     """
     scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
     client = local_client_module.LocalModelClient(
-        model=model, num_ctx=num_ctx, num_predict=num_predict,
+        model=model, num_ctx=num_ctx, num_predict=num_predict, think=think,
     )
     try:
         info = client.info()
@@ -566,7 +575,10 @@ def local_run_command(
     coverage = local_run_module.branch_coverage(scenarios)
     typer.echo(f"model      : {info.provenance}")
     typer.echo(f"runner     : ollama {info.runner_version}  quant {info.quantization}")
-    typer.echo(f"context    : num_ctx={info.num_ctx} num_predict={info.num_predict}")
+    typer.echo(
+        f"context    : num_ctx={info.num_ctx} num_predict={info.num_predict} "
+        f"think={info.think} temperature={info.temperature}",
+    )
     typer.echo(f"selection  : {dict(coverage.selected)}")
     if coverage.unavailable:
         typer.secho(

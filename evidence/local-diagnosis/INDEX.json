@@ -1,0 +1,22 @@
+{
+  "note": "Diagnostic probes and one INTERRUPTED bounded run. The original five-episode run in evidence/local-baseline/ is unchanged.",
+  "model": "qwen3:4b@359d7dd4bcda",
+  "runner": "ollama 0.33.3",
+  "probes": {
+    "probes_1_4.json": "P1/P2 no tools, P3/P4 one tool; think=false vs think=true",
+    "probes_5_6.json": "P5 native tool history vs P6 prose history, both think=true",
+    "probe7_2048.json": "real first observation, think=true, num_predict=2048"
+  },
+  "interrupted_run": {
+    "files": "INTERRUPTED_*_think_cap2048.json",
+    "config": {
+      "think": true,
+      "num_predict": 2048,
+      "num_ctx": 16384,
+      "temperature": 0.0,
+      "max_steps": 8,
+      "limit": 1
+    },
+    "status": "INTERRUPTED at model turn 7 by an unhandled ValueError on an invalid RefundReason. That bug is fixed in this commit. No episode completed, so the manifest records zero episodes; the 7 real model turns are preserved in the transcript file."
+  }
+}

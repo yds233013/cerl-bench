@@ -55,6 +55,23 @@ DEFAULT_NUM_CTX = 16384
 DEFAULT_TEMPERATURE = 0.0
 DEFAULT_TIMEOUT_S = 300.0
 
+#: Ask the runner to parse the model's reasoning into its own field.
+#:
+#: **This does not decide whether the model reasons.** Measured on qwen3:4b at
+#: this endpoint: the chat template primes an ``<think>`` block on every request
+#: whose last message is not an assistant turn, which is every request an agent
+#: makes. With ``think=false`` the runner does not parse that block, so the
+#: reasoning arrives as ordinary ``content`` -- and the token cost is identical
+#: either way (196 vs 196 output tokens on a trivial prompt; 447 vs 447 with a
+#: tool). What ``think=true`` changes is *where the reasoning goes*: ``content``
+#: becomes the final answer alone and the reasoning lands in ``thinking``.
+#:
+#: That matters because the agent appends ``content`` to the conversation as its
+#: assistant turn. Under ``think=false`` every turn appended a full reasoning
+#: transcript to the history, so prompts grew with prose the model then had to
+#: re-read. Qwen3's own guidance is not to feed reasoning back into history.
+DEFAULT_THINK = True
+
 
 class LocalRunnerUnavailable(RuntimeError):
     """The local server is not reachable. Never a reason to call a provider."""
@@ -81,6 +98,7 @@ class LocalModelInfo(Frozen):
     num_ctx: int = DEFAULT_NUM_CTX
     num_predict: int = DEFAULT_NUM_PREDICT
     temperature: float = DEFAULT_TEMPERATURE
+    think: bool = DEFAULT_THINK
     license: str = ""
 
     @property
@@ -96,6 +114,11 @@ class LocalTurnStats(Frozen):
     output_tokens: int | None = None
     wall_seconds: float = 0.0
     done_reason: str = ""
+    #: Characters of reasoning. Kept for diagnosis only -- never returned as the
+    #: turn's content and never appended to the conversation.
+    thinking_chars: int = 0
+    prompt_eval_ms: int = 0
+    eval_ms: int = 0
 
 
 def to_openai_tools(tools: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -115,6 +138,10 @@ def to_openai_tools(tools: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         }
         for tool in tools
     ]
+
+
+def message_of(response: dict[str, Any]) -> dict[str, Any]:
+    return dict(response.get("message", {}) or {})
 
 
 def _require_local(host: str) -> str:
@@ -184,6 +211,7 @@ class LocalModelClient:
         num_ctx: int = DEFAULT_NUM_CTX,
         num_predict: int = DEFAULT_NUM_PREDICT,
         temperature: float = DEFAULT_TEMPERATURE,
+        think: bool = DEFAULT_THINK,
         info: LocalModelInfo | None = None,
     ) -> None:
         self.model = model
@@ -191,6 +219,7 @@ class LocalModelClient:
         self.num_ctx = num_ctx
         self.num_predict = num_predict
         self.temperature = temperature
+        self.think = think
         self._info = info
         self.turns: list[LocalTurnStats] = []
 
@@ -220,6 +249,7 @@ class LocalModelClient:
             num_ctx=self.num_ctx,
             num_predict=self.num_predict,
             temperature=self.temperature,
+            think=self.think,
         )
         return self._info
 
@@ -238,7 +268,7 @@ class LocalModelClient:
         payload = {
             "model": self.model,
             "stream": False,
-            "think": False,
+            "think": self.think,
             "messages": [
                 {"role": "system", "content": system},
                 *[dict(m) for m in messages],
@@ -281,10 +311,17 @@ class LocalModelClient:
                 output_tokens=None if output_tokens is None else int(output_tokens),
                 wall_seconds=elapsed.seconds,
                 done_reason=done_reason,
+                thinking_chars=len(str(message_of(response).get("thinking") or "")),
+                prompt_eval_ms=round(int(response.get("prompt_eval_duration", 0)) / 1e6),
+                eval_ms=round(int(response.get("eval_duration", 0)) / 1e6),
             ),
         )
 
-        message = response.get("message", {})
+        message = message_of(response)
+        # Only the final answer. The reasoning stays in ``thinking`` and is
+        # deliberately not returned: the agent appends this string to the
+        # conversation, and feeding a model its own reasoning back is both
+        # against Qwen3's guidance and how prompts grew unboundedly here.
         text = str(message.get("content", "") or "")
         calls = message.get("tool_calls") or []
 
@@ -330,5 +367,10 @@ class LocalModelClient:
                 o for o in output if o is not None
             ),
             "wall_seconds": round(sum(t.wall_seconds for t in self.turns), 2),
+            "prompt_eval_ms": sum(t.prompt_eval_ms for t in self.turns),
+            "eval_ms": sum(t.eval_ms for t in self.turns),
+            "thinking_chars": sum(t.thinking_chars for t in self.turns),
+            # Kept apart from "no tool call": a truncated turn ran out of output
+            # budget, a completed one chose not to act. Different problems.
             "truncated_turns": sum(1 for t in self.turns if t.done_reason == "length"),
         }

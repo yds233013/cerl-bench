@@ -1,0 +1,100 @@
+{
+  "sources": [
+    "local"
+  ],
+  "transcripts": [
+    {
+      "entries": [
+        {
+          "request_key": "dc0b1bf7a21abf56e84677a173202cc187fcd9d24e45b4586df3d1f8db725c4c",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "ticket_id": "tkt_000000000001"
+            },
+            "tool_name": "tickets__get"
+          },
+          "step_index": 0
+        },
+        {
+          "request_key": "b034628bae95954533d21f3eade9ab36746169e40058c2f3a4762527010c0857",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "customer_id": "cus_000000000001"
+            },
+            "tool_name": "billing__list_charges"
+          },
+          "step_index": 1
+        },
+        {
+          "request_key": "6b8c3ef012be052b809ab884686ab8489d873592d25f59ce172353808b61f1f5",
+          "response": {
+            "source": "local",
+            "stop_reason": "length",
+            "text": "",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 2
+        },
+        {
+          "request_key": "380b0301d8a2814196aec1a3e9e154e4cbd60f56eb842e8d694fd4282fdfd1b8",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 3
+        },
+        {
+          "request_key": "aacb9cda56b6e085fb92cbb573773b01e4b9c03177f3cb737e08b66a219149ca",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "query": "duplicate charges refund"
+            },
+            "tool_name": "policy__search"
+          },
+          "step_index": 4
+        },
+        {
+          "request_key": "57a23ac1a5ec804c54a3d18dee0fa66adcbf996f0da6023d416a0054a2feb6be",
+          "response": {
+            "source": "local",
+            "stop_reason": "length",
+            "text": "",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 5
+        },
+        {
+          "request_key": "d1b18b347f354b824820e0a58bb72995e4b2add5297da0b5fbcce66a5c859052",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "amount_cents": 42000,
+              "charge_id": "ch_000000000002",
+              "reason": "duplicate charge for invoice INV-1"
+            },
+            "tool_name": "billing__issue_refund"
+          },
+          "step_index": 6
+        }
+      ],
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "source": "local"
+    }
+  ]
+}
