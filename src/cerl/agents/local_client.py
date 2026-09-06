@@ -36,8 +36,13 @@ from collections.abc import Sequence
 from typing import Any
 
 from cerl.agents.model_client import ModelResponse
-from cerl.core import Frozen, FrozenMap
-from cerl.eval.latency import measure
+from cerl.core import ExternalInterruption, Frozen, FrozenMap
+from cerl.eval.latency import (
+    CANCELLATION_NOTE,
+    Deadline,
+    DeadlineExceeded,
+    measure,
+)
 
 #: Loopback only. A non-local host would make "local-only" a promise rather than
 #: a property, so the client refuses one.
@@ -73,7 +78,7 @@ DEFAULT_TIMEOUT_S = 300.0
 DEFAULT_THINK = True
 
 
-class LocalRunnerUnavailable(RuntimeError):
+class LocalRunnerUnavailable(ExternalInterruption):
     """The local server is not reachable. Never a reason to call a provider."""
 
 
@@ -161,32 +166,43 @@ class OllamaTransport:
         self.host = _require_local(host)
         self.timeout_s = timeout_s
 
-    def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _post(
+        self, path: str, payload: dict[str, Any], timeout_s: float | None = None,
+    ) -> dict[str, Any]:
         request = urllib.request.Request(  # noqa: S310 - loopback, checked above
             f"{self.host}{path}",
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout_s) as response:  # noqa: S310
+            with urllib.request.urlopen(  # noqa: S310
+                request, timeout=timeout_s if timeout_s is not None else self.timeout_s,
+            ) as response:
                 return dict(json.load(response))
-        except urllib.error.URLError as error:
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            # ``TimeoutError`` is not a ``URLError``: a bounded request that
+            # runs out of time raises it directly from the socket. Catching only
+            # URLError let a deadline timeout escape as a bare TimeoutError,
+            # which the deadline accounting never saw and which surfaced as a
+            # generic interruption rather than an explicit external timeout.
             raise LocalRunnerUnavailable(
-                f"cannot reach the local model runner at {self.host}: {error}. "
-                f"Start it with `ollama serve`. No remote provider will be used.",
+                f"cannot reach or complete a request to the local model runner "
+                f"at {self.host}: {error!r}. No remote provider will be used.",
             ) from error
 
     def _get(self, path: str) -> dict[str, Any]:
         try:
             with urllib.request.urlopen(f"{self.host}{path}", timeout=30) as response:  # noqa: S310
                 return dict(json.load(response))
-        except urllib.error.URLError as error:
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
             raise LocalRunnerUnavailable(
-                f"cannot reach the local model runner at {self.host}: {error}",
+                f"cannot reach the local model runner at {self.host}: {error!r}",
             ) from error
 
-    def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._post("/api/chat", payload)
+    def chat(
+        self, payload: dict[str, Any], timeout_s: float | None = None,
+    ) -> dict[str, Any]:
+        return self._post("/api/chat", payload, timeout_s)
 
     def version(self) -> str:
         return str(self._get("/api/version").get("version", ""))
@@ -212,6 +228,7 @@ class LocalModelClient:
         num_predict: int = DEFAULT_NUM_PREDICT,
         temperature: float = DEFAULT_TEMPERATURE,
         think: bool = DEFAULT_THINK,
+        deadline: Deadline | None = None,
         info: LocalModelInfo | None = None,
     ) -> None:
         self.model = model
@@ -220,6 +237,9 @@ class LocalModelClient:
         self.num_predict = num_predict
         self.temperature = temperature
         self.think = think
+        #: Wall-clock budget for calls to the server. Measured outside the
+        #: simulator and never able to influence it.
+        self.deadline = deadline
         self._info = info
         self.turns: list[LocalTurnStats] = []
 
@@ -280,8 +300,37 @@ class LocalModelClient:
                 "temperature": self.temperature,
             },
         }
+        # Checked *before* the request: starting one we cannot finish spends
+        # budget on a response we would have to discard.
+        timeout_s = None
+        if self.deadline is not None:
+            timeout_s = self.deadline.check()
+
+        failure: LocalRunnerUnavailable | None = None
+        response: dict[str, Any] = {}
         with measure() as elapsed:
-            response = self.transport.chat(payload)
+            try:
+                response = self.transport.chat(payload, timeout_s)
+            except LocalRunnerUnavailable as error:
+                failure = error
+
+        # Outside the ``with``, so ``elapsed`` is actually populated. Reading it
+        # inside would always see zero, and every abandoned request would then
+        # look like an ordinary runner failure.
+        if self.deadline is not None:
+            self.deadline.record(elapsed.seconds)
+
+        if failure is not None:
+            # A bounded request that ran the budget out is abandoned, not
+            # retried. One that failed with budget left is an ordinary outage,
+            # and conflating the two would hide a broken server.
+            if self.deadline is not None and self.deadline.expired:
+                self.deadline.abandon()
+                raise DeadlineExceeded(
+                    f"request abandoned at the inference deadline; "
+                    f"{CANCELLATION_NOTE}",
+                ) from failure
+            raise failure
 
         if "error" in response:
             detail = str(response["error"])

@@ -15,6 +15,7 @@ from cerl.core.constraints import CONSTRAINT_ORDER, ConstraintClass
 from cerl.core.errors import (
     CerlFault,
     ChainBroken,
+    ExternalInterruption,
     FrozenMapMutation,
     InvalidEntityId,
     NonCanonicalValue,
@@ -48,6 +49,7 @@ from cerl.core.rng import (
     derive_int,
     derive_range,
 )
+from cerl.core.vocabulary import RefundReason
 
 __all__ = [
     "ALL_ID_TYPES",
@@ -62,6 +64,7 @@ __all__ = [
     "CustomerId",
     "DisputeId",
     "EntityId",
+    "ExternalInterruption",
     "Frozen",
     "FrozenMap",
     "FrozenMapMutation",
@@ -75,6 +78,7 @@ __all__ = [
     "PaymentMethodId",
     "PrivilegeViolation",
     "RefundId",
+    "RefundReason",
     "ReplayDivergence",
     "ScenarioDefect",
     "SortedFrozenSet",

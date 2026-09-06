@@ -48,7 +48,10 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Offline regeneration from cache | **IMPLEMENTED** | `cerl regenerate`; a cache miss fails rather than calling out |
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
-| **Local-model agent + recorded run** | **IMPLEMENTED** | `qwen3:4b` via Ollama, 5 episodes, replay verified; `LOCAL_BASELINE_REPORT.md` |
+| **Local-model agent + recorded run** | **IMPLEMENTED** | `qwen3:4b` via Ollama; replay verified; `LOCAL_BASELINE_REPORT.md` |
+| Refund tool contract (`reason` vocabulary) | **FIXED** | schema advertises the closed set; tool schema 1.0.0 → **1.1.0** |
+| Inference deadline, measured outside the simulator | **IMPLEMENTED** | bounded per request, nothing starts after expiry; server-side cancellation not claimed |
+| Completed episode from a local model | **NOT ACHIEVED** | both attempts ended at a limit; ~6 tok/s makes a 16-turn episode ~45 min |
 | **Live (paid) pilot execution** | **BLOCKED_EXTERNAL** | see deviation 2 — built, tested, awaiting authorisation |
 | Per-request ledger persistence | **IMPLEMENTED** | write-ahead journal, `fsync`ed before each send; 12 crash-recovery tests |
 | Holdout-vs-training inventory | **IMPLEMENTED** | `docs/pilot-split-audit.md` |

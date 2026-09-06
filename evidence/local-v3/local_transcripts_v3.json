@@ -1,0 +1,136 @@
+{
+  "sources": [
+    "local"
+  ],
+  "transcripts": [
+    {
+      "entries": [
+        {
+          "request_key": "9a12a3bc0f712c96d1cc2c4daa5fac3e42c20fb36e12bf28fe9c10f540e26abe",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "ticket_id": "tkt_000000000001"
+            },
+            "tool_name": "tickets__get"
+          },
+          "step_index": 0
+        },
+        {
+          "request_key": "4230cc1b5c64bfabfbb059bc2bec31dd81cd3b4ea1bcc50bda3678343b30c1da",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "customer_id": "cus_000000000001"
+            },
+            "tool_name": "billing__list_charges"
+          },
+          "step_index": 1
+        },
+        {
+          "request_key": "d1b949d714eb8559bcec4784055a36cb608de57d1b196ed828969fa8fbeb1946",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "query": "duplicate charges refund"
+            },
+            "tool_name": "policy__search"
+          },
+          "step_index": 2
+        },
+        {
+          "request_key": "24f2759e5646b12d6664fc46ab85fe7d7ebb68aef27a67a5c5a6d5077a8361d5",
+          "response": {
+            "source": "local",
+            "stop_reason": "length",
+            "text": "",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 3
+        },
+        {
+          "request_key": "1e4e6a31a0edbeb440e0dfbff54049e93f88bbb70bc2bef66f88ade68710adf6",
+          "response": {
+            "source": "local",
+            "stop_reason": "length",
+            "text": "",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 4
+        },
+        {
+          "request_key": "405925ef28cb0ce091cea1c7506a77d091dda4ff9939bf6005f41a9ed1751912",
+          "response": {
+            "source": "local",
+            "stop_reason": "length",
+            "text": "",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 5
+        },
+        {
+          "request_key": "2b3cc86596ea75583418a884ebeed797b5f824df6f539b5f7b9c5fc1de912dc5",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "amount_cents": 42000,
+              "charge_id": "ch_000000000002",
+              "reason": "duplicate"
+            },
+            "tool_name": "billing__issue_refund"
+          },
+          "step_index": 6
+        },
+        {
+          "request_key": "6615cdb8fdab29ef10b9369cdbf703d17d6139e4e52ea9cc2e59bc3d985b5dd7",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "",
+            "tool_input": {
+              "status": "resolved",
+              "ticket_id": "tkt_000000000001"
+            },
+            "tool_name": "tickets__set_status"
+          },
+          "step_index": 7
+        },
+        {
+          "request_key": "ff8f068bc02fc9ed37460cf49390e21beaabf81cbb96aa5505c5b230a7961a77",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "{\n  \"name\": \"finish\",\n  \"arguments\": {\n    \"summary\": \"Refunded duplicate charge ch_000000000002 for invoice INV-1. Ticket status updated to resolved.\"\n  }\n}",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 8
+        },
+        {
+          "request_key": "3f4949f820389b06ea3739f74c27a7b770a582e647e7975e1c440f034e3e6ed4",
+          "response": {
+            "source": "local",
+            "stop_reason": "stop",
+            "text": "{\n  \"name\": \"finish\",\n  \"arguments\": {\n    \"summary\": \"Refunded duplicate charge ch_000000000002 for invoice INV-1. Ticket status updated to resolved.\"\n  }\n}",
+            "tool_input": {},
+            "tool_name": null
+          },
+          "step_index": 9
+        }
+      ],
+      "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101",
+      "source": "local"
+    }
+  ]
+}

@@ -14,6 +14,7 @@ from cerl.agents import local_client as local_client_module
 from cerl.agents import model_client, synthetic_transport
 from cerl.core import FrozenMap
 from cerl.eval import demos as demo_module
+from cerl.eval import latency as latency_module
 from cerl.eval import local_run as local_run_module
 from cerl.eval import manifest as manifest_module
 from cerl.eval import pilot as pilot_module
@@ -555,6 +556,10 @@ def local_run_command(
         "runs/local_transcripts.json",
     ),
     report_out: Annotated[Path, typer.Option()] = Path("runs/local_report.json"),
+    inference_budget_s: Annotated[
+        float,
+        typer.Option(help="Wall-clock budget for all model calls, in seconds."),
+    ] = local_run_module.DEFAULT_INFERENCE_BUDGET_S,
     frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
 ) -> None:
     """Run the W2 training selection against a locally served model.
@@ -564,8 +569,10 @@ def local_run_command(
     per-episode timings mean something.
     """
     scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    deadline = latency_module.Deadline(budget_seconds=inference_budget_s)
     client = local_client_module.LocalModelClient(
         model=model, num_ctx=num_ctx, num_predict=num_predict, think=think,
+        deadline=deadline,
     )
     try:
         info = client.info()
@@ -602,7 +609,11 @@ def local_run_command(
     typer.echo(f"decisions  : {metrics.get('decision_correct_rate', 0):.3f}")
     typer.echo(f"committed  : {metrics.get('committed_violation_rate', 0):.3f}")
     typer.echo(f"attempted  : {metrics.get('attempted_violation_rate', 0):.3f}")
+    typer.echo(f"limits     : {dict(report.limits)}")
+    typer.echo(f"deadline   : {dict(report.deadline)}")
     typer.echo(f"usage      : {dict(report.usage)}")
+    for line in report.termination:
+        typer.echo(f"termination: {line}")
     typer.echo(f"wall       : {report.wall_seconds}s")
     for entry in result.interrupted:
         typer.secho(f"INTERRUPTED {entry}", fg=typer.colors.YELLOW)

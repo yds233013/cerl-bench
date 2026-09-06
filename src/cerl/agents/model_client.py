@@ -28,7 +28,7 @@ from cerl.agents.budget import (
     TokenCounter,
     resolve_counter,
 )
-from cerl.core import Frozen, FrozenMap, content_hash
+from cerl.core import ExternalInterruption, Frozen, FrozenMap, content_hash
 
 #: Set to a positive integer to authorise live API spend, in whole US cents.
 #: Absent or zero means live evaluation is not authorised.
@@ -204,7 +204,7 @@ class AnthropicTransport:
         return self._client.messages.count_tokens(**kwargs)
 
 
-class AmbiguousRequestOutcome(RuntimeError):
+class AmbiguousRequestOutcome(ExternalInterruption):
     """A request may have reached the provider; its cost is unresolved."""
 
 

@@ -36,6 +36,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Protocol
 
+from cerl.core import ExternalInterruption
+
 # --------------------------------------------------------------------------
 # pricing
 # --------------------------------------------------------------------------
@@ -52,8 +54,13 @@ PRICING: dict[str, tuple[float, float, float, float]] = {
 PRICING_AS_OF = "2026-09-05"
 
 
-class BudgetExceeded(RuntimeError):
-    """A request was refused because it did not fit in the spendable balance."""
+class BudgetExceeded(ExternalInterruption):
+    """A request was refused because it did not fit in the spendable balance.
+
+    An external interruption like a wall-clock deadline: the run is stopped by a
+    limit outside the simulation, and the episodes already executed are real and
+    must be preserved rather than discarded.
+    """
 
 
 class UnpricedModel(KeyError):

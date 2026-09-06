@@ -20,6 +20,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from cerl.agents import tool_schemas
 from cerl.agents.local_client import LocalModelClient
 from cerl.core import Frozen, FrozenMap
 from cerl.eval import latency, pilot, splits
@@ -34,10 +35,20 @@ FAMILY = "duplicate_charge_approval"
 #: would take hours and tell us nothing the first few episodes do not.
 MAX_SCENARIOS = 5
 
-#: Below the environment's 40-step budget. A local 4B model that has not solved
-#: a W2 ticket in 16 steps is not about to; the remaining 24 would cost half an
-#: hour to confirm it. Truncation is scored as INCOMPLETE either way.
+#: Ceiling on **environment actions**. Below the environment's own 40-step
+#: budget so an episode terminates within a bounded runtime; truncation is
+#: scored INCOMPLETE either way.
 DEFAULT_MAX_STEPS = 16
+
+#: Ceiling on **model turns**, recorded separately because they are not the same
+#: quantity: a turn that emits no tool call costs a turn and no action. Under
+#: the original configuration 71% of turns fell in that gap.
+DEFAULT_MAX_TURNS = 16
+
+#: Wall-clock budget for all model calls in a run, measured outside the
+#: simulator. Reaching it terminates the episode with a recorded external
+#: timeout, which is an acceptable outcome -- not an error to retry away.
+DEFAULT_INFERENCE_BUDGET_S = 1800.0
 
 
 class BranchCoverage(Frozen):
@@ -121,6 +132,15 @@ class LocalRunReport(Frozen):
     coverage: BranchCoverage
     episodes: tuple[FrozenMap[str, Any], ...] = ()
     usage: FrozenMap[str, Any] = FrozenMap()
+    #: Turn and action ceilings, recorded apart because they are different
+    #: quantities and either can be the binding one.
+    limits: FrozenMap[str, Any] = FrozenMap()
+    #: Wall-clock inference budget and what became of it.
+    deadline: FrozenMap[str, Any] = FrozenMap()
+    #: How each episode ended, in words, so termination is never inferred from
+    #: a missing field.
+    termination: tuple[str, ...] = ()
+    tool_schema_version: str = ""
     wall_seconds: float = 0.0
 
 
@@ -131,13 +151,13 @@ def config_hashes(client: LocalModelClient) -> dict[str, str]:
     later run that was configured differently.
     """
     from cerl.agents.prompt_only import SYSTEM_PROMPT
-    from cerl.agents.tool_schemas import all_tool_schemas
+    from cerl.agents.tool_schemas import tool_schema_hash
     from cerl.core import content_hash, report_hash
 
     info = client.info()
     return {
         "prompt_hash": content_hash(SYSTEM_PROMPT),
-        "tools_hash": content_hash([dict(t) for t in all_tool_schemas()]),
+        "tools_hash": tool_schema_hash(),
         # ``report_hash`` rather than ``content_hash``: temperature is a float,
         # and canonical JSON forbids floats in state on purpose. A generation
         # setting is report data, and report_hash renders it at fixed precision
@@ -195,9 +215,15 @@ def run(
     max_steps: int = DEFAULT_MAX_STEPS,
     limit: int = MAX_SCENARIOS,
 ) -> tuple[pilot.PilotResult, LocalRunReport]:
-    """Run the selection sequentially and build the report."""
+    """Run the selection sequentially and build the report.
+
+    Termination is recorded, never inferred: an episode ends by declaring an
+    outcome, by exhausting its action limit, or by the inference deadline. All
+    three are acceptable results for this milestone.
+    """
     chosen = list(select(scenarios, FAMILY, limit))
     hashes = config_hashes(client)
+    hashes["tool_schema_version"] = tool_schemas.TOOL_SCHEMA_VERSION
     with latency.measure() as elapsed:
         result = pilot.execute(
             chosen, client, None, source="local", max_steps=max_steps,
@@ -212,10 +238,51 @@ def run(
         coverage=branch_coverage(scenarios, FAMILY),
         episodes=episode_records(result),
         usage=FrozenMap(client.usage()),
+        limits=FrozenMap(
+            {
+                "max_environment_actions": max_steps,
+                "max_model_turns": DEFAULT_MAX_TURNS,
+                "env_budget_steps": chosen[0].budget_steps if chosen else None,
+            },
+        ),
+        deadline=FrozenMap(_deadline_report(client)),
+        termination=tuple(_termination(result, client)),
         wall_seconds=round(elapsed.seconds, 2),
         **hashes,
     )
     return result, report
+
+
+def _deadline_report(client: LocalModelClient) -> dict[str, Any]:
+    """Empty when no budget was set, rather than fabricating one."""
+    deadline = getattr(client, "deadline", None)
+    return dict(deadline.report()) if deadline is not None else {}
+
+
+def _termination(result: pilot.PilotResult, client: LocalModelClient) -> list[str]:
+    """One line per episode saying how it ended."""
+    lines: list[str] = []
+    for record in result.manifest.episodes:
+        if record.declared_outcome:
+            lines.append(
+                f"{record.scenario_id}: declared {record.declared_outcome}",
+            )
+        elif record.truncated:
+            lines.append(f"{record.scenario_id}: environment step budget exhausted")
+        else:
+            lines.append(f"{record.scenario_id}: action limit reached without a decision")
+    for entry in result.interrupted:
+        if "DeadlineExceeded" in entry or "timed out" in entry.lower():
+            note = _deadline_report(client)
+            lines.append(
+                f"EXTERNAL TIMEOUT at the inference deadline | {entry} | "
+                f"spent {note.get('spent_seconds')}s of "
+                f"{note.get('budget_seconds')}s | "
+                f"{note.get('cancellation_note', '')}",
+            )
+        else:
+            lines.append(f"{entry} | interrupted")
+    return lines
 
 
 def write_report(report: LocalRunReport, path: Path) -> Path:

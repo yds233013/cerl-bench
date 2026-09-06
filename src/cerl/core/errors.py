@@ -51,3 +51,14 @@ class ReplayDivergence(CerlFault):
     def __init__(self, detail: str) -> None:
         super().__init__(f"replay diverged: {detail}")
         self.detail = detail
+
+
+class ExternalInterruption(CerlFault):
+    """Something outside the simulation stopped the run.
+
+    A wall-clock deadline, a dead model server -- not a defect in the
+    environment, the agent's logic, or the evidence. Only these preserve a
+    partial episode: the actions already executed are real and must survive,
+    while a cache miss or a programming error must still surface as a failure
+    rather than being quietly recorded as "the agent stopped".
+    """

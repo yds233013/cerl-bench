@@ -107,8 +107,17 @@ class AgentConfig(Frozen):
     model: str | None = None
     temperature: float | None = None
     max_steps: int | None = None
+    #: Ceiling on model turns, which is not the same as environment actions: a
+    #: turn that emits no tool call costs a turn and no action.
+    max_turns: int | None = None
     max_retries: int | None = None
     transcript_cache: str | None = None
+    #: The agent-visible schema this run was shown. A transcript recorded under
+    #: a different version cannot be regenerated, because the request key
+    #: includes the schemas.
+    tool_schema_version: str = ""
+    tools_hash: str = ""
+    prompt_hash: str = ""
 
 
 class RunManifest(Frozen):

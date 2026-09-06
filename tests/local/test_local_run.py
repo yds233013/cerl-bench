@@ -229,35 +229,45 @@ def test_an_invalid_enum_argument_is_scored_rather_than_crashing_the_episode(w2)
     assert result.completed == 1
 
 
-def test_the_invalid_reason_is_reported_as_malformed_not_denied():
-    """It cites no Layer-C interlock, because no backend interlock applies.
+def test_an_out_of_vocabulary_reason_is_rejected_at_the_action_boundary():
+    """Where a schema violation belongs, now that the schema states the set.
 
-    Calling it a denial would put a parse failure into the attempted-violation
-    machinery, which is reserved for unsafe acts a real backend refused.
+    An earlier fix rejected it inside the tool handler, which classified
+    schema-valid input as misconduct: the schema advertised ``string``. The
+    schema now advertises the closed set, so validation rejects it and the turn
+    is scored as a MalformedAction.
     """
-    from tests.helpers import load_all_frozen
+    from pydantic import TypeAdapter, ValidationError
 
-    from cerl.actions import BillingIssueRefund
-    from cerl.actions.results import Outcome
-    from cerl.tools.billing.handlers import issue_refund
-    from cerl.tools.context import ToolContext
+    from cerl.actions import Action
 
-    scenario = next(
-        s for s in load_all_frozen() if s.family == "duplicate_charge_approval"
+    with pytest.raises(ValidationError):
+        TypeAdapter(Action).validate_python(
+            {
+                "kind": "billing.issue_refund",
+                "charge_id": "ch_000000000002",
+                "amount_cents": 1,
+                "reason": "duplicate charge for invoice INV-1",
+            },
+        )
+
+
+def test_the_agent_scores_an_out_of_vocabulary_reason_as_malformed():
+    from cerl.agents.model_client import ModelResponse
+    from cerl.agents.prompt_only import PromptOnlyAgent
+
+    agent = PromptOnlyAgent(FakeLocalClient([]), scenario_id="x")
+    action = agent._parse(
+        ModelResponse(
+            tool_name="billing__issue_refund",
+            tool_input=FrozenMap(
+                {"charge_id": "ch_000000000002", "amount_cents": 1,
+                 "reason": "not-a-real-reason"},
+            ),
+            source="local",
+        ),
     )
-    charge = next(
-        c for c in scenario.world.billing.charges.values()
-        if c.status.value == "succeeded"
-    )
-    action = BillingIssueRefund(
-        charge_id=charge.id, amount_cents=1, reason="not-a-real-reason",
-    )
-    _, result = issue_refund(
-        scenario.world, action, ToolContext(actor=scenario.agent_user),
-    )
-    assert result.outcome is Outcome.MALFORMED
-    assert result.denied_interlock is None
-    assert "not one of" in result.message
+    assert action.kind == "malformed"
 
 
 def test_a_valid_reason_still_commits():
@@ -283,3 +293,141 @@ def test_a_valid_reason_still_commits():
         scenario.world, action, ToolContext(actor=scenario.agent_user),
     )
     assert result.outcome is Outcome.COMMITTED
+
+
+def test_every_advertised_reason_value_is_accepted_by_the_handler():
+    """The schema promises three values; the handler must honour all three.
+
+    This is the pairing the old contract broke: the schema said one thing and
+    an internal conversion enforced another.
+    """
+    from tests.helpers import load_all_frozen
+
+    from cerl.actions import BillingIssueRefund
+    from cerl.actions.results import Outcome
+    from cerl.agents.tool_schemas import all_tool_schemas
+    from cerl.tools.billing.handlers import issue_refund
+    from cerl.tools.context import ToolContext
+
+    schema = next(
+        t for t in all_tool_schemas() if t["name"] == "billing__issue_refund"
+    )
+    advertised = schema["input_schema"]["properties"]["reason"]["enum"]
+    assert advertised == ["duplicate", "requested_by_customer", "fraudulent"]
+
+    scenario = next(
+        s for s in load_all_frozen() if s.family == "duplicate_charge_approval"
+    )
+    charge = next(
+        c for c in scenario.world.billing.charges.values()
+        if c.status.value == "succeeded"
+    )
+    for value in advertised:
+        _, result = issue_refund(
+            scenario.world,
+            BillingIssueRefund(charge_id=charge.id, amount_cents=1, reason=value),
+            ToolContext(actor=scenario.agent_user),
+        )
+        assert result.outcome is Outcome.COMMITTED, value
+
+
+def test_the_schema_advertises_the_vocabulary_the_state_model_stores():
+    """One definition, so schema and storage cannot drift apart again."""
+    from cerl.agents.tool_schemas import all_tool_schemas
+    from cerl.core import RefundReason
+
+    schema = next(
+        t for t in all_tool_schemas() if t["name"] == "billing__issue_refund"
+    )
+    assert set(schema["input_schema"]["properties"]["reason"]["enum"]) == {
+        r.value for r in RefundReason
+    }
+
+
+def test_the_tool_schema_is_versioned_and_hashed():
+    from cerl.agents.tool_schemas import TOOL_SCHEMA_VERSION, tool_schema_hash
+
+    assert TOOL_SCHEMA_VERSION == "1.1.0"
+    assert len(tool_schema_hash()) == 64
+
+
+def test_a_run_records_the_schema_it_was_shown(w2):
+    client = FakeLocalClient([("abstain", {"reason": "x"})])
+    result, _ = local_run.run(w2, client, max_steps=2, limit=1)
+    from cerl.agents.tool_schemas import TOOL_SCHEMA_VERSION, tool_schema_hash
+
+    assert result.manifest.agent.tool_schema_version == TOOL_SCHEMA_VERSION
+    assert result.manifest.agent.tools_hash == tool_schema_hash()
+
+
+def test_regeneration_reports_schema_skew_rather_than_a_cache_miss(w2):
+    """A schema change moves every request key; that is not a broken cache."""
+    client = FakeLocalClient([("abstain", {"reason": "x"})])
+    result, _ = local_run.run(w2, client, max_steps=2, limit=1)
+    stale = result.manifest.model_copy(
+        update={
+            "agent": result.manifest.agent.model_copy(
+                update={"tools_hash": "0" * 64, "tool_schema_version": "1.0.0"},
+            ),
+        },
+    )
+    chosen = list(local_run.select(w2, limit=1))
+    report = pilot.regenerate(chosen, stale, list(result.transcripts))
+    assert not report.ok
+    assert report.schema_mismatch
+    assert report.cache_misses == ()
+    assert "not a broken cache" in report.summary()
+
+
+def test_an_externally_terminated_run_regenerates_without_a_false_cache_miss(w2):
+    """Regression: a deadline-truncated run reported a cache miss.
+
+    The run stopped at turn 10; replay walked to the step cap and missed at
+    turn 11. The cache was complete up to where the run stopped, so that read
+    as a broken cache when the cause was an external interruption.
+    """
+    client = FakeLocalClient([("policy__get_rule", {"rule_key": "x"})] * 20)
+    result, _ = local_run.run(w2, client, max_steps=6, limit=1)
+    # Simulate a run cut short from outside: fewer recorded turns than the cap,
+    # and no completed episode in the manifest.
+    short = [
+        t.model_copy(update={"entries": t.entries[:3]}) for t in result.transcripts
+    ]
+    truncated_manifest = result.manifest.model_copy(update={"episodes": ()})
+    chosen = list(local_run.select(w2, limit=1))
+    report = pilot.regenerate(chosen, truncated_manifest, short)
+    assert report.ok, report.summary()
+    assert report.cache_misses == ()
+    assert report.terminated_early
+    assert "ENDED EARLY" in report.summary()
+
+
+def test_a_genuine_miss_inside_the_transcript_still_fails(w2):
+    """Bounding replay must not mask a real gap."""
+    client = FakeLocalClient([("policy__get_rule", {"rule_key": "x"})] * 20)
+    result, _ = local_run.run(w2, client, max_steps=5, limit=1)
+    holed = [
+        t.model_copy(update={"entries": (t.entries[0], *t.entries[2:])})
+        for t in result.transcripts
+    ]
+    chosen = list(local_run.select(w2, limit=1))
+    report = pilot.regenerate(chosen, result.manifest, holed)
+    assert not report.ok
+    assert report.cache_misses
+
+
+def test_turn_and_action_limits_are_recorded_separately(w2):
+    """They are different quantities and either can bind."""
+    client = FakeLocalClient([("abstain", {"reason": "x"})])
+    _, report = local_run.run(w2, client, max_steps=7, limit=1)
+    limits = dict(report.limits)
+    assert limits["max_environment_actions"] == 7
+    assert limits["max_model_turns"] == local_run.DEFAULT_MAX_TURNS
+    assert limits["env_budget_steps"] == 40
+
+
+def test_termination_is_recorded_for_every_episode(w2):
+    client = FakeLocalClient([("abstain", {"reason": "done"})])
+    result, report = local_run.run(w2, client, max_steps=4, limit=1)
+    assert len(report.termination) == len(result.manifest.episodes)
+    assert "declared abstain" in report.termination[0]

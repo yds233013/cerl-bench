@@ -30,10 +30,14 @@ class FakeTransport:
     def __init__(self, replies: list[dict[str, Any]] | None = None) -> None:
         self.replies = replies or []
         self.calls: list[dict[str, Any]] = []
+        self.timeouts: list[float | None] = []
         self.index = 0
 
-    def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def chat(
+        self, payload: dict[str, Any], timeout_s: float | None = None,
+    ) -> dict[str, Any]:
         self.calls.append(payload)
+        self.timeouts.append(timeout_s)
         if self.index < len(self.replies):
             reply = self.replies[self.index]
             self.index += 1

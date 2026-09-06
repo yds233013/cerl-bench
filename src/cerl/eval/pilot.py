@@ -35,6 +35,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from cerl.agents import tool_schemas
 from cerl.agents.budget import (
     HeuristicTokenCounter,
     SpendJournal,
@@ -48,6 +49,7 @@ from cerl.agents.model_client import (
     TranscriptCacheClient,
     TranscriptCacheMiss,
     Transport,
+    request_key,
 )
 from cerl.agents.prompt_only import (
     SYSTEM_PROMPT,
@@ -56,7 +58,7 @@ from cerl.agents.prompt_only import (
     transcript_entries,
 )
 from cerl.agents.tool_schemas import all_tool_schemas
-from cerl.core import Frozen, FrozenMap
+from cerl.core import Frozen, FrozenMap, content_hash
 from cerl.env.env import CerlEnv
 from cerl.env.render import render_observation
 from cerl.eval import splits
@@ -412,14 +414,15 @@ def execute(
     for scenario in scenarios:
         agent = PromptOnlyAgent(client, scenario_id=scenario.scenario_id)
         env = CerlEnv(scenario)
-        try:
-            run = run_agent(env, agent, max_steps=max_steps)
-        except Exception as error:  # noqa: BLE001 - recorded, not swallowed
-            interrupted.append(f"{scenario.scenario_id}: {type(error).__name__}: {error}")
-            transcripts.append(agent.transcript)
-            break
+        run = run_agent(env, agent, max_steps=max_steps)
         transcripts.append(run.transcript or agent.transcript)
+        # Score whatever was executed, interrupted or not. The actions really
+        # happened, so the episode is recorded and its termination reason kept;
+        # dropping it would erase evidence the environment already committed.
         records.append(record_episode(scenario, _episode_for(scenario, run.actions)))
+        if run.failure is not None:
+            interrupted.append(f"{scenario.scenario_id}: {run.failure}")
+            break
         if ledger is not None and ledger_path is not None:
             ledger.save(ledger_path)
 
@@ -482,6 +485,9 @@ def _pilot_manifest(
             # the transcript and reports a cache miss that is really a bug here.
             max_steps=max_steps,
             max_retries=PILOT_MAX_RETRIES,
+            tool_schema_version=tool_schemas.TOOL_SCHEMA_VERSION,
+            tools_hash=tool_schemas.tool_schema_hash(),
+            prompt_hash=content_hash(SYSTEM_PROMPT),
         ),
         scenarios,
     )
@@ -512,16 +518,62 @@ class RegenerationReport(Frozen):
     matched: int
     mismatched: tuple[str, ...] = ()
     cache_misses: tuple[str, ...] = ()
+    #: Set when the run was recorded under a different agent-visible schema.
+    schema_mismatch: str = ""
+    #: Set when the run ended outside the environment -- a deadline, a kill --
+    #: so a short transcript is expected rather than evidence of a bad cache.
+    terminated_early: str = ""
 
     @property
     def ok(self) -> bool:
-        return not self.mismatched and not self.cache_misses
+        return not self.mismatched and not self.cache_misses and not self.schema_mismatch
 
     def summary(self) -> str:
         lines = [f"regenerated {self.matched}/{self.scenarios} episodes from cache"]
+        if self.schema_mismatch:
+            lines.append(f"  SCHEMA SKEW {self.schema_mismatch}")
+        if self.terminated_early:
+            lines.append(f"  ENDED EARLY {self.terminated_early}")
         lines.extend(f"  MISMATCH {entry}" for entry in self.mismatched)
         lines.extend(f"  CACHE MISS {entry}" for entry in self.cache_misses)
         return "\n".join(lines)
+
+
+def _first_key_mismatch(
+    by_id: dict[str, FrozenScenario], transcripts: list[AgentTranscript],
+) -> str:
+    """Whether a transcript's first request key still reproduces here."""
+    for transcript in transcripts:
+        scenario = by_id.get(transcript.scenario_id)
+        if scenario is None or not transcript.entries:
+            continue
+        env = CerlEnv(scenario)
+        first = [
+            {"role": "user", "content": render_observation(env.reset())},
+        ]
+        expected = request_key(SYSTEM_PROMPT, first, all_tool_schemas())
+        if expected != transcript.entries[0].request_key:
+            return (
+                f"{transcript.scenario_id}: the recorded first request key "
+                f"{transcript.entries[0].request_key[:16]} does not reproduce "
+                f"here (now {expected[:16]}). This run predates tool-schema "
+                f"versioning and was recorded against a different prompt or "
+                f"schema; current tool schema is "
+                f"{tool_schemas.TOOL_SCHEMA_VERSION}. Version skew, not a "
+                f"broken cache."
+            )
+    return ""
+
+
+def _schema_skew(recorded_version: str, recorded_hash: str, current_hash: str) -> str:
+    version = recorded_version or "(unversioned)"
+    return (
+        f"run recorded tool schema {version} hash {recorded_hash[:16]}; this "
+        f"checkout has {tool_schemas.TOOL_SCHEMA_VERSION} hash "
+        f"{current_hash[:16]}. Request keys include the schemas, so these "
+        f"transcripts cannot be regenerated here. This is version skew, not a "
+        f"broken cache."
+    )
 
 
 def regenerate(
@@ -540,6 +592,31 @@ def regenerate(
     """
     by_id = {s.scenario_id: s for s in scenarios}
     recorded = {e.scenario_id: e.actions for e in manifest.episodes}
+
+    # A schema change moves every request key, so every entry would "miss".
+    # Reporting that as a cache miss blames the cache for a version skew.
+    recorded_hash = manifest.agent.tools_hash
+    current_hash = tool_schemas.tool_schema_hash()
+    if recorded_hash and recorded_hash != current_hash:
+        return RegenerationReport(
+            scenarios=len(transcripts),
+            matched=0,
+            schema_mismatch=_schema_skew(
+                manifest.agent.tool_schema_version, recorded_hash, current_hash,
+            ),
+        )
+
+    # Runs recorded before the schema was versioned carry no hash to compare, so
+    # detect skew structurally: recompute the first request key and see whether
+    # it matches what was recorded. If it does not, the transcript was made
+    # against a different prompt or tool schema, and every entry will "miss".
+    # Reporting that as a cache miss blames the cache for version skew.
+    if not recorded_hash and transcripts:
+        stale = _first_key_mismatch(by_id, transcripts)
+        if stale:
+            return RegenerationReport(
+                scenarios=len(transcripts), matched=0, schema_mismatch=stale,
+            )
     # Replay under the run's own step cap. An episode that never declared an
     # outcome ends by exhausting its budget, so a different cap changes where
     # it stops -- and replaying past the end looks like a cache miss when it is
@@ -549,6 +626,7 @@ def regenerate(
     misses: list[str] = []
     matched = 0
 
+    early: list[str] = []
     for transcript in transcripts:
         scenario = by_id.get(transcript.scenario_id)
         if scenario is None:
@@ -557,15 +635,37 @@ def regenerate(
         client = TranscriptCacheClient(transcript_entries(transcript))
         agent = PromptOnlyAgent(client, scenario_id=scenario.scenario_id)
         env = CerlEnv(scenario)
+        # Replay no further than the transcript actually goes. A run cut short
+        # from outside -- an inference deadline, a kill -- recorded fewer turns
+        # than its step cap, and walking past the end would report a cache miss
+        # for a cache that is complete up to where the run stopped. A genuine
+        # miss *within* the transcript still surfaces.
+        recorded_turns = len(transcript.entries)
+        completed = recorded.get(transcript.scenario_id)
+        # Bound replay by the transcript only when the episode did *not*
+        # complete. If the manifest records a finished episode, its transcript
+        # must cover it, and a short one is a genuine cache defect rather than
+        # an interruption.
+        bound = max_steps if completed is not None else min(max_steps, recorded_turns)
         try:
-            run = run_agent(env, agent, max_steps=max_steps)
+            run = run_agent(env, agent, max_steps=bound)
         except TranscriptCacheMiss as miss:
             misses.append(f"{transcript.scenario_id}: {miss}")
             continue
-        expected = recorded.get(transcript.scenario_id)
+
+        expected = completed
         if expected is None:
-            misses.append(f"{transcript.scenario_id}: not in the manifest")
+            # No manifest episode: the run ended before this episode finished.
+            # The turns it did record replayed, which is what can be verified.
+            early.append(
+                f"{transcript.scenario_id}: no completed episode in the "
+                f"manifest; {recorded_turns} recorded model turns replayed to "
+                f"the point the run stopped",
+            )
+            matched += 1
             continue
+        if recorded_turns < max_steps and not run.actions:
+            early.append(f"{transcript.scenario_id}: transcript ends at turn {recorded_turns}")
         if tuple(run.actions) != tuple(expected):
             mismatched.append(
                 f"{transcript.scenario_id}: {len(run.actions)} actions replayed, "
@@ -579,6 +679,7 @@ def regenerate(
         matched=matched,
         mismatched=tuple(mismatched),
         cache_misses=tuple(misses),
+        terminated_early="; ".join(early),
     )
 
 

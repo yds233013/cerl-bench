@@ -16,9 +16,15 @@ from cerl.core import (
     LogicalInstant,
     PaymentMethodId,
     RefundId,
+    RefundReason,
     UserId,
 )
 from cerl.state.common import Frozen, Money
+
+#: Re-exported so ``state`` stays the natural home for billing vocabulary while
+#: the single definition lives in ``core`` -- ``actions`` sits below ``state``
+#: and could not otherwise share it.
+__all__ = ["RefundReason"]
 
 
 class CustomerStatus(StrEnum):
@@ -38,12 +44,6 @@ class DisputeStatus(StrEnum):
     OPEN = "open"
     WON = "won"
     LOST = "lost"
-
-
-class RefundReason(StrEnum):
-    DUPLICATE = "duplicate"
-    REQUESTED_BY_CUSTOMER = "requested_by_customer"
-    FRAUDULENT = "fraudulent"
 
 
 class PaymentMethod(Frozen):

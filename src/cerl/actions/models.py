@@ -19,7 +19,16 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import Field
 
-from cerl.core import ChargeId, CustomerId, DisputeId, Frozen, MessageId, TicketId, UserId
+from cerl.core import (
+    ChargeId,
+    CustomerId,
+    DisputeId,
+    Frozen,
+    MessageId,
+    RefundReason,
+    TicketId,
+    UserId,
+)
 
 
 class ActionKind(StrEnum):
@@ -205,7 +214,10 @@ class BillingIssueRefund(BaseAction):
     kind: Literal[ActionKind.BILLING_ISSUE_REFUND] = ActionKind.BILLING_ISSUE_REFUND
     charge_id: ChargeId
     amount_cents: int
-    reason: str = "duplicate"
+    # Typed as the enum so an out-of-vocabulary value is rejected where the
+    # schema promises it will be -- at validation -- and becomes a scored
+    # MalformedAction rather than surfacing from inside a tool handler.
+    reason: RefundReason = RefundReason.DUPLICATE
     approval_ref: str | None = None
     idempotency_key: str | None = None
 
