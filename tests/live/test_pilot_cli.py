@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from tests.helpers import visible_text
 from typer.testing import CliRunner
 
 from cerl.cli import app
@@ -213,7 +214,43 @@ def test_a_ledger_from_a_different_cap_is_refused_with_an_instruction(tmp_path):
          "--ledger-out", str(ledger)],
     )
     assert second.exit_code != 0
-    assert "different settings" in second.output
-    assert "fresh --ledger-out" in second.output
+    # Asserted against the *visible* text. Rich styles CLI options when colour
+    # is on, so "--ledger-out" reaches ``output`` as three separately-coloured
+    # runs and the literal substring is absent even though the sentence is on
+    # screen. See ``visible_text``.
+    message = visible_text(second.output)
+    assert "different settings" in message
+    assert "fresh --ledger-out" in message
     # The record of prior spend is intact, not discarded to get past the error.
+    assert ledger.exists()
+
+
+def test_the_ledger_refusal_reads_correctly_with_colour_enabled(tmp_path, monkeypatch):
+    """The same refusal, under the styling CI actually uses.
+
+    This is the condition that broke the build: locally the runner emits no
+    colour and the assertion above passed for years' worth of runs; on GitHub
+    Actions Rich highlights ``--ledger-out`` and the plain substring vanished.
+    Forcing colour on pins that difference here, so the next such divergence
+    fails on a laptop instead of on CI.
+    """
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    ledger = tmp_path / "ledger.json"
+    common = ["pilot", "--execute", "--synthetic", "--ledger-out", str(ledger)]
+    first = runner.invoke(
+        app,
+        [*common, "--per-branch", "1", "--out", str(tmp_path / "a.json"),
+         "--transcripts-out", str(tmp_path / "at.json")],
+    )
+    assert first.exit_code == 0, first.output
+    second = runner.invoke(
+        app,
+        [*common, "--per-branch", "2", "--out", str(tmp_path / "b.json"),
+         "--transcripts-out", str(tmp_path / "bt.json")],
+    )
+
+    assert second.exit_code != 0
+    message = visible_text(second.output)
+    assert "different settings" in message
+    assert "fresh --ledger-out" in message
     assert ledger.exists()
