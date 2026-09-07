@@ -311,15 +311,142 @@ def test_the_tool_schema_version_records_the_change():
     assert TOOL_SCHEMA_VERSION == "1.2.0"
 
 
+_EMPTY_AGENT = {"name": "x", "kind": "model", "privilege_mode": "unprivileged"}
+
+
 def test_an_empty_manifest_does_not_read_as_a_reproduced_result(tmp_path):
-    """It passes every check, because there is nothing to check."""
+    """It passes every check there is to run, which is not the same as evidence.
+
+    The metric block still has to be present and correct -- for zero episodes
+    that is the zero-valued block ``aggregate([])`` produces -- because "no
+    episodes" is not a licence to omit numbers.
+    """
+    from cerl.eval.metrics import aggregate
+
     path = tmp_path / "m.json"
     path.write_text(
         json.dumps(
-            {"agent": {"name": "x", "kind": "model", "privilege_mode": "unprivileged"},
-             "episodes": []},
+            {"agent": _EMPTY_AGENT, "episodes": [], "metrics": aggregate([])},
         ),
     )
     report = verify_run.verify_manifest(manifest_module.load(path), freeze.FROZEN_DIR)
-    assert report.ok
+    assert report.ok, report.summary()
     assert "NO episodes" in report.summary()
+
+
+def test_an_empty_manifest_still_has_to_carry_its_metric_block(tmp_path):
+    """Omitting it entirely is a missing metric, not an empty run."""
+    path = tmp_path / "m.json"
+    path.write_text(json.dumps({"agent": _EMPTY_AGENT, "episodes": []}))
+    report = verify_run.verify_manifest(manifest_module.load(path), freeze.FROZEN_DIR)
+    assert not report.ok
+    assert "metrics.episodes" in {m.field for m in report.mismatches}
+
+
+# --------------------------------------------------------------------------
+# 1b. the metric block is compared exactly, key set included
+# --------------------------------------------------------------------------
+
+
+def _metric_fields(report: verify_run.VerificationReport) -> set[str]:
+    return {m.field for m in report.mismatches if m.field.startswith("metrics.")}
+
+
+def test_an_empty_metric_block_fails_rather_than_being_skipped(recorded, tmp_path):
+    """Deleting the whole block used to be free: absent read as nothing to check."""
+    altered = copy.deepcopy(recorded)
+    altered["metrics"] = {}
+    altered.pop("manifest_hash", None)
+    report = _verify(altered, tmp_path)
+    assert not report.ok
+    fields = _metric_fields(report)
+    assert "metrics.safe_completion_rate" in fields
+    assert "metrics.committed_violation_rate" in fields
+    assert "metrics.attempted_violation_rate" in fields
+    assert all(
+        m.recorded == "<absent from the manifest>"
+        for m in report.mismatches
+        if m.field in fields
+    )
+
+
+@pytest.mark.parametrize(
+    "metric",
+    [
+        "safe_completion_rate",
+        "task_completion_mean",
+        "committed_violation_rate",
+        "attempted_violation_rate",
+        "committed_by_class",
+        "attempted_by_class",
+        "episodes",
+    ],
+)
+def test_a_single_missing_metric_is_caught_and_named(recorded, tmp_path, metric):
+    altered = copy.deepcopy(recorded)
+    del altered["metrics"][metric]
+    altered.pop("manifest_hash", None)
+    report = _verify(altered, tmp_path)
+    assert not report.ok
+    assert _metric_fields(report) == {f"metrics.{metric}"}, report.summary()
+
+
+def test_an_invented_metric_is_caught_and_named(recorded, tmp_path):
+    """Nothing looked at keys the run does not produce, so one could be asserted."""
+    altered = copy.deepcopy(recorded)
+    altered["metrics"]["safety_score"] = 0.99
+    altered.pop("manifest_hash", None)
+    report = _verify(altered, tmp_path)
+    assert not report.ok
+    assert _metric_fields(report) == {"metrics.safety_score"}
+    invented = next(m for m in report.mismatches if m.field == "metrics.safety_score")
+    assert invented.recomputed == "<not a metric this run produces>"
+
+
+def test_a_changed_metric_value_names_that_metric_alone(recorded, tmp_path):
+    altered = copy.deepcopy(recorded)
+    altered["metrics"]["safe_completion_rate"] = 1.0
+    altered.pop("manifest_hash", None)
+    report = _verify(altered, tmp_path)
+    assert not report.ok
+    assert _metric_fields(report) == {"metrics.safe_completion_rate"}
+
+
+def test_the_two_violation_series_are_compared_separately(recorded, tmp_path):
+    """Swapping them must fail, not cancel out.
+
+    A verifier that compared their sum -- or compared only one -- would accept
+    this. The separation is CLAUDE.md rule 2, and it has to hold in the checker
+    as much as in the recorder.
+    """
+    altered = copy.deepcopy(recorded)
+    metrics = altered["metrics"]
+    metrics["committed_violation_rate"], metrics["attempted_violation_rate"] = (
+        metrics["attempted_violation_rate"],
+        metrics["committed_violation_rate"],
+    )
+    metrics["committed_by_class"], metrics["attempted_by_class"] = (
+        metrics["attempted_by_class"],
+        metrics["committed_by_class"],
+    )
+    altered.pop("manifest_hash", None)
+    report = _verify(altered, tmp_path)
+    assert not report.ok
+    assert "metrics.committed_violation_rate" in _metric_fields(report)
+    assert "metrics.committed_by_class" in _metric_fields(report)
+
+
+def test_a_non_replayable_metric_is_exempt_by_an_explicit_allowlist(recorded, tmp_path):
+    """Provider spend has nothing to recompute against; everything else does."""
+    assert "spend_cents" in verify_run.UNVERIFIABLE_METRICS
+    altered = copy.deepcopy(recorded)
+    altered["metrics"]["spend_cents"] = 1234
+    altered.pop("manifest_hash", None)
+    assert _verify(altered, tmp_path).ok
+
+
+def test_the_allowlist_covers_only_what_replay_cannot_produce(recorded):
+    """It must never shadow a metric the run actually computes."""
+    from cerl.eval.metrics import aggregate
+
+    assert verify_run.UNVERIFIABLE_METRICS.isdisjoint(set(aggregate([])))

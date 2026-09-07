@@ -10,7 +10,6 @@ own chain hash.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 from pydantic import PrivateAttr
@@ -22,6 +21,7 @@ from cerl.core import (
     evolve,
     json_copy,
 )
+from cerl.diff import Origin, StateDiff, diff_business
 from cerl.state.billing import BillingState
 from cerl.state.common import ViolationLog
 from cerl.state.policy import PolicyDocument
@@ -77,21 +77,35 @@ class WorldState(Frozen):
             self._document = self.model_dump(mode="json")
         return self._document
 
-    def document_for_reading(self) -> Mapping[str, Any]:
-        """The document as an un-copied, read-only view.
+    def business_diff_to(
+        self,
+        other: WorldState,
+        *,
+        origin: Origin = Origin.AGENT,
+        responder_rule: str | None = None,
+    ) -> StateDiff:
+        """Diff this world's business projection against ``other``'s.
 
-        Typed ``Mapping`` rather than ``dict`` so mypy rejects a write at the
-        call site: the value is the live cache, and a caller that mutated it
-        would desynchronise the document from the typed state and the memoised
-        hash. Use it only to *read* -- and never to build something that
-        retains a reference to a nested value, because those are the cache's own
-        objects. :class:`DiffOp` retains its inputs, so the differ is the one
-        exception, justified where it is called.
+        The diff lives here, rather than at the call sites, so the memoised
+        document never leaves this object. An earlier version exposed the cache
+        through a public ``document_for_reading()`` typed ``Mapping``; that types
+        as read-only but *is* the live cache, and its nested values are ordinary
+        ``dict`` and ``list``. Mutating one changed every later
+        :meth:`as_document` while the typed state and the memoised hash kept the
+        original -- the document and the hash silently disagreeing, which is the
+        exact defect the copy in :meth:`as_document` exists to prevent.
 
-        This exists for the per-step path, where copying the whole world on
-        every diff cost more than the episode's entire time budget.
+        Diffing is strictly read-only, and :class:`DiffOp` detaches the values it
+        retains, so passing the cache in here is safe and costs no copy. That
+        matters: copying the whole world on every per-step diff cost more than
+        the episode's entire time budget.
         """
-        return self._cached_document()
+        return diff_business(
+            self._cached_document(),
+            other._cached_document(),
+            origin=origin,
+            responder_rule=responder_rule,
+        )
 
     def as_document(self) -> dict[str, Any]:
         """Canonical JSON view of the whole state (including bookkeeping).

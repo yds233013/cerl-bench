@@ -30,7 +30,6 @@ from typing import Any
 
 from cerl.core import ConstraintClass, Frozen, FrozenMap, LogicalInstant
 from cerl.diff.allowlist import residual_of_diffs
-from cerl.diff.differ import diff_business
 from cerl.scenario.schema import FrozenScenario
 from cerl.state import WorldState
 from cerl.verify.approval import check_refund_approval
@@ -304,10 +303,8 @@ def grade(
 
     # Terminal diff only. A change made and then undone leaves nothing here --
     # which is precisely the blind spot this study exists to measure.
-    # Read-only view; the differ does not write. See ``document_for_reading``.
-    terminal = diff_business(
-        initial.document_for_reading(), final.document_for_reading(),
-    )
+    # WorldState owns the diff; its cached document never leaves the object.
+    terminal = initial.business_diff_to(final)
     split = residual_of_diffs((terminal,), scenario.permitted(), scenario.variables)
     agent_residual = _attributable_to_agent(split.agent, scenario, final)
 

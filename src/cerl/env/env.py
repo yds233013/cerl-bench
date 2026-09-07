@@ -25,9 +25,9 @@ from cerl.core import (
     FrozenMap,
     LogicalInstant,
     evolve,
-    json_copy,
+    freeze_json,
 )
-from cerl.diff import Origin, StateDiff, diff_business
+from cerl.diff import Origin, StateDiff
 from cerl.env.observation import Notice, Observation, TaskBrief
 from cerl.env.responders import fire_one_due, schedule_new_firings
 from cerl.env.reward import CostVector, RewardVector, default_scalar
@@ -246,17 +246,10 @@ class CerlEnv:
 
     @staticmethod
     def _business_diff(before: WorldState, after: WorldState, origin: Origin) -> StateDiff:
-        # The read-only view, not a copy: this is the per-step path and a full
-        # world copy here cost more than the whole 50 ms episode budget. The
-        # differ only reads. It *does* retain references to nested values in the
-        # ``DiffOp`` payloads it builds, which is sound because both worlds are
-        # already-superseded immutable snapshots that nothing mutates again --
-        # every mutation produces a new ``WorldState``.
-        return diff_business(
-            before.document_for_reading(),
-            after.document_for_reading(),
-            origin=origin,
-        )
+        # WorldState owns the diff so its memoised document never leaves the
+        # object. No copy is taken here, and none is needed: diffing only reads,
+        # and DiffOp detaches the values it retains.
+        return before.business_diff_to(after, origin=origin)
 
     @staticmethod
     def _append_entry(
@@ -392,14 +385,15 @@ def _sealed(result: ToolResult) -> ToolResult:
     editing a nested value through the observation edited the sealed entry and
     broke its hash -- through the ordinary public API, with no privileged access.
 
-    Copying rather than deep-freezing is deliberate. A nested ``FrozenMap`` in a
-    field typed ``Any`` has no pydantic serialiser, so freezing in place breaks
-    canonical serialisation and, with it, every historical replay hash. A copy
-    keeps the payload plain JSON, so the encoding -- and every committed hash --
-    is byte-identical to before.
+    ``freeze_json`` both copies and seals. Copying keeps the observation and the
+    record separate; sealing means the record cannot be edited afterwards
+    either, which matters because a caller that reaches a trace entry and edits
+    its payload in place breaks that entry's hash. The sealed containers are
+    ``dict`` and ``list`` subclasses, so the canonical encoding -- and with it
+    every historical replay hash -- is byte-identical to before.
 
     ``evolve`` rather than ``model_copy(update=...)``: the result is revalidated
     as a whole, per the rule that safety-critical packages never install an
     unchecked field.
     """
-    return evolve(result, payload=FrozenMap(json_copy(result.payload.to_dict())))
+    return evolve(result, payload=FrozenMap(freeze_json(result.payload.to_dict())))

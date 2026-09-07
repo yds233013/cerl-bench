@@ -14,6 +14,7 @@ manifest.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 
 from cerl.core import Frozen
@@ -196,6 +197,76 @@ def _short(value: object) -> str:
     return text if len(text) <= _MAX_REPORTED else text[: _MAX_REPORTED - 3] + "..."
 
 
+#: Metric keys a replay genuinely cannot recompute, and which are therefore
+#: exempt from the exact comparison below. Each entry needs a reason, because
+#: every exemption is a place a number can be asserted without being checked.
+#:
+#: * ``spend_cents`` / ``tokens_*`` -- what a provider billed. Replay runs no
+#:   model, so there is nothing to recompute; these describe an event outside
+#:   the simulation.
+#: * ``wall_clock_seconds`` -- how long the machine took. Not state, not
+#:   hashed, and different on every machine by design.
+#:
+#: The list is deliberately short and deliberately explicit. Adding to it means
+#: deciding that a reported number will never be checked again, which is a
+#: design decision and not a convenience.
+UNVERIFIABLE_METRICS: frozenset[str] = frozenset(
+    {
+        "spend_cents",
+        "tokens_in",
+        "tokens_out",
+        "wall_clock_seconds",
+    },
+)
+
+
+def _compare_metrics(
+    manifest: RunManifest, replayed: Sequence[EpisodeRecord],
+) -> list[Mismatch]:
+    """Compare the **complete** metric block, key set included.
+
+    Three failures are possible and all three must be caught:
+
+    * a **changed** value -- the obvious one;
+    * a **missing** key, which an earlier version treated as "nothing to
+      compare" and passed, so deleting an inconvenient metric hid it;
+    * an **extra** key, which nothing looked at, so a manifest could report an
+      invented metric beside honest ones and have it pass unchallenged.
+
+    Recomputation is from the **replayed** records, never the submitted ones:
+    deriving aggregates from the submission proves only that the file is
+    internally consistent, which a submitter can arrange for any numbers.
+
+    ``committed_*`` and ``attempted_*`` are compared as the separate keys they
+    are. Nothing here merges them, and a mismatch names whichever series moved.
+    """
+    recomputed = aggregate(list(replayed))
+    recorded = {str(k): v for k, v in manifest.metrics.items()}
+
+    out: list[Mismatch] = []
+
+    def note(field: str, was: object, now: object) -> None:
+        out.append(
+            Mismatch(
+                scenario_id="<aggregate>",
+                field=f"metrics.{field}",
+                recorded=_short(was),
+                recomputed=_short(now),
+            ),
+        )
+
+    for key in sorted(set(recorded) | set(recomputed)):
+        if key in UNVERIFIABLE_METRICS:
+            continue
+        if key not in recorded:
+            note(key, "<absent from the manifest>", recomputed[key])
+        elif key not in recomputed:
+            note(key, recorded[key], "<not a metric this run produces>")
+        elif recorded[key] != recomputed[key]:
+            note(key, recorded[key], recomputed[key])
+    return out
+
+
 def verify_manifest(
     manifest: RunManifest,
     frozen_dir: Path,
@@ -225,20 +296,7 @@ def verify_manifest(
             replayed_records.append(rebuilt)
         checked += 1
 
-    # Aggregates are recomputed from the **replayed** records, not from the
-    # submitted ones. Deriving them from the submission only proves the file is
-    # internally consistent, which a submitter can arrange for any numbers they
-    # like.
-    recomputed_metrics = aggregate(replayed_records) if replayed_records else {}
-    for key, value in recomputed_metrics.items():
-        recorded = manifest.metrics.get(key)
-        if recorded is not None and recorded != value:
-            mismatches.append(
-                Mismatch(
-                    scenario_id="<aggregate>", field=f"metrics.{key}",
-                    recorded=str(recorded), recomputed=str(value),
-                ),
-            )
+    mismatches += _compare_metrics(manifest, replayed_records)
 
     checksum = (
         manifest_module.checksum_of(manifest_path)

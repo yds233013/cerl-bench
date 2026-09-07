@@ -4,24 +4,35 @@ Working file. Updated at each meaningful milestone and before context compaction
 After compaction: reload `CLAUDE.md`, `docs/design.md`, and this file, then continue
 from **Next action**.
 
-## Authorized scope
+## Authorized scope — current
 
-Phase 1B, authorized directly by the user in-session on 2026-09-05. Supersedes the
-earlier "stop after Phase 1A" and "stop after one small W1 slice" instructions.
+**v0.1 release-candidate repair**, authorized 2026-09-07: fix the three issues
+raised by independent review of candidate `ed04213`, and nothing else.
 
-**In scope**: W1 and W3 families, scenario generation/splits/pairing across all three
-families, evaluation harness + offline replay, unprivileged prompt-only baseline
-(integration only unless a spending budget exists), documentation, verification.
+**In scope**: exact aggregate verification; closing the document-aliasing hole
+without regressing the ~50 ms episode budget; repairing provenance and stale
+status text; running the listed gates from a fresh clone.
 
-**Out of scope**: push/publish/deploy, history rewrite, frontend, HTTP/MCP adapters,
-SFT, GRPO, later phases, paid infrastructure. No Chrome, no ChatGPT during this run.
+**Out of scope**: new workflow families, RL training of any kind, MCP adapters,
+inference, spending, publishing or pushing.
 
-## Baseline verified at start
+> **Scope history.** Earlier entries in this file were written under narrower
+> grants, and their "out of scope" lines are superseded rather than wrong: the
+> Phase 1B grant of 2026-09-05 excluded a frontend and HTTP adapters, both of
+> which were separately authorized afterwards and now exist (`cerl serve`,
+> `cerl serve-review`, `app/`). `CLAUDE.md` §11 is the authority on current
+> scope; where this file disagrees with it, §11 wins.
+
+## Baseline verified at start of Phase 1B — historical
 
 `b7fc987698119ea1bae3036671284d344029b888` — confirmed by inspection, not assumed:
-114 frozen W2 scenarios, 114 gold trajectories, clean tree at that commit.
+114 frozen W2 scenarios, 114 gold trajectories, clean tree at that commit. This is
+where Phase 1B began, not where the project stands.
 
-## Milestones
+## Milestones — Phase 1B
+
+Historical: this table records the Phase 1B run and is not a current to-do list.
+
 
 | # | Milestone | Status |
 |---|---|---|
@@ -36,9 +47,10 @@ SFT, GRPO, later phases, paid infrastructure. No Chrome, no ChatGPT during this 
 | 9 | Documentation + executable demonstrations | DONE |
 | 10 | Clean-clone verification + morning handoff | DONE |
 
-## Interrupted work preserved (uncommitted at resume)
+## Interrupted work preserved (uncommitted at resume) — historical
 
-Mid-flight W1 groundwork, all intentional:
+Mid-flight W1 groundwork as it stood mid-run. **All of it landed**; this section
+is kept as a record of the resume, not as outstanding work:
 
 - `scenario/families/registry.py` (new) — family registry: template + generator + plan.
   Freezing no longer knows which family it holds.
@@ -51,8 +63,9 @@ Mid-flight W1 groundwork, all intentional:
   per approved merge semantics (was charges only).
 - `verify/predicates/{state,trace,invariant}.py` — W1 predicates added.
 
-`scenario/bootstrap.py` imports a W1 module that does not exist yet, so the package
-does not import until that lands. That is the immediate next action.
+At the moment this was written, `scenario/bootstrap.py` imported a W1 module that
+did not exist yet, so the package would not import. That was resolved in the same
+run; it is recorded here because the resume protocol depended on it.
 
 ## Significant decisions
 
@@ -81,25 +94,29 @@ does not import until that lands. That is the immediate next action.
 
 ## Next action
 
-All authorised Phase 1B work is complete and verified from a clean clone of
-`7904d9f`. See `MORNING_REPORT.md`.
+**Nothing is pending.** The reviewed repairs are complete and the gates were run
+from a fresh clone; see `docs/rc-review-repairs.md` for each finding's before and
+after, and `docs/status.md` for canonical status.
 
-The next useful step is Phase 2 (scale to ~40 templates, pilot variance study,
-prompt-only results across all four tiers), which requires an explicit spending
-budget before any live model run.
+Phase 2 (scale to ~40 templates, pilot variance study, prompt-only results across
+all four tiers) remains the next *useful* step, and is **not authorized**. It
+requires an explicit spending budget before any live model run.
 
 **Live model evaluation is BLOCKED_EXTERNAL.** `ANTHROPIC_API_KEY` and
 `GEMINI_API_KEY` are present in the environment, but no spending budget or
 provider authorization is recorded anywhere in the project or session, and
 credentials alone are explicitly not a budget. `AnthropicClient` refuses to
 construct unless both `CERL_LIVE_EVAL_AUTHORIZED=1` and a positive
-`CERL_LIVE_EVAL_BUDGET_CENTS` are set. No API call was made during this run.
+`CERL_LIVE_EVAL_BUDGET_CENTS` are set. No paid API call has ever been made.
 Every baseline fixture is stamped `synthetic` and none may be reported as a
-model result.
+model result. The one real model run in this repository is local
+(`qwen3:4b` via Ollama), recorded under `evidence/local-baseline/`.
 
 ## Evidence locations
 
 - Frozen scenarios: `scenarios/frozen/`, manifest `scenarios/manifest.json`
 - Gold trajectories: `scenarios/gold/`
 - Golden verdicts: `tests/golden/golden_verdicts.json`
-- Reports: `MORNING_REPORT.md` (written at handoff)
+- Recorded runs: `evidence/`, including `evidence/rc-review/before_after.json`
+- Reports: `MORNING_REPORT.md` and `LOCAL_BASELINE_REPORT.md` — both **historical**,
+  each pinned to the commit it describes; `docs/status.md` is canonical for now

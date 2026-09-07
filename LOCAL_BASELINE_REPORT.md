@@ -1,5 +1,10 @@
 # Local-model baseline — development smoke test
 
+> **Historical report — preserved as written.** It describes the local-model
+> development smoke test at the commit noted below, not the current tree. Its
+> numbers are that run's and must not be re-reported as current. For current
+> status see `docs/status.md`.
+
 **A real open-weight model, running on this laptop, choosing its own actions
 against the real environment.** No paid inference, no API credential, no
 scripted or oracle substitution. The score is low; that is the result, and

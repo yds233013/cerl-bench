@@ -1,5 +1,11 @@
 # Phase 1B — morning handoff
 
+> **Historical report — preserved as written.** It describes commit `7904d9f`
+> at the Phase 1B handoff (2026-09-05) and is not a statement about the current
+> tree. Later work — the local-model agent, the grader study, the workspace
+> application, the v0.1 candidate and its review repairs — came afterwards. For
+> current status see `docs/status.md`.
+
 **Tested code commit: `7904d9fbeff796349a8e8d8f0d70e7d5ee7fe3cb`** on branch `main`.
 Everything below was run inside a fresh clone of that exact commit. Nothing was
 pushed. A later commit adds this report only; the code under test is `7904d9f`.

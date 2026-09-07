@@ -1,9 +1,12 @@
-# Status — Phase 1B candidate
+# Status — v0.1 release candidate, under local review
 
-One canonical status. `README.md` and `MORNING_REPORT.md` both defer to this
-file; where any other document disagrees, this one is correct.
+One canonical status. Every other document defers to this file; where any other
+document disagrees, this one is correct. Two documents are deliberately *not*
+kept current and say so at the top: `docs/design.md` (the Phase 0 design of
+record) and the dated reports `MORNING_REPORT.md` and `LOCAL_BASELINE_REPORT.md`.
 
-Last updated 2026-09-06, after the local-model baseline milestone.
+Last updated **2026-09-07**, after the second independent review of the v0.1
+candidate. **Not publicly released, and nothing has been pushed.**
 
 ## Two different kinds of "not done"
 
@@ -19,9 +22,16 @@ dependency that is not actually the obstacle.
 
 ## Summary
 
-Phase 1B is **implemented and verified, with two scope deviations recorded
-below**. It is a candidate for review, not a finished result: no live model has
-been evaluated, and no research claim (C1–C6) has been measured.
+Phases 1A and 1B are **implemented and verified, with two scope deviations
+recorded below**, and v0.1 is a **candidate under local review** — not a finished
+result and not a release. No live model has been evaluated and **no research
+claim (C1–C6) has been measured**; the benchmark exists, the science has not been
+done with it.
+
+Two independent reviews have been answered. The first found five defects in
+`fc2a301`; the second found three remaining issues in `ed04213`. Both sets are
+repaired, with each finding's before and after recorded in
+`docs/rc-review-repairs.md` and as data in `evidence/rc-review/before_after.json`.
 
 ## By area
 
@@ -49,10 +59,17 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
 | **v0.1 release candidate** | **UNDER LOCAL REVIEW** | single start command, README, archive; **not publicly released** |
+| Independent review #1 of `fc2a301` — 5 defects | **REPAIRED** | reproduced then fixed; `docs/rc-review-repairs.md` |
+| Independent review #2 of `ed04213` — 3 issues | **REPAIRED** | exact aggregate verification; document aliasing closed; provenance repaired |
+| Aggregate metrics verified exactly (missing, extra and changed keys all fail) | **VERIFIED** | `UNVERIFIABLE_METRICS` is the only exemption, and is empty of anything replay can produce |
+| No caller-reachable view can reach back into state | **VERIFIED** | adversarial poison walk over documents, payloads, diff ops and verdicts |
+| Episode time budget (50 ms) | **VERIFIED** | 32.9 ms/episode with the isolation in place |
+| Per-package coverage gate (≥90% on core, diff, trace, verify) | **VERIFIED** | gated per package, not as a combined average |
 | **Interactive workspace application** | **IMPLEMENTED** | React/TS over a thin stdlib HTTP adapter; `docs/workspace.md` |
 | **Grader comparison study (state-only vs trace-aware)** | **COMPLETE** | 1,134 cases; `docs/grader-study-results.md` |
 | **Local-model agent + recorded run** | **IMPLEMENTED** | `qwen3:4b` via Ollama; replay verified; `LOCAL_BASELINE_REPORT.md` |
 | Refund tool contract (`reason` vocabulary) | **FIXED** | schema advertises the closed set; tool schema 1.0.0 → **1.1.0** |
+| Finite-domain action fields (`amount_cents`, ticket status, comment kind) | **FIXED** | bounds and enums reach the advertised schema; tool schema **1.2.0** |
 | Inference deadline, measured outside the simulator | **IMPLEMENTED** | bounded per request, nothing starts after expiry; server-side cancellation not claimed |
 | Completed episode from a local model | **NOT ACHIEVED** | both attempts ended at a limit; ~6 tok/s makes a 16-turn episode ~45 min |
 | **Live (paid) pilot execution** | **BLOCKED_EXTERNAL** | see deviation 2 — built, tested, awaiting authorisation |

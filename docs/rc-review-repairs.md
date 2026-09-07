@@ -1,7 +1,9 @@
-# v0.1 candidate `fc2a301` — independent review repairs
+# v0.1 candidate — independent review repairs
 
-An independent review of candidate `fc2a301` reproduced five defects. This
-document records what each one was, what it now does, and how that is enforced.
+Two independent reviews. The first found **five defects** in candidate
+`fc2a301`; the second found **three remaining issues** in the candidate that
+repaired them, `ed04213`. This document records what each one was, what it now
+does, and how that is enforced.
 Every finding was **reproduced first** against `fc2a301`'s own source in a git
 worktree, so the before-evidence is observed behaviour rather than a reading of
 the code. Both sides are recorded as data in
@@ -33,6 +35,20 @@ longer helps. Both probes now report `ok=False` naming the differing field.
 
 `UNVERIFIABLE_EPISODE_FIELDS` is empty and stays empty: every field of an
 `EpisodeRecord` is derived from the scenario and the recorded actions.
+
+**Round two made the aggregate block exact.** The first repair recomputed metrics
+from replayed records but compared them with `if recorded is not None`, which
+checks only *changed* values. Two holes stayed open: a **missing** metric read as
+"nothing to compare" and passed, so deleting an inconvenient number hid it; and
+an **extra** metric was never looked at, so an invented one could sit beside
+honest ones unchallenged. The comparison now runs over the **union of both key
+sets**, so changed, missing and invented metrics each fail and each is named
+(`metrics.safe_completion_rate`, and so on). `committed_*` and `attempted_*` are
+compared as the separate keys they are — swapping them fails rather than
+cancelling out. The only exemption is `UNVERIFIABLE_METRICS`, an explicit
+allowlist for numbers replay genuinely cannot produce (provider spend, token
+counts, wall-clock seconds); a test asserts it never shadows a metric the run
+does compute.
 
 **What replay still cannot establish**, now printed rather than implied — who
 produced a run, which model did (or whether one did at all), and what it cost.
@@ -69,13 +85,48 @@ payload plain JSON, so the encoding and all historical hashes are byte-identical
 
 **Cost, and what was done about it.** Copying the whole world document on every
 per-step diff took an episode from ~30 ms to **77 ms**, past the 50 ms budget in
-`docs/design.md`. The budget was not relaxed. Two changes brought it to
-**33.2 ms**: `state_hash()` and the differ read the cache through
-`document_for_reading()`, typed `Mapping` so mypy rejects a write at the call
-site and justified where it is called — both are strictly read-only, and the
-worlds they read are already-superseded snapshots. And `json_copy()` replaces
-`copy.deepcopy` for the copy that remains: a canonical document is pure JSON
-with no cycles, so `deepcopy`'s memo table and reductor dispatch are all cost.
+`docs/design.md`. The budget was not relaxed. `json_copy()` replaced
+`copy.deepcopy` for the copy that remains — a canonical document is pure JSON
+with no cycles, so `deepcopy`'s memo table and reductor dispatch are all cost —
+and the per-step readers stopped copying at all.
+
+**Round two closed the hole that first fix opened.** Letting the readers skip the
+copy meant exposing the cache, through a public `document_for_reading()` typed
+`Mapping`. That types as read-only and is not: its nested values are ordinary
+`dict` and `list`, so a nested write changed every later `as_document()` while
+the typed state and the memoised hash kept the original. **The document and the
+hash disagreed silently**, which is worse than either being wrong, because both
+look fine. Three changes, and the budget still holds at **32.9 ms/episode**:
+
+* `document_for_reading()` is **gone**. `as_document()` — which copies — is the
+  only public document accessor, asserted by a test.
+* Diffing moved **into** `WorldState` as `business_diff_to()`, so the memoised
+  document never leaves the object that owns it.
+* Values retained in hashed records are **sealed**, not merely copied.
+  `freeze_json()` returns `FrozenJsonMap` / `FrozenJsonList`, which refuse
+  mutation. They are `dict` and `list` **subclasses** on purpose: a `Mapping`
+  that is not a `dict` breaks `json.dumps`, silently disables the float check in
+  `canonical._reject_floats`, and cannot be serialised in a field typed `Any`.
+  Subclassing keeps the encoded bytes identical, so every committed hash is
+  unchanged — the 190-scenario corpus re-freezes byte-identically and every
+  recorded manifest still verifies.
+
+Sealing was not optional. The adversarial test found that copying alone left the
+*recorded* diff ops writable: editing one in place raised
+`ChainBroken: entry 0 seal does not match its contents`. Detaching protects
+state from the record; sealing protects the record from its readers, and a
+hash-chained trace needs both.
+
+`tests/review/test_document_isolation.py` is written as an attack rather than a
+unit test, because both failures here were reachable through the ordinary public
+API and both looked correct in review. It walks every caller-reachable view —
+exported documents, observation payloads, recorded diff ops, verdict dumps —
+tries to write a marker into **every** string it can reach, and then proves the
+typed `WorldState` is unchanged, later documents are unchanged, `state_hash()`
+still equals the hash of the current document, the trace chain still verifies,
+and the time budget still passes. A refusal and an accepted write into a detached
+copy both count as a successful defence; touching nothing at all is treated as a
+vacuous test and fails.
 
 ## 3. Session dispatch was not atomic
 

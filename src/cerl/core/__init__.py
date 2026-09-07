@@ -24,7 +24,14 @@ from cerl.core.errors import (
     ScenarioDefect,
 )
 from cerl.core.evolve import UnknownField, evolve, validate_field
-from cerl.core.frozen_map import FrozenMap, deep_freeze, json_copy
+from cerl.core.frozen_map import (
+    FrozenJsonList,
+    FrozenJsonMap,
+    FrozenMap,
+    deep_freeze,
+    freeze_json,
+    json_copy,
+)
 from cerl.core.frozen_set import SortedFrozenSet
 from cerl.core.ids import (
     ALL_ID_TYPES,
@@ -67,6 +74,8 @@ __all__ = [
     "EntityId",
     "ExternalInterruption",
     "Frozen",
+    "FrozenJsonList",
+    "FrozenJsonMap",
     "FrozenMap",
     "FrozenMapMutation",
     "InvalidEntityId",
@@ -97,6 +106,7 @@ __all__ = [
     "derive_int",
     "derive_range",
     "evolve",
+    "freeze_json",
     "hash_text",
     "json_copy",
     "report_hash",

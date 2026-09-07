@@ -142,3 +142,88 @@ def json_copy(value: Any) -> Any:
     if isinstance(value, list):
         return [json_copy(v) for v in value]
     return value
+
+
+class _ImmutableJson:
+    """Mixin: every mutating method raises.
+
+    Kept separate from :class:`FrozenMap` because these types exist for a
+    different job. ``FrozenMap`` is a typed model field with a pydantic schema.
+    These are what goes *inside* a field typed ``Any`` -- sealed trace payloads
+    and retained diff values -- where pydantic performs no validation and the
+    value must still encode as ordinary JSON.
+    """
+
+    __slots__ = ()
+
+    def refuse_mutation(self, *_args: Any, **_kwargs: Any) -> Any:
+        raise TypeError(
+            f"{type(self).__name__} is sealed: this value is part of a hashed "
+            f"record, and editing it would break the hash rather than change "
+            f"anything. Copy it first if you need to modify it.",
+        )
+
+
+class FrozenJsonMap(_ImmutableJson, dict):  # type: ignore[type-arg]
+    """An immutable JSON object.
+
+    A ``dict`` **subclass** on purpose, and that is the whole trick. The
+    alternative -- a ``Mapping`` that is not a ``dict`` -- fails three ways at
+    once: ``json.dumps`` cannot encode it, so canonical serialisation breaks;
+    ``canonical._reject_floats`` tests ``isinstance(value, dict)`` and would
+    silently stop checking, so a float could enter a hash undetected; and
+    pydantic's serialiser for a field typed ``Any`` raises on it. Subclassing
+    ``dict`` keeps all three working, so the encoded bytes -- and therefore
+    every committed hash -- are unchanged.
+    """
+
+    __slots__ = ()
+    __setitem__ = _ImmutableJson.refuse_mutation
+    __delitem__ = _ImmutableJson.refuse_mutation
+    update = _ImmutableJson.refuse_mutation
+    setdefault = _ImmutableJson.refuse_mutation
+    pop = _ImmutableJson.refuse_mutation
+    popitem = _ImmutableJson.refuse_mutation
+    clear = _ImmutableJson.refuse_mutation
+    __ior__ = _ImmutableJson.refuse_mutation
+
+
+class FrozenJsonList(_ImmutableJson, list):  # type: ignore[type-arg]
+    """An immutable JSON array. A ``list`` subclass, for the reasons above."""
+
+    __slots__ = ()
+    __setitem__ = _ImmutableJson.refuse_mutation
+    __delitem__ = _ImmutableJson.refuse_mutation
+    append = _ImmutableJson.refuse_mutation
+    extend = _ImmutableJson.refuse_mutation
+    insert = _ImmutableJson.refuse_mutation
+    remove = _ImmutableJson.refuse_mutation
+    pop = _ImmutableJson.refuse_mutation
+    clear = _ImmutableJson.refuse_mutation
+    sort = _ImmutableJson.refuse_mutation
+    reverse = _ImmutableJson.refuse_mutation
+    __iadd__ = _ImmutableJson.refuse_mutation
+    __imul__ = _ImmutableJson.refuse_mutation
+
+
+def freeze_json(value: Any) -> Any:
+    """Deep-copy a JSON value into sealed containers.
+
+    Used where a value is *retained in a hashed record* -- a trace entry's tool
+    payload, a recorded diff op. Two properties at once, and both are needed:
+
+    * it **detaches** from the caller's objects, so building a record out of a
+      state document does not leave the record holding live references into
+      that document;
+    * it **seals**, so the record itself cannot be edited afterwards. Detaching
+      alone is not enough: a caller that reaches a sealed entry and edits its
+      payload in place breaks that entry's hash, which is a corrupted trace
+      rather than a modified one.
+
+    Scalars are returned as they are, because every JSON scalar is immutable.
+    """
+    if isinstance(value, dict):
+        return FrozenJsonMap({k: freeze_json(v) for k, v in value.items()})
+    if isinstance(value, (list, tuple)):
+        return FrozenJsonList(freeze_json(v) for v in value)
+    return value

@@ -2,7 +2,22 @@
 
 **Counterfactual Enterprise Reinforcement Learning for Safe Tool-Using Agents**
 
-Status: design approved pending this revision. No code exists (the repository was an initialized git repo with zero commits). Toolchain present: Python 3.13.5, uv 0.12.5.
+> ## ⓘ This is a historical document, preserved as written
+>
+> It is the **design of record**: the Phase 0 proposal as approved, before any
+> code existed. It is kept unedited on purpose, because a design document that
+> is quietly updated to match what got built can no longer show whether the
+> design was right — which is the only reason to keep one.
+>
+> **Every status statement below describes the moment of approval, not today.**
+> Where it says no code exists, or lists work as forthcoming, read that as the
+> position at Phase 0.
+>
+> For what is actually true now, see **`docs/status.md`** (canonical status),
+> `README.md` (what runs today), `CLAUDE.md` §11 (current scope), and
+> `docs/deviations.md` (where the build departed from this document, and why).
+
+Status **at Phase 0, when this was approved**: design approved pending this revision; no code existed (the repository was an initialized git repo with zero commits). Toolchain present: Python 3.13.5, uv 0.12.5.
 
 **Changes in R3** — four final decisions applied: attempted and committed unsafe actions are strictly separate everywhere, with no Phase-1 training weight (§4.3, §4.6); responder chaining disabled, at most one responder transition per environment step (§3.6); responder diffs are exempt from grading **only when declared in the active branch** — no global exemption (§9.3); Phase 1A expanded to cover all seven required W2 cells, which required splitting `missing` into obtainable/unobtainable and adding the `request_then_refund` branch so the "obtain approval through Slack" path is reachable (§7.5, §20.1).
 
