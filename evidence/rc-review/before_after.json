@@ -4,25 +4,25 @@
   "trees_measured": {
     "fc2a301": "the first release candidate, reviewed by report #1 (five defects)",
     "ed04213": "the candidate that repaired those five, reviewed by report #2 (three remaining issues)",
-    "0280a23": "the final candidate, repairing report #2"
+    "c6f0c50": "the final candidate, repairing report #2"
   },
   "commit_identity": {
-    "final_candidate_commit": "0280a23d68c9f0798423232cf689bd83091b67d8",
-    "final_candidate_src_tree": "87ca44e25ef5b9c8c8245be6aa1649a3a1428ba8",
-    "note": "A commit cannot contain its own hash, so this file is written against the commit whose source it measured and is then committed on top. `final_candidate_src_tree` is the exact, self-consistent pin: it is the git tree of src/ at the measured commit AND at the commit that carries this file, because the follow-up commit changes no source. Check with `git rev-parse HEAD:src`. The follow-up also carries a one-line lint fix in tests/review/test_document_isolation.py (a list-index replaced by next()), which changes no behaviour; `git diff --stat 0280a23 HEAD` shows exactly that, the report text and this file."
+    "final_candidate_commit": "c6f0c50f15cf277ec9f192a12c071084eac7d70e",
+    "final_candidate_src_tree": "19d2c03717c5c67b74e68d948ed3f77d47ca8936",
+    "note": "A commit cannot contain its own hash, so this file is measured against the final source and then committed on top of it. `final_candidate_src_tree` is the exact, self-consistent pin: it is the git tree of src/ at the measured commit AND at the commit carrying this file, because that commit changes documentation and evidence only. Check with `git rev-parse HEAD:src` and `git diff --stat c6f0c50 HEAD`."
   },
   "reviews": {
     "report_1": {
       "of": "fc2a301",
       "findings": 5,
       "before": "fc2a301",
-      "after": "0280a23"
+      "after": "c6f0c50"
     },
     "report_2": {
       "of": "ed04213",
       "findings": 3,
       "before": "ed04213",
-      "after": "0280a23",
+      "after": "c6f0c50",
       "note": "Issues 1 and 2 concern code introduced by the repair of report #1, so ed04213 -- not fc2a301 -- is the meaningful before for them. fc2a301 is included so the whole chain is visible."
     }
   },
@@ -307,7 +307,7 @@
         }
       }
     },
-    "0280a23": {
+    "c6f0c50": {
       "1_manifest_verification": {
         "untouched_historical_run": {
           "ok": true,
@@ -369,10 +369,7 @@
           "the wall-clock cost or spend attributed to it"
         ],
         "unverifiable_metrics_allowlist": [
-          "spend_cents",
-          "tokens_in",
-          "tokens_out",
-          "wall_clock_seconds"
+          "spend"
         ]
       },
       "2_document_aliasing": {

@@ -15,27 +15,24 @@ each measured by the same probe script:
 |---|---|
 | `fc2a301` | the first candidate — report #1's five defects |
 | `ed04213` | the candidate that repaired them — report #2's three issues |
-| `0280a23` | the final candidate |
+| `c6f0c50` | the final candidate |
 
 Report #2's first two issues concern code that the repair of report #1
 *introduced*, so `ed04213` — not `fc2a301` — is the meaningful before for them.
 All three are kept so the chain is visible rather than summarised.
 
 A commit cannot contain its own hash, so the evidence file is measured against
-`0280a23` and committed on top of it. The self-consistent pin is therefore the
-**source tree**, `87ca44e2`, which is identical at the measured commit and at the
-commit carrying this file, because that follow-up commit changes no source.
-Checkable:
+the final source and committed on top of it. The self-consistent pin is therefore
+the **source tree**, `19d2c037`, which is identical at the measured commit and at
+the commit carrying this file, because that commit changes documentation and
+evidence only. Both claims are checkable:
 
 ```bash
-git rev-parse HEAD:src          # 87ca44e2… — the tree the probes ran against
-git diff --stat 0280a23 HEAD    # this file, the report, and one lint fix
+git rev-parse HEAD:src            # 19d2c037… — the tree the probes ran against
+git diff --stat c6f0c50 HEAD      # docs and evidence only
 ```
 
-The follow-up carries one behaviour-free change outside documentation: a
-list-index replaced by `next()` in `tests/review/test_document_isolation.py`, to
-satisfy `ruff`. Said explicitly rather than rounded to "docs only", because the
-whole point of this section is that identity claims should be exact.
+
 
 The regressions live in `tests/review/`. Run against `fc2a301`'s source they
 fail 25 of 34; the nine that pass are checks of fields the old verifier already
