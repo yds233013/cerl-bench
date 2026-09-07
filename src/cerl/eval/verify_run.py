@@ -197,27 +197,26 @@ def _short(value: object) -> str:
     return text if len(text) <= _MAX_REPORTED else text[: _MAX_REPORTED - 3] + "..."
 
 
-#: Metric keys a replay genuinely cannot recompute, and which are therefore
-#: exempt from the exact comparison below. Each entry needs a reason, because
-#: every exemption is a place a number can be asserted without being checked.
+#: The one metric key a replay genuinely cannot recompute, and which is
+#: therefore exempt from the exact comparison below.
 #:
-#: * ``spend_cents`` / ``tokens_*`` -- what a provider billed. Replay runs no
-#:   model, so there is nothing to recompute; these describe an event outside
-#:   the simulation.
-#: * ``wall_clock_seconds`` -- how long the machine took. Not state, not
-#:   hashed, and different on every machine by design.
+#: ``spend`` is the :class:`SpendLedger` report a live pilot attaches: what a
+#: provider was asked for, what it billed, what is still unresolved. Replay runs
+#: no model, so there is nothing to recompute it against -- it describes an event
+#: outside the simulation. Every other metric is a function of the episodes and
+#: is checked.
 #:
-#: The list is deliberately short and deliberately explicit. Adding to it means
-#: deciding that a reported number will never be checked again, which is a
-#: design decision and not a convenience.
-UNVERIFIABLE_METRICS: frozenset[str] = frozenset(
-    {
-        "spend_cents",
-        "tokens_in",
-        "tokens_out",
-        "wall_clock_seconds",
-    },
-)
+#: This set is deliberately tiny and deliberately *observed rather than guessed*.
+#: An earlier version listed plausible-sounding names (``spend_cents``,
+#: ``tokens_in``) that nothing writes, which is the worst kind of allowlist: it
+#: exempts nothing real while reading as though spend were covered.
+#: ``test_the_allowlist_matches_what_the_code_actually_writes`` pins it to the
+#: producers, so a name here that nothing emits, or a key emitted that is neither
+#: aggregated nor listed, fails.
+#:
+#: Adding an entry means deciding a reported number will never be checked again.
+#: That is a design decision, not a convenience.
+UNVERIFIABLE_METRICS: frozenset[str] = frozenset({"spend"})
 
 
 def _compare_metrics(

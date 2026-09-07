@@ -438,11 +438,35 @@ def test_the_two_violation_series_are_compared_separately(recorded, tmp_path):
 
 def test_a_non_replayable_metric_is_exempt_by_an_explicit_allowlist(recorded, tmp_path):
     """Provider spend has nothing to recompute against; everything else does."""
-    assert "spend_cents" in verify_run.UNVERIFIABLE_METRICS
+    assert "spend" in verify_run.UNVERIFIABLE_METRICS
     altered = copy.deepcopy(recorded)
-    altered["metrics"]["spend_cents"] = 1234
+    altered["metrics"]["spend"] = {"cap_cents": 100000.0, "confirmed_cents": 90.0}
     altered.pop("manifest_hash", None)
-    assert _verify(altered, tmp_path).ok
+    assert _verify(altered, tmp_path).ok, "a live pilot's spend block must not fail"
+
+
+def test_the_allowlist_matches_what_the_code_actually_writes():
+    """Guessed exemptions are worse than none: they read as cover and are not.
+
+    Two places write manifest metrics -- ``aggregate()`` and the pilot, which
+    attaches the ledger report under ``spend``. Every key one of them emits must
+    be either recomputed or explicitly exempt, and nothing may be exempt that
+    nothing emits.
+    """
+    from cerl.eval.metrics import aggregate
+
+    replayable = set(aggregate([]))
+    written_by_the_pilot = {"spend"}  # cerl/eval/pilot.py, _stamp
+    emitted = replayable | written_by_the_pilot
+
+    assert emitted >= verify_run.UNVERIFIABLE_METRICS, (
+        "the allowlist names a metric nothing writes: "
+        f"{sorted(verify_run.UNVERIFIABLE_METRICS - emitted)}"
+    )
+    assert emitted - replayable == verify_run.UNVERIFIABLE_METRICS, (
+        "a metric is emitted that is neither recomputed nor exempt: "
+        f"{sorted(emitted - replayable - verify_run.UNVERIFIABLE_METRICS)}"
+    )
 
 
 def test_the_allowlist_covers_only_what_replay_cannot_produce(recorded):
