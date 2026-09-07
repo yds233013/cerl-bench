@@ -1,12 +1,12 @@
-# Status — v0.1 release candidate, under local review
+# Status — v0.1 release candidate, reviewed
 
 One canonical status. Every other document defers to this file; where any other
 document disagrees, this one is correct. Two documents are deliberately *not*
 kept current and say so at the top: `docs/design.md` (the Phase 0 design of
 record) and the dated reports `MORNING_REPORT.md` and `LOCAL_BASELINE_REPORT.md`.
 
-Last updated **2026-09-07**, after the second independent review of the v0.1
-candidate. **Not publicly released, and nothing has been pushed.**
+Last updated **2026-09-07**, after the independent review of candidate
+`3d7fc20` passed. **Not publicly released, and nothing has been pushed.**
 
 ## Two different kinds of "not done"
 
@@ -22,16 +22,49 @@ dependency that is not actually the obstacle.
 
 ## Summary
 
-Phases 1A and 1B are **implemented and verified, with two scope deviations
-recorded below**, and v0.1 is a **candidate under local review** — not a finished
-result and not a release. No live model has been evaluated and **no research
-claim (C1–C6) has been measured**; the benchmark exists, the science has not been
-done with it.
+Phases 1A and 1B are **implemented and verified, with the deviations recorded
+below**, and v0.1 is a **reviewed candidate** — not a finished result and not a
+release. The benchmark exists; **the science has not been done with it.**
 
 Two independent reviews have been answered. The first found five defects in
-`fc2a301`; the second found three remaining issues in `ed04213`. Both sets are
-repaired, with each finding's before and after recorded in
+`fc2a301`; the second found three remaining issues in `ed04213`; the review of
+`3d7fc20` passed. Each finding's before and after is in
 `docs/rc-review-repairs.md` and as data in `evidence/rc-review/before_after.json`.
+
+### One achievement, four things it is not
+
+**Real inference happened.** An open-weight model — `qwen3:4b` under Ollama, on
+this machine — drove the real environment through the ordinary unprivileged agent
+interface and chose its own actions. Five W2 episodes were recorded, and they
+replay byte-exactly offline: `cerl verify-manifest evidence/local-baseline/local_run.json`.
+Nothing was scripted, substituted, or stood in for a model.
+
+Four things that run does **not** amount to, kept explicit because each is easy
+to read into it:
+
+| | |
+|---|---|
+| **No successful local task completion** | 0/5 safe completion; mean task completion 0.147. **All five** reached the run's 16-step cap without ever declaring an outcome. One is `UNAUTHORIZED_ACTION` — it refunded on an expired approval and latched `C_AUTH`; the other four are `INCOMPLETE`. No model has completed an episode in this repository, at this or the corrected configuration. |
+| **No paid provider evaluation** | Zero paid API calls have ever been made. The wiring exists and is exercised offline; authorisation does not. See deviation 2. |
+| **No RL training** | No SFT, GRPO or curriculum arm. There is no training loop in the repository. |
+| **No generalization result** | No C1–C6 claim is measured. Δ(π) has never been computed for any policy, and the ID/CF contrast that the whole design exists to support has not been run. |
+
+The first of these is a measured negative result and is reported as one. The
+other three are work that has not been done.
+
+### Deviations, indexed
+
+Six, and the numbering is historical rather than ordered — kept as assigned so
+that earlier reports referring to "deviation 4" still point at the same thing:
+
+| # | What it is | Where |
+|---|---|---|
+| 1 | W1's identity-evidence axis is a challenge set, not a matched pair | below |
+| 2 | No **paid provider** evaluation — authorisation, not wiring | below |
+| 3 | The pilot is a development smoke test, not a held-out evaluation | below |
+| 4 | No dollar guarantee on spend, only an operational limit | below |
+| 5 | Criterion 42 now passes; the corpus was regenerated to get there | below, with a **(historical)** companion recording how it came to fail |
+| 6 | Training branch coverage is 5/10, pending a research decision | below |
 
 ## By area
 
@@ -79,7 +112,11 @@ repaired, with each finding's before and after recorded in
 | Ten-branch training coverage | **BLOCKED — research decision** | 5/10. Three branches could be added by freezing pure-ID instances; two cannot without changing the hypotheses. Alternatives documented, none chosen |
 | Evaluation-partition branch coverage | **RESOLVED by 1.2.0** | was 6/10; validation and evaluation now cover 10/10 |
 | Investigate-then-abstain / -act controls | **NOT_IMPLEMENTED** | `docs/baselines.md` |
-| SFT, GRPO, curriculum arms, HTTP/MCP adapters, frontend | **NOT STARTED** | out of Phase 1B scope by instruction |
+| **Local HTTP adapter (`cerl serve`, `cerl serve-review`)** | **IMPLEMENTED** | thin `http.server` + router; two processes, operational and reviewer; `docs/workspace.md` |
+| **W2 React/TS workspace** | **IMPLEMENTED** | W2 only; W1 and W3 have no UI. Guided demonstration, **not** an evaluation interface — see `docs/workspace.md` |
+| **Real local inference performed and recorded** | **DONE** | `qwen3:4b` under Ollama chose its own actions against the real environment; 5 episodes; replay-verified; `evidence/local-baseline/` |
+| MCP adapter | **NOT_IMPLEMENTED** | not started; out of v0.1 scope |
+| SFT, GRPO, curriculum arms — any RL training | **NOT_IMPLEMENTED** | not started; out of v0.1 scope. No training loop exists anywhere in the repository |
 
 ## Deviation 1 — W1's identity-evidence axis is a challenge set, not a matched pair
 
@@ -103,7 +140,12 @@ A related overclaim has been **withdrawn**: an earlier version of
 its values are equally difficult. It does not. Stratification changes which
 comparison is made; it does not equalise the things compared.
 
-## Deviation 2 — no live model evaluation
+## Deviation 2 — no *paid provider* evaluation
+
+Retitled: this deviation was "no live model evaluation", which stopped being
+accurate once a real model ran. A local open-weight model **has** driven the
+environment and its run is recorded (see below). What has never happened is an
+evaluation against a **paid provider**, and that is what this deviation is about.
 
 **`BLOCKED_EXTERNAL`, and now genuinely so.** Previously this label covered both
 a missing budget *and* missing wiring, which was not an honest use of it. The
@@ -220,17 +262,23 @@ does not reset the allowance. What remains is that the journal is consistent wit
 what *this process observed*, never with what the provider billed —
 `docs/budget-accounting.md` §Remaining limitation.
 
-## Local-model baseline (2026-09-06)
+## Local-model baseline — real inference, 0/5 completion (2026-09-06)
 
-An open-weight model (`qwen3:4b`, Apache-2.0) running under Ollama on this
-machine, driving the real environment through the ordinary agent interface. Five
-training-partition W2 episodes, sequential, no paid inference.
+**Both halves of that heading are the point.** The inference is real: an
+open-weight model (`qwen3:4b`, Apache-2.0) running under Ollama on this machine,
+driving the real environment through the ordinary unprivileged agent interface
+and choosing its own actions. Five training-partition W2 episodes, sequential, no
+paid inference. The result is a failure, and is reported as one.
 
-**Result: 0/5 safe task completion.** One episode committed a `C_AUTH` violation
-by refunding on an expired approval — a correctly-detected safety failure with
-Invariant B1 holding. The other four ran out of steps without declaring an
-outcome, because **84% of turns produced no tool call**: the model exhausts its
-640-token output budget on reasoning prose. Throughput was 5.8 tok/s against a
+**Result: 0/5 safe task completion**, mean task completion 0.147. One episode
+committed a `C_AUTH` violation by refunding on an expired approval — a
+correctly-detected safety failure with Invariant B1 holding, classified
+`UNAUTHORIZED_ACTION`. The other four are `INCOMPLETE`. **All five** reached the
+run's 16-step cap without ever declaring an outcome, because **84% of turns
+produced no tool call**: the model exhausts its 640-token output budget on
+reasoning prose. (Note this is the harness's `max_steps=16`, not the scenario's
+40-step budget, so no episode carries `truncated: true` — the run stopped them,
+not the environment.) Throughput was 5.8 tok/s against a
 machine already 22 GB into swap.
 
 **Diagnosed 2026-09-06.** The 84% figure conflated three outcomes; separated, it
@@ -290,8 +338,13 @@ serialised responses. Setup and architecture: `docs/workspace.md`.
 
 ## What this candidate does not establish
 
-- No C1–C6 claim. Those need trained arms, the full split structure, and a
-  cluster bootstrap over templates. None exists.
+- **No generalization result.** No C1–C6 claim is measured; Δ(π) has never been
+  computed for any policy. Those need trained arms, the full split structure, and
+  a cluster bootstrap over templates. None exists.
+- **No RL training.** No SFT, GRPO or curriculum arm; no training loop exists.
+- **No paid provider evaluation.** Zero paid API calls have ever been made.
+- **No successful task completion by any model.** The local run scored 0/5, and
+  no completed episode exists at the corrected configuration either.
 - No statement about any model's safety. The only policies measured are the
   privileged references and five deterministic controls.
 - The two privileged reference policies are an upper bound by construction, not
@@ -301,4 +354,9 @@ serialised responses. Setup and architecture: `docs/workspace.md`.
 - Nothing produced by the synthetic transport is a model result.
 - The workspace demo fixture is development-exposed and is not evaluation data.
 - The local baseline is a development smoke test on training data, n=5, one
-  model, one configuration. It is not a held-out evaluation of anything.
+  model, one configuration. It is not a held-out evaluation of anything. What it
+  does establish is narrow and real: a model can be pointed at this environment,
+  its actions are recorded, and the recording replays exactly.
+- The W2 workspace is a guided human demonstration. It exposes descriptive
+  scenario ids, demo titles and walkthroughs, so **no number produced by driving
+  that UI is a benchmark result**.
