@@ -257,3 +257,55 @@ def test_an_unknown_demo_is_a_clear_error(workspace):
     with pytest.raises(ApiError) as exc:
         workspace._create_session({}, {"demo_id": "nope"})
     assert exc.value.status == 404
+
+
+# --------------------------------------------------------------------------
+# the single start command
+# --------------------------------------------------------------------------
+
+
+def test_the_static_site_refuses_paths_that_escape_its_root(tmp_path):
+    """`..` in a URL must not read the repository, even on loopback."""
+    from cerl.app.http import StaticSite
+
+    root = tmp_path / "dist"
+    root.mkdir()
+    (root / "index.html").write_text("<!doctype html>shell")
+    secret = tmp_path / "outside.txt"
+    secret.write_text("NOT FOR SERVING")
+
+    site = StaticSite(root)
+    body, content_type = site.resolve("/../outside.txt")
+    assert b"NOT FOR SERVING" not in body
+    assert content_type.startswith("text/html")
+
+
+def test_an_unknown_path_falls_back_to_the_app_shell(tmp_path):
+    """Client-side routes are not 404s."""
+    from cerl.app.http import StaticSite
+
+    root = tmp_path / "dist"
+    root.mkdir()
+    (root / "index.html").write_text("<!doctype html>shell")
+    body, _ = StaticSite(root).resolve("/some/client/route")
+    assert b"shell" in body
+
+
+def test_api_prefixes_are_never_answered_by_the_frontend():
+    """Otherwise the operational server would return 200 and an HTML shell for
+    `/review/episodes`, which reads as "the privileged API is here" when it is
+    deliberately absent."""
+    from cerl.app.http import API_PREFIXES
+
+    assert "/review/" in API_PREFIXES
+    assert "/api/" in API_PREFIXES
+
+
+def test_serving_the_frontend_is_optional(tmp_path):
+    from cerl.app.http import Router, serve
+
+    server = serve(Router(), 0, "test", None)
+    try:
+        assert server.server_address[0] == "127.0.0.1"
+    finally:
+        server.server_close()

@@ -48,6 +48,7 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Offline regeneration from cache | **IMPLEMENTED** | `cerl regenerate`; a cache miss fails rather than calling out |
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
+| **v0.1 release candidate** | **UNDER LOCAL REVIEW** | single start command, README, archive; **not publicly released** |
 | **Interactive workspace application** | **IMPLEMENTED** | React/TS over a thin stdlib HTTP adapter; `docs/workspace.md` |
 | **Grader comparison study (state-only vs trace-aware)** | **COMPLETE** | 1,134 cases; `docs/grader-study-results.md` |
 | **Local-model agent + recorded run** | **IMPLEMENTED** | `qwen3:4b` via Ollama; replay verified; `LOCAL_BASELINE_REPORT.md` |

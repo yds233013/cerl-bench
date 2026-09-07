@@ -668,10 +668,21 @@ def grader_study_command(
 
 @app.command(name="serve")
 def serve_command(
-    port: Annotated[int, typer.Option(help="Operational API port.")] = 8000,
+    port: Annotated[int, typer.Option(help="Operational port.")] = 8000,
     frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+    ui: Annotated[
+        Path, typer.Option(help="Built frontend directory."),
+    ] = Path("app/dist"),
+    *,
+    api_only: Annotated[
+        bool, typer.Option(help="Serve the API without the built frontend."),
+    ] = False,
 ) -> None:
-    """Start the operational workspace API. No privileged data is served.
+    """Start the workspace: built UI and operational API, one process.
+
+    This is the single start command. It serves the built frontend from
+    ``app/dist`` alongside the API, so a reviewer needs one terminal rather
+    than three. `npm run dev` remains available for frontend work.
 
     This process has no code path to a verdict, a branch label or a violation
     flag: the reviewer lives in a separate server started by `cerl serve-review`.
@@ -682,13 +693,35 @@ def serve_command(
         fixture = app_demos.build_demo_fixture()
         typer.echo(f"built demo fixture {fixture.scenario_id}")
     workspace = operational.Workspace(scenarios, fixture)
-    server = app_http.serve(workspace.router(), port, "operational")
+
+    site: app_http.StaticSite | None = None
+    if not api_only:
+        if not (ui / "index.html").exists():
+            raise typer.BadParameter(
+                f"no built frontend at {ui}. Build it once with "
+                f"`cd app && npm install && npm run build`, or pass --api-only "
+                f"to serve the API alone.",
+            )
+        site = app_http.StaticSite(ui)
+
+    server = app_http.serve(workspace.router(), port, "operational", site)
     typer.secho(
-        f"operational workspace on http://127.0.0.1:{port}  "
-        f"({len(workspace.demos)} demos, no privileged data)",
+        f"\n  CERL-Bench workspace  →  http://127.0.0.1:{port}\n",
         fg=typer.colors.GREEN,
     )
-    server.serve_forever()
+    typer.echo(f"  {len(workspace.demos)} demonstrations · operational data only")
+    typer.echo(
+        "  The reviewer is a separate command and is NOT running: "
+        "`uv run cerl serve-review`",
+    )
+    typer.echo("  Ctrl-C to stop.\n")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        # Only this server is stopped. Nothing else was started here, so
+        # nothing else is killed.
+        typer.echo("stopping workspace")
+        server.shutdown()
 
 
 @app.command(name="serve-review")
@@ -706,10 +739,21 @@ def serve_review_command(
     library = reviewer.ReviewLibrary(scenarios)
     server = app_http.serve(library.router(), port, "reviewer")
     typer.secho(
-        f"reviewer replay on http://127.0.0.1:{port}  (privileged: verdicts)",
+        f"\n  Reviewer replay  →  http://127.0.0.1:{port}   PRIVILEGED\n",
         fg=typer.colors.YELLOW,
     )
-    server.serve_forever()
+    typer.echo("  Serves verdicts, branch labels and violation flags.")
+    typer.secho(
+        "  A separate port is NOT an access-control boundary. Stop this "
+        "process during agent evaluation.",
+        fg=typer.colors.YELLOW,
+    )
+    typer.echo("  Ctrl-C to stop.\n")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        typer.echo("stopping reviewer")
+        server.shutdown()
 
 
 @app.command(name="regenerate")
