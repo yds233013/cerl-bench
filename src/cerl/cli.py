@@ -14,13 +14,13 @@ from cerl.agents import local_client as local_client_module
 from cerl.agents import model_client, synthetic_transport
 from cerl.core import FrozenMap
 from cerl.eval import demos as demo_module
+from cerl.eval import grader_study, verify_run
 from cerl.eval import latency as latency_module
 from cerl.eval import local_run as local_run_module
 from cerl.eval import manifest as manifest_module
 from cerl.eval import pilot as pilot_module
 from cerl.eval import runner as eval_runner
 from cerl.eval import splits as split_module
-from cerl.eval import verify_run
 from cerl.reference import gold as gold_module
 from cerl.reference import registry as reference_registry
 from cerl.reference.runner import run_reference
@@ -626,6 +626,41 @@ def local_run_command(
         f"contacted.",
         fg=typer.colors.GREEN,
     )
+
+
+@app.command(name="grader-study")
+def grader_study_command(
+    out_dir: Annotated[Path, typer.Option()] = Path("evidence/grader-study"),
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Run the state-only versus trace-aware grader comparison. Offline.
+
+    No network and no model: every case is a reference trajectory or a
+    systematic mutation replayed against the frozen corpus. Protocol in
+    ``docs/grader-study-protocol.md``, frozen before results were collected.
+    """
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    result = grader_study.run_study(scenarios)
+    inventory, results = grader_study.write_results(result, out_dir)
+
+    counts = dict(result.counts)
+    for role in ("development", "evaluation", "all"):
+        block = counts[role]
+        typer.echo(
+            f"{role:12s} cases {block['cases']:4d}  scenarios {block['scenarios']:3d}  "
+            f"agree(task) {block['agreement_task']:4d}  "
+            f"agree(safety) {block['agreement_safety']:4d}",
+        )
+        for grader in ("trace", "state"):
+            for axis in ("task", "safety"):
+                tally = block[f"{grader}_{axis}"]
+                typer.echo(
+                    f"   {grader:5s} {axis:6s} correct {tally['correct']:4d}  "
+                    f"FP {tally['false_positive']:3d}  FN {tally['false_negative']:3d}",
+                )
+    diffs = grader_study.disagreements(result)
+    typer.echo(f"disagreements: {len(diffs)} of {len(result.cases)}")
+    typer.secho(f"wrote {inventory} and {results}", fg=typer.colors.GREEN)
 
 
 @app.command(name="regenerate")

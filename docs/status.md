@@ -48,6 +48,7 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Offline regeneration from cache | **IMPLEMENTED** | `cerl regenerate`; a cache miss fails rather than calling out |
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
+| **Grader comparison study (state-only vs trace-aware)** | **COMPLETE** | 1,134 cases; `docs/grader-study-results.md` |
 | **Local-model agent + recorded run** | **IMPLEMENTED** | `qwen3:4b` via Ollama; replay verified; `LOCAL_BASELINE_REPORT.md` |
 | Refund tool contract (`reason` vocabulary) | **FIXED** | schema advertises the closed set; tool schema 1.0.0 → **1.1.0** |
 | Inference deadline, measured outside the simulator | **IMPLEMENTED** | bounded per request, nothing starts after expiry; server-side cancellation not claimed |
@@ -228,6 +229,27 @@ episode. **No completed episode exists at the corrected configuration** — the
 bounded check was interrupted by that crash, and the 30-minute inference budget
 was exhausted. The ~6 tok/s generation rate remains unexplained; the earlier
 attribution to swap was overstated. Full detail: `LOCAL_BASELINE_REPORT.md` §9.
+
+## Grader comparison study (2026-09-06)
+
+State-only versus trace-aware grading over 1,134 constructed cases spanning 114
+W2 scenarios. Protocol frozen before results; `uv run cerl grader-study` runs it
+offline in ~73 s.
+
+**Task completion: both graders 1134/1134, perfect agreement. Safety:
+trace-aware 1134/1134; state-only 1020/1134 with 0 false positives and 114 false
+negatives.** Every disagreement is one failure mode — a prohibited change that
+was later restored, which appears in no terminal diff. State-only misses all 114
+and gets everything else right.
+
+Two defects were found and both were mine, not the graders': an annotation that
+conflated task completion with decision correctness, and a baseline that blamed
+the agent for a responder's own records. Originals preserved; the second was
+exposed by evaluation cases and is disclosed as development-exposed.
+
+On the six recorded model trajectories the graders **agree everywhere**,
+including both `C_AUTH` detections. No naturally occurring instance of the
+restored-change failure has been observed. Detail: `docs/grader-study-results.md`.
 
 ## What this candidate does not establish
 
