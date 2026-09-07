@@ -1,33 +1,51 @@
 cff-version: 1.2.0
 title: >-
-  CERL-Bench: Counterfactual Enterprise Reinforcement Learning for
-  Safe Tool-Using Agents
+  CERL-Bench: a deterministic enterprise-agent simulator and
+  evaluation toolkit
 message: >-
-  If you use this benchmark, please cite it. Cite the version you ran:
-  scores are only comparable within a version, because the verifier,
-  the scenario corpus and the split definition are all hash-pinned.
+  If you use this software, please cite it. Cite the version you ran:
+  scores are comparable only within a version, because the verifier,
+  the scenario corpus and the split definition are each hash-pinned and
+  a change to any of them makes the eval refuse to compare across it.
 type: software
 authors:
-  - alias: yds2330
+  - family-names: Shah
+    given-names: Yash
+    alias: yds233013
     email: yashshah2311@berkeley.edu
-# No repository-code field: this candidate has not been published, and a URL
-# that does not resolve is worse than an absent one.
+repository-code: https://github.com/yds233013/cerl-bench
+url: https://github.com/yds233013/cerl-bench
 abstract: >-
-  A deterministic research benchmark for measuring whether tool-using
-  agents learn transferable safe decision procedures or fit the state
-  distributions they were trained on. A single controlled perturbation
-  -- an approval that expired, a near-identical customer name, a moved
-  approval threshold -- flips the correct behaviour while leaving
-  surface complexity intact. Committed and attempted-but-blocked unsafe
-  actions are reported as separate series and never merged. Scoring is a
-  pure function over a hash-chained trace; there is no LLM judge in the
-  scoring path.
+  A deterministic simulation of enterprise support and billing --
+  Slack-like messaging, tickets and Stripe-like billing -- together with
+  the evaluation toolkit that grades what a tool-using agent does in it.
+
+  Three workflow families and 190 canonical frozen scenarios are built so
+  that a single controlled perturbation (an approval that expired, a
+  near-identical customer name, a moved approval threshold) flips the
+  correct behaviour while leaving surface complexity intact, which is what
+  makes a counterfactual generalization gap measurable.
+
+  Grading is a pure function over a hash-chained trace, applied
+  trace-wide rather than to the terminal state, so a prohibited change
+  that is later reverted is still caught. Committed and
+  attempted-but-blocked unsafe actions are reported as separate series
+  and are never merged. There is no LLM judge anywhere in the scoring
+  path, and every recorded run replays byte-exactly offline with no model
+  in the loop.
+
+  This release publishes the instrument. It contains no trained policy,
+  no measured generalization result, and no successful task completion by
+  any model.
 keywords:
   - benchmark
-  - reinforcement-learning
+  - evaluation
   - ai-safety
-  - tool-use
   - agents
+  - tool-use
+  - reinforcement-learning
   - reproducibility
+  - determinism
 license: Apache-2.0
 version: 0.1.0
+date-released: "2026-09-07"

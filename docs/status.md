@@ -1,4 +1,4 @@
-# Status — v0.1 release candidate, reviewed
+# Status — v0.1.0, released
 
 One canonical status. Every other document defers to this file; where any other
 document disagrees, this one is correct. Two documents are deliberately *not*
@@ -6,7 +6,7 @@ kept current and say so at the top: `docs/design.md` (the Phase 0 design of
 record) and the dated reports `MORNING_REPORT.md` and `LOCAL_BASELINE_REPORT.md`.
 
 Last updated **2026-09-07**, after the independent review of candidate
-`3d7fc20` passed. **Not publicly released, and nothing has been pushed.**
+`3d7fc20` passed, and **v0.1.0 is published**: https://github.com/yds233013/cerl-bench
 
 ## Two different kinds of "not done"
 
@@ -23,8 +23,8 @@ dependency that is not actually the obstacle.
 ## Summary
 
 Phases 1A and 1B are **implemented and verified, with the deviations recorded
-below**, and v0.1 is a **reviewed candidate** — not a finished result and not a
-release. The benchmark exists; **the science has not been done with it.**
+below**, and v0.1.0 is **released** as a deterministic enterprise-agent simulator and
+evaluation toolkit — an instrument, not a finding. The benchmark exists; **the science has not been done with it.**
 
 Two independent reviews have been answered. The first found five defects in
 `fc2a301`; the second found three remaining issues in `ed04213`; the review of
@@ -91,7 +91,7 @@ that earlier reports referring to "deviation 4" still point at the same thing:
 | Offline regeneration from cache | **IMPLEMENTED** | `cerl regenerate`; a cache miss fails rather than calling out |
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
-| **v0.1 release candidate** | **UNDER LOCAL REVIEW** | single start command, README, archive; **not publicly released** |
+| **v0.1.0** | **RELEASED** | published as a simulator and evaluation toolkit; source, tag and archive at https://github.com/yds233013/cerl-bench |
 | Independent review #1 of `fc2a301` — 5 defects | **REPAIRED** | reproduced then fixed; `docs/rc-review-repairs.md` |
 | Independent review #2 of `ed04213` — 3 issues | **REPAIRED** | exact aggregate verification; document aliasing closed; provenance repaired |
 | Aggregate metrics verified exactly (missing, extra and changed keys all fail) | **VERIFIED** | `UNVERIFIABLE_METRICS` is the only exemption, and is empty of anything replay can produce |

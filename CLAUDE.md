@@ -166,7 +166,10 @@ In scope for v0.1:
 - Any RL training — SFT, GRPO, curriculum, or a training loop of any kind.
 - Paid inference, model downloads, or a parameter sweep.
 - A fourth workflow family, or a second domain.
-- An MCP adapter, a public deployment, a leaderboard, or a submission service.
+- An MCP adapter, a hosted/public *deployment* of the app, a leaderboard, or a
+  submission service. (Publishing the **source** is done: v0.1.0 is released at
+  https://github.com/yds233013/cerl-bench. Running the workspace anywhere other
+  than a reviewer's own machine is still out of scope.)
 - An LLM judge anywhere in the scoring path. This one is permanent.
 
 **Historical evidence is immutable.** Recorded runs, frozen corpora, split

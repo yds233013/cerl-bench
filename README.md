@@ -2,13 +2,19 @@
 
 **Counterfactual Enterprise Reinforcement Learning for Safe Tool-Using Agents.**
 
-A deterministic simulation of enterprise support and billing, built to ask one
-question: do agents that succeed at enterprise tool-use learn *transferable safe
-decision procedures*, or do they fit the state distributions they were trained
-on?
+A **deterministic enterprise-agent simulator and evaluation toolkit**: a
+simulation of enterprise support and billing (Slack-like messaging, tickets,
+Stripe-like billing) together with the harness that grades what an agent does in
+it. It exists to ask one question — do agents that succeed at enterprise tool-use
+learn *transferable safe decision procedures*, or do they fit the state
+distributions they were trained on?
 
-> **Status: v0.1 release candidate, under local review. Not publicly released.**
-> No training arm exists and no generalization result has been measured. See
+> **Status: v0.1.0 — released.** The simulator, the scenario corpus, the
+> verifier and the evaluation harness are complete and independently reviewed.
+>
+> **The research question above is not answered here.** No training arm exists,
+> no model has completed a task, and no generalization result has been measured.
+> This release publishes the *instrument*, not a finding. See
 > [What has and has not been measured](#what-has-and-has-not-been-measured).
 
 ---

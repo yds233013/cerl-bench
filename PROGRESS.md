@@ -14,7 +14,12 @@ without regressing the ~50 ms episode budget; repairing provenance and stale
 status text; running the listed gates from a fresh clone.
 
 **Out of scope**: new workflow families, RL training of any kind, MCP adapters,
-inference, spending, publishing or pushing.
+inference, spending, or a hosted deployment.
+
+**Publication (2026-09-07):** v0.1.0 is released at
+https://github.com/yds233013/cerl-bench. Earlier "do not push" instructions in
+this file were standing constraints at the time and are now superseded for the
+source; they still hold for anything that would spend money or run inference.
 
 > **Scope history.** Earlier entries in this file were written under narrower
 > grants, and their "out of scope" lines are superseded rather than wrong: the
