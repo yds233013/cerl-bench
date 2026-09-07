@@ -32,7 +32,7 @@ MARKER = "MUTATED-BY-AN-EXTERNAL-CALLER"
 
 @pytest.fixture(scope="module")
 def w2(all_frozen):
-    return [s for s in all_frozen if s.family == "duplicate_charge_approval"][0]
+    return next(s for s in all_frozen if s.family == "duplicate_charge_approval")
 
 
 class Attack(NamedTuple):

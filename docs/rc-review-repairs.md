@@ -4,11 +4,38 @@ Two independent reviews. The first found **five defects** in candidate
 `fc2a301`; the second found **three remaining issues** in the candidate that
 repaired them, `ed04213`. This document records what each one was, what it now
 does, and how that is enforced.
-Every finding was **reproduced first** against `fc2a301`'s own source in a git
-worktree, so the before-evidence is observed behaviour rather than a reading of
-the code. Both sides are recorded as data in
-`evidence/rc-review/before_after.json`, produced by running the same probes
-against each tree.
+Every finding was **reproduced first** against the source that was reviewed,
+checked out in its own git worktree, so the before-evidence is observed
+behaviour rather than a reading of the code.
+
+**Provenance.** `evidence/rc-review/before_after.json` records **three** trees,
+each measured by the same probe script:
+
+| Tree | What it is |
+|---|---|
+| `fc2a301` | the first candidate — report #1's five defects |
+| `ed04213` | the candidate that repaired them — report #2's three issues |
+| `0280a23` | the final candidate |
+
+Report #2's first two issues concern code that the repair of report #1
+*introduced*, so `ed04213` — not `fc2a301` — is the meaningful before for them.
+All three are kept so the chain is visible rather than summarised.
+
+A commit cannot contain its own hash, so the evidence file is measured against
+`0280a23` and committed on top of it. The self-consistent pin is therefore the
+**source tree**, `87ca44e2`, which is identical at the measured commit and at the
+commit carrying this file, because that follow-up commit changes no source.
+Checkable:
+
+```bash
+git rev-parse HEAD:src          # 87ca44e2… — the tree the probes ran against
+git diff --stat 0280a23 HEAD    # this file, the report, and one lint fix
+```
+
+The follow-up carries one behaviour-free change outside documentation: a
+list-index replaced by `next()` in `tests/review/test_document_isolation.py`, to
+satisfy `ruff`. Said explicitly rather than rounded to "docs only", because the
+whole point of this section is that identity claims should be exact.
 
 The regressions live in `tests/review/`. Run against `fc2a301`'s source they
 fail 25 of 34; the nine that pass are checks of fields the old verifier already
@@ -238,3 +265,76 @@ whether a diff op is permitted or becomes a residual.
   descriptive scenario ids, demo titles and walkthroughs, and that **no number
   produced by driving that UI is a benchmark result**. Omitted rubric keys are not
   evidence of no label leakage.
+
+---
+
+# Report #2 — three remaining issues in `ed04213`
+
+The second review took the repaired candidate and found three more things. Two
+of them were **introduced by the first repair**, which is the honest reading:
+fixing the aliasing defect meant not copying on the hot path, and the mechanism
+chosen for that opened a narrower version of the same hole.
+
+## 1. Aggregate verification was not exact
+
+**Was.** Metrics were recomputed from replayed records — correct — but compared
+with `if recorded is not None and recorded != value`. That catches a *changed*
+value and nothing else. Measured at `ed04213`: emptying the metric block
+entirely, deleting a single metric, and inventing a metric named `safety_score`
+all returned `ok: true`.
+
+**Now.** The comparison runs over the union of both key sets, so all three fail
+and each names the exact metric — `metrics.safe_completion_rate`,
+`metrics.safety_score`. The `committed_*` and `attempted_*` series are compared
+as the separate keys they are; swapping them fails rather than cancelling out.
+The only exemption is `UNVERIFIABLE_METRICS` — `spend_cents`, `tokens_in`,
+`tokens_out`, `wall_clock_seconds` — numbers replay genuinely cannot produce
+because no model runs. A test asserts that set never shadows a metric
+`aggregate()` does compute, so the allowlist cannot quietly grow to cover a real
+one.
+
+## 2. `document_for_reading()` returned the mutable cache
+
+**Was.** Typed `Mapping`, which reads as read-only and is not: the value *is* the
+live cache and its nested values are ordinary `dict` and `list`. Measured at
+`ed04213`: a nested write through the view made every later `as_document()`
+return `PWNED-VIA-VIEW` while `state_hash()` stayed put. **The document and the
+hash disagreed**, which is worse than either being wrong, because both look fine.
+
+**Now.** The method is gone; `as_document()` — which copies — is the only public
+document accessor. Diffing moved into `WorldState.business_diff_to()`, so the
+cache never leaves the object that owns it. And values retained in hashed records
+are sealed rather than merely copied: `freeze_json()` returns `FrozenJsonMap` /
+`FrozenJsonList`, `dict` and `list` subclasses that refuse mutation while
+encoding identically, so every committed hash is unchanged.
+
+The sealing was found necessary by the test, not anticipated: copying alone left
+*recorded* diff ops writable, and editing one raised `ChainBroken`. Detaching
+protects state from the record; sealing protects the record from its readers.
+
+**32.9 ms/episode** — the 50 ms budget holds, and the adversarial test asserts it.
+
+## 3. Provenance
+
+**Was.** `before_after.json` recorded `after_commit: 35d276e`, an intermediate
+commit; the candidate actually shipped was `ed04213`. Correct in substance,
+wrong in identity, which is the kind of error that makes evidence unusable.
+
+**Now.** All probes were re-run against the final tree, three trees are recorded
+rather than two, and the pin is the source tree hash — see **Provenance** above.
+
+Stale status text was corrected in the same pass:
+
+- `docs/design.md` said *"No code exists"*. It is the **Phase 0 design of
+  record** and is deliberately preserved unedited — a design document quietly
+  updated to match what got built can no longer show whether the design was
+  right. It now carries a banner saying so, and its status line is scoped to the
+  moment of approval.
+- `PROGRESS.md` is a working file, so it was **updated, not labelled**: its scope
+  section still listed a frontend and HTTP adapters as out of scope, both since
+  authorised and built, and its "next action" pointed at a superseded commit.
+- `MORNING_REPORT.md` and `LOCAL_BASELINE_REPORT.md` are dated reports about
+  specific commits and are labelled **historical**, with a pointer to canonical
+  status.
+- `docs/status.md` claims to be canonical and now is: retitled to the v0.1
+  candidate, covering both reviews and the current gate results.
