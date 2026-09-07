@@ -345,9 +345,17 @@ def test_the_schema_advertises_the_vocabulary_the_state_model_stores():
 
 
 def test_the_tool_schema_is_versioned_and_hashed():
+    """Pinned deliberately: a change here moves every cached request key.
+
+    1.1.0 -> 1.2.0 carried the numeric and enum bounds (``exclusiveMinimum`` on
+    ``amount_cents``; closed sets for ticket status and comment kind). Runs
+    recorded against 1.1.0 remain verifiable -- replay reads actions, not
+    schemas -- but regenerating one from the transcript cache reports schema
+    skew rather than a cache miss.
+    """
     from cerl.agents.tool_schemas import TOOL_SCHEMA_VERSION, tool_schema_hash
 
-    assert TOOL_SCHEMA_VERSION == "1.1.0"
+    assert TOOL_SCHEMA_VERSION == "1.2.0"
     assert len(tool_schema_hash()) == 64
 
 

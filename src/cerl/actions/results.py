@@ -29,6 +29,17 @@ class ToolResult(Frozen):
     ``payload`` is the tool's return value as plain JSON. It must never contain
     ground truth (branch, axis values, rubric) -- ``tests/boundaries`` asserts
     this over the rendered observation stream.
+
+    ``FrozenMap`` freezes only its outer level, so nested containers here are
+    ordinary JSON and remain mutable. That is deliberate: this object is handed
+    to the agent, consumers legitimately annotate what they are given, and the
+    payload has to stay plain JSON for canonical serialisation to work -- a
+    nested ``FrozenMap`` in a field typed ``Any`` has no pydantic serialiser.
+
+    What must not happen is that editing the returned object changes the
+    **sealed trace**. The environment therefore stores its own copy in the trace
+    entry (``cerl.env.env._sealed``), so the observation and the record are
+    separate objects and mutating one cannot break the other's hash.
     """
 
     outcome: Outcome

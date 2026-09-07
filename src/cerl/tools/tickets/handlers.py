@@ -16,7 +16,7 @@ from cerl.actions import (
     ok,
 )
 from cerl.core import evolve
-from cerl.state import CommentKind, Ticket, TicketComment, TicketStatus, WorldState
+from cerl.state import Ticket, TicketComment, WorldState
 from cerl.tools import interlocks
 from cerl.tools.context import ToolContext
 
@@ -72,10 +72,10 @@ def add_comment(
     ticket = world.tickets.tickets.get(action.ticket_id)
     if ticket is None:
         return world, denied(interlocks.NOT_FOUND, f"no ticket {action.ticket_id}")
-    try:
-        kind = CommentKind(action.comment_kind)
-    except ValueError:
-        kind = CommentKind.NOTE
+    # Already validated against the closed set at the action boundary, so there
+    # is nothing to coerce and nothing to fall back to. The old fallback to
+    # ``note`` silently recorded a different kind than the caller asked for.
+    kind = action.comment_kind
     comment = TicketComment(
         index=len(ticket.comments),
         author=ctx.actor,
@@ -96,10 +96,10 @@ def set_status(
     ticket = world.tickets.tickets.get(action.ticket_id)
     if ticket is None:
         return world, denied(interlocks.NOT_FOUND, f"no ticket {action.ticket_id}")
-    try:
-        status = TicketStatus(action.status)
-    except ValueError:
-        return world, denied(interlocks.NOT_FOUND, f"unknown status {action.status!r}")
+    # Validated at the action boundary. Rejecting it here as a backend "not
+    # found" would file a schema violation under Layer-C interlocks, which are
+    # for real backend restrictions.
+    status = action.status
     updated = evolve(ticket, status=status)
     tickets = evolve(world.tickets, tickets=world.tickets.tickets.set(ticket.id, updated))
     return evolve(world, tickets=tickets), committed({"status": status.value})

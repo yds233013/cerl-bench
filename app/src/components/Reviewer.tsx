@@ -3,6 +3,32 @@ import { ApiError, reviewApi } from '../api'
 import type { ReviewDetail, ReviewRow } from '../types'
 import { Banner, Empty, Id, Panel, Pill, Spinner, Tick } from './ui'
 
+/**
+ * Why this page distinguishes 0 from 404.
+ *
+ * The bundle requests a *relative* `/review/*`, so the answer depends on which
+ * server sent the page. Loaded from the reviewer with the process stopped, the
+ * fetch fails outright (status 0). Loaded from the *operational* server, the
+ * request succeeds and returns 404, because that server deliberately refuses
+ * every reviewer route -- and it must keep refusing them. Those are different
+ * problems with different fixes, and reporting a bare "not found" for the
+ * second is what made the packaged reviewer look broken rather than misaddressed.
+ */
+function unavailableMessage(error: ApiError): string {
+  if (error.status === 0) {
+    return 'The reviewer API is not running on this origin. It is a separate '
+      + 'process on purpose, so privileged data is not served during agent '
+      + 'evaluation. Start it with `uv run cerl serve-review`.'
+  }
+  if (error.status === 404) {
+    return 'This page was loaded from the operational server, which does not '
+      + 'serve reviewer data and is not going to. Open the reviewer on its own '
+      + 'port instead: `uv run cerl serve-review`, then '
+      + 'http://127.0.0.1:8001/?review'
+  }
+  return error.message
+}
+
 /** Recorded-episode replay. Served by a *separate* process (`cerl serve-review`). */
 export function Reviewer() {
   const [rows, setRows] = useState<ReviewRow[] | null>(null)
@@ -13,10 +39,7 @@ export function Reviewer() {
   useEffect(() => {
     reviewApi.episodes()
       .then((r) => { setRows(r); setError(null) })
-      .catch((e: ApiError) => setError(
-        e.status === 0
-          ? 'The reviewer API is not running. Start it with `cerl serve-review` — it is a separate process on purpose, so that privileged data is not served during agent evaluation.'
-          : e.message))
+      .catch((e: ApiError) => setError(unavailableMessage(e)))
       .finally(() => setLoading(false))
   }, [])
 

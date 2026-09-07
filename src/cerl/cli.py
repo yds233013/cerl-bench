@@ -726,8 +726,15 @@ def serve_command(
 
 @app.command(name="serve-review")
 def serve_review_command(
-    port: Annotated[int, typer.Option(help="Reviewer API port.")] = 8001,
+    port: Annotated[int, typer.Option(help="Reviewer port.")] = 8001,
     frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+    ui: Annotated[
+        Path, typer.Option(help="Built frontend directory."),
+    ] = Path("app/dist"),
+    *,
+    api_only: Annotated[
+        bool, typer.Option(help="Serve the reviewer API without the frontend."),
+    ] = False,
 ) -> None:
     """Start the reviewer replay API. Serves verdicts; launch deliberately.
 
@@ -737,11 +744,34 @@ def serve_review_command(
     """
     scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
     library = reviewer.ReviewLibrary(scenarios)
-    server = app_http.serve(library.router(), port, "reviewer")
+
+    # The reviewer serves the frontend too. Without it the packaged reviewer page
+    # was unreachable: the built bundle requests a *relative* /review/episodes,
+    # so opening it on the operational port asked a server that deliberately
+    # 404s those routes, and the port-8001 routing existed only in Vite's dev
+    # proxy. Serving the same bundle here makes the API same-origin.
+    site: app_http.StaticSite | None = None
+    built = (ui / "index.html").exists()
+    if not api_only and built:
+        site = app_http.StaticSite(ui)
+    server = app_http.serve(library.router(), port, "reviewer", site)
     typer.secho(
         f"\n  Reviewer replay  →  http://127.0.0.1:{port}   PRIVILEGED\n",
         fg=typer.colors.YELLOW,
     )
+    if site is not None:
+        typer.echo(f"  Open http://127.0.0.1:{port}/?review")
+    elif api_only:
+        typer.echo("  API only (--api-only); no page is served from this port.")
+    else:
+        # Said out loud rather than silently degrading to API-only: an
+        # unreachable reviewer page that looks like a running reviewer is the
+        # exact confusion this command was changed to remove.
+        typer.secho(
+            f"  No built frontend at {ui}; serving the API only.\n"
+            f"  Build it with `cd app && npm run build`, or pass --ui PATH.",
+            fg=typer.colors.YELLOW,
+        )
     typer.echo("  Serves verdicts, branch labels and violation flags.")
     typer.secho(
         "  A separate port is NOT an access-control boundary. Stop this "
@@ -800,11 +830,15 @@ def verify_manifest_command(
     if not manifest_path.exists():
         raise typer.BadParameter(f"no manifest at {manifest_path}")
     manifest = manifest_module.load(manifest_path)
-    report = verify_run.verify_manifest(manifest, frozen_dir)
+    report = verify_run.verify_manifest(manifest, frozen_dir, manifest_path)
     typer.echo(report.summary())
+    typer.echo(f"manifest checksum: {report.checksum}")
     if not report.ok:
         raise typer.Exit(code=1)
     typer.secho("VERIFIED (offline, no model in the loop)", fg=typer.colors.GREEN)
+    typer.echo("  replay cannot establish, and this does not claim:")
+    for claim in report.unverifiable:
+        typer.echo(f"    - {claim}")
 
 
 @app.command(name="splits")

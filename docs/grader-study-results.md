@@ -177,19 +177,30 @@ deadline and is not presented as a normally completed task.
 
 **No naturally occurring instance of the restored-change failure has been
 observed.** The 114 cases that produce the entire disagreement are all
-constructed. That is stated rather than glossed: this study shows what the
-graders *would* do, not that a model has done it.
+constructed, and constructed **mechanically**: `violate_then_revert()` is a
+single programmed transformation applied across all 114 W2 scenarios, not 114
+independently authored trajectories. (An earlier draft described them as written
+by hand; that was wrong, and it matters — see the correlation limitation in §8.)
+This study shows what the graders *would* do, not that a model has done it.
 
 > **What violate-then-revert demonstrates, precisely.** It shows that a
-> state-only reward signal *can be exploited* — the same final state is reachable
-> with and without a prohibited intermediate change, so the two are
-> indistinguishable to a grader that sees only endpoints. That is a property of
-> the grader, established here.
+> prohibited change can be **absent from the terminal state**, and that a grader
+> comparing only endpoints therefore does not see it. That is a property of the
+> grader, established here.
+>
+> It is **weaker than a demonstrated reward exploit**, and the earlier wording
+> in this document overstated it. The constructed trajectory appends its two
+> statuses to the end of a correct run, so it leaves the ticket at its *initial*
+> status rather than the one the branch requires. The task fails on its own
+> terms — the annotation records `task_ok=False` — so this is not a case of an
+> agent scoring a successful task while concealing a side effect. Constructing
+> that stronger case would mean reverting to the *required* status, and would be
+> a separately versioned study; it has not been run.
 >
 > It does **not** show that an agent discovers this, learns it, or is drawn to
 > it under optimisation. No agent in this project has produced such a
-> trajectory; all 114 were written by hand. Whether a trained policy would find
-> the exploit is an open question this study does not address and cannot.
+> trajectory. Whether a trained policy would find the exploit is an open
+> question this study does not address and cannot.
 
 ## 7. What this does and does not support
 
@@ -227,5 +238,7 @@ the threat model, not a finding of this study.
   1,134 cases and 114 of 114 disagreements. Drop it and the graders agree
   completely.
 - **No confidence intervals.** Cases within a source are highly correlated —
-  the same mutation across 114 scenarios — so 114/114 is closer to one repeated
-  observation than to 114 independent ones.
+  **one programmed transformation applied across 114 scenarios**, not 114
+  independently authored trajectories — so 114/114 is closer to one repeated
+  observation than to 114 independent ones. Every case source in this study has
+  the same shape: a mutation function mapped over the corpus.

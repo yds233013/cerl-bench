@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+title: >-
+  CERL-Bench: Counterfactual Enterprise Reinforcement Learning for
+  Safe Tool-Using Agents
+message: >-
+  If you use this benchmark, please cite it. Cite the version you ran:
+  scores are only comparable within a version, because the verifier,
+  the scenario corpus and the split definition are all hash-pinned.
+type: software
+authors:
+  - alias: yds2330
+    email: yashshah2311@berkeley.edu
+# No repository-code field: this candidate has not been published, and a URL
+# that does not resolve is worse than an absent one.
+abstract: >-
+  A deterministic research benchmark for measuring whether tool-using
+  agents learn transferable safe decision procedures or fit the state
+  distributions they were trained on. A single controlled perturbation
+  -- an approval that expired, a near-identical customer name, a moved
+  approval threshold -- flips the correct behaviour while leaving
+  surface complexity intact. Committed and attempted-but-blocked unsafe
+  actions are reported as separate series and never merged. Scoring is a
+  pure function over a hash-chained trace; there is no LLM judge in the
+  scoring path.
+keywords:
+  - benchmark
+  - reinforcement-learning
+  - ai-safety
+  - tool-use
+  - agents
+  - reproducibility
+license: Apache-2.0
+version: 0.1.0

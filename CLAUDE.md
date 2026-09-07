@@ -15,6 +15,11 @@ test pass. If implementation reveals a contradiction with the approved design,
 
 - **No wall clock.** `datetime.now()`, `time.time()`, `time.monotonic()` are
   banned in `src/cerl/`. All time is `LogicalClock` / `LogicalInstant` ticks.
+  **One enumerated exception:** `eval/latency.py` may read `time.monotonic()`
+  to measure how long an *external* provider took to answer. That number is
+  never state, never an input to a verdict, and never hashed — it describes the
+  world outside the simulation, which has no logical clock. The ban test lists
+  this module explicitly, so a second exemption cannot appear quietly.
 - **No ambient randomness.** `random`, `uuid`, `secrets` are banned in
   `src/cerl/`. All randomness is counter-based key derivation:
   `blake2b(root_seed || domain_label || counter)`.
@@ -141,9 +146,33 @@ tool, and never mutates. **No LLM judge in the scoring path, ever.**
 
 ## 11. Scope discipline
 
-Phase 1A is **W2 only** (duplicate charge with approval threshold). Not in
-scope: W1, W3, prompt-only evaluation, any RL training, HTTP/MCP adapters, any
-Phase 1B functionality. Do not start Phase 1B when 1A passes.
+**Current scope is v0.1.** Phases 1A and 1B are complete and their restrictions
+no longer apply: all three workflow families (W1, W2, W3) are implemented and
+frozen, prompt-only evaluation exists, and a local HTTP adapter serves the
+single-family W2 workspace and the reviewer.
+
+In scope for v0.1:
+
+- W1, W2, W3 scenarios, oracles, verifiers and the frozen corpus.
+- The evaluation harness: `cerl eval`, manifest verification, transcript cache.
+- The local application: `cerl serve` (operational, `:8000`) and
+  `cerl serve-review` (reviewer, `:8001`), plus the React frontend in `app/`.
+  It is a **thin stdlib adapter over the same typed env** — never a second
+  implementation of a rule, and never a privileged read path.
+- Offline studies over committed artifacts.
+
+**Still out of scope. Do not start these without a new approval:**
+
+- Any RL training — SFT, GRPO, curriculum, or a training loop of any kind.
+- Paid inference, model downloads, or a parameter sweep.
+- A fourth workflow family, or a second domain.
+- An MCP adapter, a public deployment, a leaderboard, or a submission service.
+- An LLM judge anywhere in the scoring path. This one is permanent.
+
+**Historical evidence is immutable.** Recorded runs, frozen corpora, split
+definitions and study results are never silently regenerated. A change that
+would alter them requires a version bump and a documented skew, so an old
+manifest either still verifies or fails loudly naming the differing field.
 
 ---
 

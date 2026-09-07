@@ -13,6 +13,7 @@ import pytest
 from cerl.app import demos as demo_lib
 from cerl.app.http import ApiError
 from cerl.app.operational import FORBIDDEN_KEYS, Workspace
+from cerl.core import TicketId
 from cerl.eval import splits
 
 
@@ -198,12 +199,38 @@ def test_the_app_does_not_prevent_an_unauthorised_refund(workspace):
     assert len(res["session"]["observed"]["refunds"]) == 1
 
 
-def test_an_ended_episode_refuses_further_actions(workspace):
+def test_an_ended_episode_refuses_a_genuinely_new_action(workspace):
     sid, _ = _session(workspace)
     _act(workspace, sid, {"kind": "abstain", "reason": "done"}, submission="end")
+    # A *well-formed* action, so this reaches the finished check. The id here
+    # used to be "t", which is not a valid TicketId; that passed only because
+    # the finished check ran before validation, and it would have kept passing
+    # if the refusal had stopped working.
     with pytest.raises(ApiError) as exc:
-        _act(workspace, sid, {"kind": "tickets.get", "ticket_id": "t"}, submission="after")
+        _act(
+            workspace,
+            sid,
+            {"kind": "tickets.get", "ticket_id": str(TicketId.mint(1))},
+            submission="after",
+        )
     assert exc.value.status == 409
+
+
+def test_retrying_the_terminal_action_returns_the_original_record(workspace):
+    """A retry is not a new action, so the finished check must not see it first.
+
+    The order used to be reversed: ``done`` was checked before the submission
+    token, so the client that never received the response to the action that
+    ended the episode got a 409 when it retried -- for an action the server had
+    already executed. Resolving the token first makes the retry idempotent
+    without weakening the refusal above.
+    """
+    sid, _ = _session(workspace)
+    action = {"kind": "abstain", "reason": "done"}
+    first_status, first = _act(workspace, sid, action, submission="end")
+    retry_status, retry = _act(workspace, sid, action, submission="end")
+    assert first_status == retry_status == 200
+    assert first["record"]["index"] == retry["record"]["index"]
 
 
 # --------------------------------------------------------------------------

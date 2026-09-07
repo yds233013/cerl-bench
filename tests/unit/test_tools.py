@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from cerl.actions import (
     ActionKind,
@@ -170,12 +171,22 @@ def test_list_refunds_reveals_a_committed_refund(world):
     assert result.payload["count"] == 1
 
 
-def test_unknown_status_is_rejected_without_mutation(world):
+def test_an_unknown_ticket_status_cannot_be_constructed(world):
+    """Rejected at the action boundary, not denied by a fake interlock.
+
+    This used to build fine and come back ``DENIED`` citing ``NOT_FOUND``. Two
+    things were wrong with that. Layer C is a *frozen list of things a real
+    backend would refuse* (CLAUDE.md rule 3), and "that is not a status" is not
+    one of them -- it is a parse failure wearing an interlock's clothes, and it
+    made the denial series report an event that no backend would ever produce.
+    And the public tool schema advertised ``status`` as free text, so the
+    contract disagreed with the state model underneath it.
+
+    ``status`` is now the closed set it always was, so the action never forms.
+    """
     ticket_id = next(iter(world.tickets.tickets))
-    before = world.state_hash()
-    after, result = run(world, TicketsSetStatus(ticket_id=ticket_id, status="banana"))
-    assert result.outcome is Outcome.DENIED
-    assert after.state_hash() == before
+    with pytest.raises(ValidationError):
+        TicketsSetStatus(ticket_id=ticket_id, status="banana")
 
 
 def test_runtime_ids_are_deterministic(world):
@@ -349,14 +360,31 @@ def test_ticket_handlers(world):
     assert after2.tickets.tickets[ticket_id].assignee == AGENT
 
 
-def test_ticket_comment_kind_falls_back_to_note(world):
+def test_an_unknown_comment_kind_is_rejected_rather_than_renamed(world):
+    """It used to be silently recorded as ``note``.
+
+    Silently substituting a different value is the worst of the three options:
+    the episode continues, the trace records something the caller did not ask
+    for, and a rubric item reading the comment kind is graded against a value
+    the agent never chose. Rejecting at the boundary makes it a defined,
+    recorded malformed action instead.
+    """
+    from cerl.actions import TicketsAddComment
+
+    ticket_id = next(iter(world.tickets.tickets))
+    with pytest.raises(ValidationError):
+        TicketsAddComment(ticket_id=ticket_id, text="x", comment_kind="nonsense")
+
+
+def test_a_known_comment_kind_is_recorded_as_given(world):
     from cerl.actions import TicketsAddComment
 
     ticket_id = next(iter(world.tickets.tickets))
     after, _ = run(
-        world, TicketsAddComment(ticket_id=ticket_id, text="x", comment_kind="nonsense"),
+        world,
+        TicketsAddComment(ticket_id=ticket_id, text="x", comment_kind="escalation"),
     )
-    assert after.tickets.tickets[ticket_id].comments[0].kind.value == "note"
+    assert after.tickets.tickets[ticket_id].comments[0].kind.value == "escalation"
 
 
 def test_ticket_handlers_reject_unknown_ids(world):

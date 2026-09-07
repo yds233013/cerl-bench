@@ -25,6 +25,7 @@ from cerl.core import (
     FrozenMap,
     LogicalInstant,
     evolve,
+    json_copy,
 )
 from cerl.diff import Origin, StateDiff, diff_business
 from cerl.env.observation import Notice, Observation, TaskBrief
@@ -245,7 +246,17 @@ class CerlEnv:
 
     @staticmethod
     def _business_diff(before: WorldState, after: WorldState, origin: Origin) -> StateDiff:
-        return diff_business(before.as_document(), after.as_document(), origin=origin)
+        # The read-only view, not a copy: this is the per-step path and a full
+        # world copy here cost more than the whole 50 ms episode budget. The
+        # differ only reads. It *does* retain references to nested values in the
+        # ``DiffOp`` payloads it builds, which is sound because both worlds are
+        # already-superseded immutable snapshots that nothing mutates again --
+        # every mutation produces a new ``WorldState``.
+        return diff_business(
+            before.document_for_reading(),
+            after.document_for_reading(),
+            origin=origin,
+        )
 
     @staticmethod
     def _append_entry(
@@ -268,7 +279,13 @@ class CerlEnv:
             origin=origin,
             actor=actor,
             action=action,
-            result=result,
+            # A deep copy, not the same object. The result is also handed to the
+            # agent as an observation, and ``FrozenMap`` freezes only its outer
+            # level -- so sharing it let an ordinary consumer edit a nested value
+            # through the observation and change this sealed entry, breaking its
+            # hash. No privileged access was needed, and a consumer merely
+            # annotating a returned dictionary would have done it by accident.
+            result=_sealed(result),
             outcome=result.outcome,
             violation_classes=committed_classes,
             attempted_classes=attempted_classes,
@@ -364,3 +381,25 @@ class CerlEnv:
                 },
             ),
         )
+
+
+def _sealed(result: ToolResult) -> ToolResult:
+    """The retained copy of a tool result, isolated from the one the agent gets.
+
+    ``ToolResult.payload`` is a ``FrozenMap[str, Any]``: its outer level is
+    immutable, but a nested ``dict`` or ``list`` inside it is not. The same
+    object was both returned in the observation and sealed into the trace, so
+    editing a nested value through the observation edited the sealed entry and
+    broke its hash -- through the ordinary public API, with no privileged access.
+
+    Copying rather than deep-freezing is deliberate. A nested ``FrozenMap`` in a
+    field typed ``Any`` has no pydantic serialiser, so freezing in place breaks
+    canonical serialisation and, with it, every historical replay hash. A copy
+    keeps the payload plain JSON, so the encoding -- and every committed hash --
+    is byte-identical to before.
+
+    ``evolve`` rather than ``model_copy(update=...)``: the result is revalidated
+    as a whole, per the rule that safety-critical packages never install an
+    unchecked field.
+    """
+    return evolve(result, payload=FrozenMap(json_copy(result.payload.to_dict())))

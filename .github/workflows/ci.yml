@@ -24,10 +24,18 @@ jobs:
       - name: Package boundaries
         run: uv run lint-imports
       - name: Tests with coverage
-        run: uv run pytest -q --cov=cerl --cov-report=term
+        run: uv run pytest -q --cov=cerl --cov-report=term --cov-fail-under=80
       - name: Frozen scenarios regenerate byte-exactly
         run: uv run pytest tests/determinism -q
-      - name: Coverage gate on correctness-critical packages
+      # Each correctness-critical package is gated SEPARATELY at 90%.
+      # A single combined --cov-fail-under over all four passed while diff/ sat
+      # at 89.16%, because the other three carried it. A combined average is not
+      # the documented requirement (CLAUDE.md rule 10) and cannot enforce it.
+      - name: Coverage gate, per package
         run: |
           uv run pytest -q --cov=cerl.core --cov=cerl.diff --cov=cerl.trace \
-            --cov=cerl.verify --cov-fail-under=90 --cov-report=term
+            --cov=cerl.verify --cov-report=
+          for pkg in core diff trace verify; do
+            echo "--- cerl/$pkg ---"
+            uv run coverage report --include="*/cerl/$pkg/*" --fail-under=90
+          done

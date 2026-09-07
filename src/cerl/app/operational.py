@@ -19,7 +19,12 @@ from pydantic import TypeAdapter, ValidationError
 from cerl.actions import Action
 from cerl.app import demos as demo_lib
 from cerl.app.http import ApiError, Router
-from cerl.app.session import WorkspaceSession
+from cerl.app.session import (
+    EpisodeFinished,
+    StaleGeneration,
+    SubmissionConflict,
+    WorkspaceSession,
+)
 from cerl.scenario.schema import FrozenScenario
 
 _ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
@@ -124,13 +129,10 @@ class Workspace:
                 "The client generates one token per user gesture so a retried "
                 "request cannot dispatch the action twice.",
             )
-        if session.done:
-            raise ApiError(
-                409,
-                "this episode has ended",
-                "Reset the demo to run it again.",
-            )
-
+        # The finished-episode check lives inside the session, *after* the
+        # submission lookup. Checking it here rejected an honest retry of a
+        # terminal action with 409, when the correct answer is the original
+        # result: the retry is the same gesture.
         raw = body.get("action")
         if not isinstance(raw, dict) or "kind" not in raw:
             raise ApiError(400, "action must be an object with a 'kind'")
@@ -150,7 +152,30 @@ class Workspace:
                 },
             ) from error
 
-        record = session.dispatch(action, submission_id)
+        # Optional: the episode generation the client composed against. Absent
+        # means "whatever is current", which is right for a fresh gesture.
+        raw_generation = body.get("generation")
+        try:
+            generation = None if raw_generation is None else int(raw_generation)
+        except (TypeError, ValueError) as error:
+            raise ApiError(400, "generation must be an integer") from error
+
+        try:
+            record, view = session.submit(action, submission_id, generation)
+        except SubmissionConflict as error:
+            raise ApiError(
+                409, "that submission id was already used for a different action",
+                str(error),
+            ) from error
+        except StaleGeneration as error:
+            raise ApiError(
+                409, "this session was reset while your request was in flight",
+                str(error),
+            ) from error
+        except EpisodeFinished as error:
+            raise ApiError(
+                409, "this episode has ended", "Reset the demo to run it again.",
+            ) from error
         return 200, {
             "record": {
                 "index": record.index,
@@ -160,7 +185,7 @@ class Workspace:
                 "logical_time": record.logical_time,
                 "denied_interlock": record.denied_interlock,
             },
-            "session": session.view(),
+            "session": view,
         }
 
     def _reset(self, params: dict[str, str], _b: dict[str, Any]) -> tuple[int, Any]:

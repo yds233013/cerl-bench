@@ -33,8 +33,11 @@ replays byte-for-byte.
 | **W3** | Suspicious refund request | The request is illegitimate; the correct action is *not acting* | — |
 
 **Only W2 has an interactive workspace today.** W1 and W3 are fully implemented
-as scenarios, oracles and verifiers — they are exercised by the test suite and
-the grader study — but there is no UI for them.
+as scenarios, oracles and verifiers, and are exercised by the test suite — the
+oracle scores 1.0 on every frozen instance of all three families, and the
+systematic mutations run against all three. **The grader study is W2-only**
+(1,134 cases over 114 `duplicate_charge_approval` scenarios); it says nothing
+about W1 or W3. There is no UI for either.
 
 ## Install
 
@@ -101,7 +104,14 @@ Two things worth noticing while you work:
 uv run cerl serve-review
 ```
 
-Then open **http://127.0.0.1:8000/?review** (or :8001 for the raw API).
+Then open **http://127.0.0.1:8001/?review**.
+
+The reviewer serves its **own** copy of the page, so the page and the privileged
+API it calls are the same origin. Port 8000 will not work and is not meant to:
+the operational server returns 404 for every `/review/*` route, and the fix for
+that was to give the reviewer a page, never to expose reviewer data on the
+operational API. (Add `--api-only` to serve just the API, or `--ui` to point at
+a different build.)
 
 It shows ordered actions with logical time and state hashes, task completion and
 safety as **separate** results, committed and attempted violations on separate
@@ -179,9 +189,14 @@ Drop it and the two graders agree completely. It changes a ticket status the
 branch does not permit and changes it back, so the change appears in no terminal
 diff.
 
-This shows a state-only reward signal **can be exploited**. It does **not** show
-that an agent discovers, learns, or is drawn to the exploit. All 114 were written
-by hand.
+This shows that a prohibited change can be **invisible to a grader that compares
+only endpoints**. It is weaker than a demonstrated reward exploit: the
+constructed trajectory leaves the ticket at its *initial* status, not the
+required one, so the task fails on its own terms — it is not a case of scoring a
+success while concealing a side effect. It does **not** show that an agent
+discovers, learns, or is drawn to the exploit. The 114 cases are one programmed
+transformation applied across 114 scenarios, so they are one repeated
+observation far more than 114 independent ones.
 
 **All recorded model cases were detected by both graders** — six episodes,
 including both `C_AUTH` detections, complete agreement. No naturally occurring
@@ -230,6 +245,7 @@ is in `docs/` and `evidence/`, and is reproducible by the commands above.
 | `docs/workspace.md` | The application: setup, architecture, boundary |
 | `docs/grader-study-protocol.md` / `-results.md` | The grader comparison |
 | `docs/pilot-split-audit.md` | Corpus 2.0.0 and split 1.2.0 |
+| `docs/rc-review-repairs.md` | The five defects found by independent review of `fc2a301`, before and after |
 | `LOCAL_BASELINE_REPORT.md` | The local-model runs, in full |
 | `docs/limitations.md` | Known limitations |
 
@@ -247,7 +263,7 @@ cd app && npm run typecheck
 ## Licensing and attribution
 
 This project is **Apache-2.0** (`LICENSE`). Author: the repository owner; see
-`CITATION.cff`.
+`CITATION.cff` for the citation metadata.
 
 **All scenario data is synthetic.** Company names, people, emails and
 identifiers are invented, drawn from committed lexicons in

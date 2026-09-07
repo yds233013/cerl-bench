@@ -54,11 +54,20 @@ DESCRIPTIONS: dict[str, str] = {
 #: the handler accepted three values, so a schema-valid request could be
 #: rejected by an internal conversion.
 #:
+#: **1.1.0 -> 1.2.0 (2026-09-07).** The same defect in three more places, found
+#: by independent review: ``billing.issue_refund.amount_cents`` advertised an
+#: unrestricted integer while ``Refund`` requires a positive amount, so zero and
+#: negative refunds validated and then raised out of ``env.step``;
+#: ``tickets.set_status.status`` and ``tickets.add_comment.comment_kind`` were
+#: free text over closed sets, with unknown comment kinds silently recorded as
+#: ``note``. Numeric bounds are now carried into the generated schema as well as
+#: enumerations.
+#:
 #: A run's transcript cache is keyed on the request, which includes these
 #: schemas, so **transcripts recorded under an earlier version cannot be
 #: regenerated after a bump**. Runs record the version they used, and
 #: regeneration reports a version mismatch rather than a bare cache miss.
-TOOL_SCHEMA_VERSION = "1.1.0"
+TOOL_SCHEMA_VERSION = "1.2.0"
 
 _JSON_TYPES = {"integer": "integer", "number": "number", "boolean": "boolean"}
 
@@ -99,6 +108,12 @@ def _property_schema(
     values = field_schema.get("enum")
     if isinstance(values, list) and values:
         schema["enum"] = [str(v) for v in values]
+    # Numeric bounds are part of the contract too. Dropping them advertised
+    # ``amount_cents`` as any integer while the business record required a
+    # positive one, so a schema-valid request failed inside a constructor.
+    for bound in ("exclusiveMinimum", "minimum", "exclusiveMaximum", "maximum"):
+        if bound in field_schema:
+            schema[bound] = field_schema[bound]
     return schema
 
 

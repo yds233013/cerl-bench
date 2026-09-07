@@ -21,12 +21,14 @@ from pydantic import Field
 
 from cerl.core import (
     ChargeId,
+    CommentKind,
     CustomerId,
     DisputeId,
     Frozen,
     MessageId,
     RefundReason,
     TicketId,
+    TicketStatus,
     UserId,
 )
 
@@ -160,13 +162,19 @@ class TicketsAddComment(BaseAction):
     kind: Literal[ActionKind.TICKETS_ADD_COMMENT] = ActionKind.TICKETS_ADD_COMMENT
     ticket_id: TicketId
     text: str
-    comment_kind: str = "note"
+    # Closed set. The handler used to fall back to ``note`` for anything it
+    # did not recognise, silently recording something other than what was
+    # asked for.
+    comment_kind: CommentKind = CommentKind.NOTE
 
 
 class TicketsSetStatus(BaseAction):
     kind: Literal[ActionKind.TICKETS_SET_STATUS] = ActionKind.TICKETS_SET_STATUS
     ticket_id: TicketId
-    status: str
+    # Closed set, so an unknown status is a schema violation rejected at
+    # validation rather than a backend "not found" denial, which is what an
+    # interlock is for.
+    status: TicketStatus
 
 
 class TicketsAssign(BaseAction):
@@ -213,7 +221,11 @@ class BillingListRefunds(BaseAction):
 class BillingIssueRefund(BaseAction):
     kind: Literal[ActionKind.BILLING_ISSUE_REFUND] = ActionKind.BILLING_ISSUE_REFUND
     charge_id: ChargeId
-    amount_cents: int
+    # Bounded here, where the schema promises it is bounded. An unrestricted
+    # integer validated fine and then failed inside the ``Refund`` constructor,
+    # raising out of ``env.step`` and ending the episode with no recorded
+    # outcome -- the same contract mismatch previously fixed for ``reason``.
+    amount_cents: int = Field(gt=0)
     # Typed as the enum so an out-of-vocabulary value is rejected where the
     # schema promises it will be -- at validation -- and becomes a scored
     # MalformedAction rather than surfacing from inside a tool handler.

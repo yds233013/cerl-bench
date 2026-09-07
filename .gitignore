@@ -12,3 +12,6 @@ runs/
 # Frontend build artefacts and dependencies
 app/node_modules/
 app/dist/
+
+# macOS
+.DS_Store

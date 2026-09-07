@@ -2,34 +2,25 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Self
 
 from pydantic import model_validator
 
 from cerl.core import (
+    CommentKind,
     CustomerId,
     FrozenMap,
     LogicalInstant,
     SortedFrozenSet,
     TicketId,
+    TicketStatus,
     UserId,
 )
 from cerl.state.common import Frozen
 
-
-class TicketStatus(StrEnum):
-    OPEN = "open"
-    PENDING_CUSTOMER = "pending_customer"
-    RESOLVED = "resolved"
-    ESCALATED = "escalated"
-
-
-class CommentKind(StrEnum):
-    RESOLUTION = "resolution"
-    ESCALATION = "escalation"
-    INFO_REQUEST = "info_request"
-    NOTE = "note"
+#: Re-exported: the single definition lives in ``core`` because ``actions``
+#: sits below ``state`` and must type these fields too.
+__all__ = ["CommentKind", "TicketStatus"]
 
 
 class TicketComment(Frozen):

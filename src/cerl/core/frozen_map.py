@@ -99,3 +99,46 @@ class FrozenMap(Mapping[K, V], Hashable):
                 when_used="always",
             ),
         )
+
+
+def deep_freeze(value: Any) -> Any:
+    """Recursively convert plain JSON containers into immutable ones.
+
+    ``FrozenMap`` freezes only its outer level, so a nested ``dict`` or
+    ``list`` inside a ``FrozenMap[str, Any]`` stayed mutable. A tool result is
+    handed to the agent *and* sealed into the trace as the same object, so
+    editing a nested value through the observation changed the sealed entry and
+    broke its hash -- reachable through the ordinary public API, with no
+    privileged access at all.
+
+    Mappings become ``FrozenMap`` and sequences become tuples. Both still
+    serialise to the same JSON, so canonical encodings and historical replay
+    hashes are unchanged.
+    """
+    # No early return for ``FrozenMap``: its outer level is frozen but its
+    # *values* may not be, which is the whole defect this closes.
+    if isinstance(value, Mapping):
+        return FrozenMap({str(k): deep_freeze(v) for k, v in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(deep_freeze(v) for v in value)
+    return value
+
+def json_copy(value: Any) -> Any:
+    """Deep-copy a canonical-JSON document. Faster than ``copy.deepcopy``.
+
+    State documents are pure JSON -- dicts, lists and scalars, no cycles, no
+    custom classes -- so ``deepcopy``'s memo table, ``id()`` bookkeeping and
+    reductor dispatch are all paid for and none of it is needed. This copier
+    recurses over exactly the three container shapes a canonical document can
+    hold and returns scalars unchanged, which is safe because every scalar in a
+    canonical document is immutable.
+
+    It exists because the copy is on the per-step path: isolating the world
+    document costs a full copy on every diff, and ``deepcopy`` made an episode
+    exceed the 50 ms budget.
+    """
+    if isinstance(value, dict):
+        return {k: json_copy(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [json_copy(v) for v in value]
+    return value

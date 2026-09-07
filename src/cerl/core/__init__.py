@@ -24,7 +24,7 @@ from cerl.core.errors import (
     ScenarioDefect,
 )
 from cerl.core.evolve import UnknownField, evolve, validate_field
-from cerl.core.frozen_map import FrozenMap
+from cerl.core.frozen_map import FrozenMap, deep_freeze, json_copy
 from cerl.core.frozen_set import SortedFrozenSet
 from cerl.core.ids import (
     ALL_ID_TYPES,
@@ -49,7 +49,7 @@ from cerl.core.rng import (
     derive_int,
     derive_range,
 )
-from cerl.core.vocabulary import RefundReason
+from cerl.core.vocabulary import CommentKind, RefundReason, TicketStatus
 
 __all__ = [
     "ALL_ID_TYPES",
@@ -60,6 +60,7 @@ __all__ = [
     "CerlFault",
     "ChainBroken",
     "ChargeId",
+    "CommentKind",
     "ConstraintClass",
     "CustomerId",
     "DisputeId",
@@ -83,11 +84,13 @@ __all__ = [
     "ScenarioDefect",
     "SortedFrozenSet",
     "TicketId",
+    "TicketStatus",
     "UnknownField",
     "UserId",
     "canonical_bytes",
     "canonical_json",
     "content_hash",
+    "deep_freeze",
     "derive_below",
     "derive_bytes",
     "derive_choice",
@@ -95,6 +98,7 @@ __all__ = [
     "derive_range",
     "evolve",
     "hash_text",
+    "json_copy",
     "report_hash",
     "validate_field",
 ]

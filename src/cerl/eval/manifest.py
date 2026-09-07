@@ -156,6 +156,45 @@ def write(manifest: RunManifest, path: Path) -> Path:
     return path
 
 
+class ChecksumResult(Frozen):
+    """What a manifest's own checksum says about the file.
+
+    Kept separate from replay verification because they answer different
+    questions. The checksum detects a file damaged in transit; it proves nothing
+    about honesty, since a submitter who edits the contents can recompute it.
+    Replay is what checks the claims.
+    """
+
+    present: bool
+    valid: bool
+    recorded: str = ""
+    recomputed: str = ""
+
+    @property
+    def status(self) -> str:
+        if not self.present:
+            return "absent (recorded before manifests were checksummed)"
+        return "valid" if self.valid else "MISMATCH -- the file has been altered"
+
+
+def checksum_of(path: Path) -> ChecksumResult:
+    """Check a manifest's embedded checksum without loading it as a manifest."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    recorded = payload.pop("manifest_hash", None)
+    if recorded is None:
+        # Historical manifests predate the field. Their absence is reported, not
+        # treated as failure: rejecting them would make old evidence
+        # unverifiable for a reason unrelated to its correctness.
+        return ChecksumResult(present=False, valid=True)
+    recomputed = report_hash(payload)
+    return ChecksumResult(
+        present=True,
+        valid=recorded == recomputed,
+        recorded=str(recorded),
+        recomputed=recomputed,
+    )
+
+
 def load(path: Path) -> RunManifest:
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload.pop("manifest_hash", None)

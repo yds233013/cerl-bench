@@ -304,7 +304,10 @@ def grade(
 
     # Terminal diff only. A change made and then undone leaves nothing here --
     # which is precisely the blind spot this study exists to measure.
-    terminal = diff_business(initial.as_document(), final.as_document())
+    # Read-only view; the differ does not write. See ``document_for_reading``.
+    terminal = diff_business(
+        initial.document_for_reading(), final.document_for_reading(),
+    )
     split = residual_of_diffs((terminal,), scenario.permitted(), scenario.variables)
     agent_residual = _attributable_to_agent(split.agent, scenario, final)
 

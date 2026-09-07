@@ -1,0 +1,204 @@
+{
+  "what_this_is": "Observed behaviour of each reviewed defect, before and after. 'before' was produced by running the same probes against candidate fc2a301's own source in a git worktree, not by reading the code.",
+  "before_commit": "fc2a301",
+  "after_commit": "35d276e",
+  "before": {
+    "D1_inflated_scores": {
+      "ok": true,
+      "summary": "verified 5 episodes offline; all evidence matches"
+    },
+    "D1_corrupted_step": {
+      "ok": true,
+      "summary": "verified 5 episodes offline; all evidence matches"
+    },
+    "D2_aliasing": {
+      "sealed_trace_says": "mutated-by-consumer",
+      "chain": "ChainBroken: entry 0 seal does not match its contents",
+      "as_document_first_read": "Alpine Ceramics",
+      "as_document_second_read_after_external_edit": "MUTATED"
+    },
+    "D4_finite_domains": {
+      "tool_schema_version": "1.1.0",
+      "advertised_amount_cents": {
+        "type": "integer"
+      },
+      "advertised_status": {
+        "type": "string"
+      },
+      "advertised_comment_kind": {
+        "type": "string"
+      },
+      "amount_cents": {
+        "0": "action VALIDATED, then ValidationError raised out of env.step; trace entries: 0",
+        "-1": "action VALIDATED, then ValidationError raised out of env.step; trace entries: 0"
+      },
+      "unknown_comment_kind": "accepted at the boundary"
+    },
+    "D3_concurrency": {
+      "two_concurrent_posts_same_token": [
+        [
+          200,
+          0
+        ],
+        [
+          200,
+          1
+        ]
+      ],
+      "environment_steps_executed": 2,
+      "history_records": 2,
+      "trace_entries": 1,
+      "step_index": 1,
+      "terminal_retry": {
+        "first": [
+          200,
+          0
+        ],
+        "retry": [
+          409,
+          "this episode has ended"
+        ]
+      },
+      "token_reused_with_different_action": [
+        200,
+        "tickets.get"
+      ]
+    },
+    "D5_reviewer_routing": {
+      "frontend_built_in_this_worktree": true,
+      "operational_/?review": 200,
+      "operational_/review/episodes": 404,
+      "reviewer_/review/episodes": 200,
+      "reviewer_/": 404
+    }
+  },
+  "after": {
+    "D1_manifest_verification": {
+      "untouched_historical_run": {
+        "ok": true,
+        "episodes": 5,
+        "checksum": "valid",
+        "summary": "verified 5 episodes offline; all evidence matches"
+      },
+      "inflated_scores_with_consistent_aggregates": {
+        "ok": false,
+        "mismatch_fields": [
+          "correct_final_state",
+          "decision_correct",
+          "metrics.decision_correct_rate",
+          "metrics.task_completion_mean",
+          "task_completion"
+        ],
+        "mismatch_count": 17
+      },
+      "corrupted_step": {
+        "ok": false,
+        "mismatch_fields": [
+          "step[0].committed_classes",
+          "step[0].outcome",
+          "step[0].state_hash_after"
+        ]
+      },
+      "unverifiable_claims": [
+        "who produced this run (agent.provider, agent.name)",
+        "which model produced it, and that a model produced it at all",
+        "the wall-clock cost or spend attributed to it"
+      ]
+    },
+    "D2_aliasing": {
+      "observation_mutated_to": "mutated-by-consumer",
+      "sealed_trace_still_says": "open",
+      "chain": "verifies",
+      "as_document_first_read": "Alpine Ceramics",
+      "as_document_second_read_after_external_edit": "Alpine Ceramics",
+      "state_hash_unchanged": true
+    },
+    "D4_finite_domains": {
+      "tool_schema_version": "1.2.0",
+      "advertised_amount_cents": {
+        "type": "integer",
+        "exclusiveMinimum": 0
+      },
+      "advertised_status": {
+        "type": "string",
+        "enum": [
+          "open",
+          "pending_customer",
+          "resolved",
+          "escalated"
+        ]
+      },
+      "advertised_comment_kind": {
+        "type": "string",
+        "enum": [
+          "resolution",
+          "escalation",
+          "info_request",
+          "note"
+        ]
+      },
+      "amount_cents": {
+        "0": "rejected at the action boundary: Input should be greater than 0",
+        "-1": "rejected at the action boundary: Input should be greater than 0",
+        "42000": "accepted"
+      },
+      "unknown_comment_kind": "rejected, not renamed to note"
+    },
+    "D3_concurrency": {
+      "two_concurrent_posts_same_token": [
+        [
+          200,
+          0
+        ],
+        [
+          200,
+          0
+        ]
+      ],
+      "environment_steps_executed": 1,
+      "history_records": 1,
+      "trace_entries": 1,
+      "step_index": 1,
+      "terminal_retry": {
+        "first": [
+          200,
+          0
+        ],
+        "retry": [
+          200,
+          0
+        ],
+        "genuinely_new_action_after_end": [
+          409,
+          "this episode has ended"
+        ]
+      },
+      "token_reused_with_different_action": [
+        409,
+        "that submission id was already used for a different action"
+      ],
+      "request_from_before_a_reset": [
+        409,
+        "this session was reset while your request was in flight"
+      ]
+    },
+    "D5_reviewer_routing": {
+      "vite_running": false,
+      "reviewer_/": 200,
+      "reviewer_/?review": 200,
+      "reviewer_/review/episodes": [
+        200,
+        6
+      ],
+      "operational_/": 200,
+      "operational_/review/episodes": 404,
+      "operational_/review/health": 404,
+      "local-baseline:0": {
+        "failure_class": "UNAUTHORIZED_ACTION",
+        "committed": [
+          "C_AUTH"
+        ]
+      }
+    }
+  }
+}
