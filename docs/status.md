@@ -48,6 +48,7 @@ been evaluated, and no research claim (C1–C6) has been measured.
 | Offline regeneration from cache | **IMPLEMENTED** | `cerl regenerate`; a cache miss fails rather than calling out |
 | Offline action replay + manifest verification | **IMPLEMENTED** | `cerl verify-manifest` |
 | Spend accounting (4 quantities, retries, resume) | **IMPLEMENTED** | `docs/budget-accounting.md`; 18 tests |
+| **Interactive workspace application** | **IMPLEMENTED** | React/TS over a thin stdlib HTTP adapter; `docs/workspace.md` |
 | **Grader comparison study (state-only vs trace-aware)** | **COMPLETE** | 1,134 cases; `docs/grader-study-results.md` |
 | **Local-model agent + recorded run** | **IMPLEMENTED** | `qwen3:4b` via Ollama; replay verified; `LOCAL_BASELINE_REPORT.md` |
 | Refund tool contract (`reason` vocabulary) | **FIXED** | schema advertises the closed set; tool schema 1.0.0 → **1.1.0** |
@@ -251,6 +252,24 @@ On the six recorded model trajectories the graders **agree everywhere**,
 including both `C_AUTH` detections. No naturally occurring instance of the
 restored-change failure has been observed. Detail: `docs/grader-study-results.md`.
 
+## Interactive workspace (2026-09-06)
+
+A working support & billing application over W2: ticket inbox with search,
+customer and billing records, approval conversations and records, and actions
+for investigation, requesting approval, refunding, ticket notes, status and
+escalation. Three deterministic demonstrations, each resettable to its exact
+initial state.
+
+The simulator remains the single source of truth. Logical time advances only on
+dispatched actions — polling and waiting do not move it. The app adds **no**
+policy enforcement: an unauthorised refund still commits and still latches
+`C_AUTH`, because a UI guard would delete the dependent variable. Genuine
+backend interlocks still fire.
+
+Operational and reviewer are **separate processes**. The operational server has
+no code path to a verdict, branch label or violation flag, asserted over the
+serialised responses. Setup and architecture: `docs/workspace.md`.
+
 ## What this candidate does not establish
 
 - No C1–C6 claim. Those need trained arms, the full split structure, and a
@@ -262,5 +281,6 @@ restored-change failure has been observed. Detail: `docs/grader-study-results.md
 - 36/190 is what one specific escalating control scored. It is not a proven
   ceiling on escalation-shaped policies, and none is claimed.
 - Nothing produced by the synthetic transport is a model result.
+- The workspace demo fixture is development-exposed and is not evaluation data.
 - The local baseline is a development smoke test on training data, n=5, one
   model, one configuration. It is not a held-out evaluation of anything.

@@ -12,6 +12,9 @@ from cerl.actions import ActionKind
 from cerl.agents import budget as budget_module
 from cerl.agents import local_client as local_client_module
 from cerl.agents import model_client, synthetic_transport
+from cerl.app import demos as app_demos
+from cerl.app import http as app_http
+from cerl.app import operational, reviewer
 from cerl.core import FrozenMap
 from cerl.eval import demos as demo_module
 from cerl.eval import grader_study, verify_run
@@ -661,6 +664,52 @@ def grader_study_command(
     diffs = grader_study.disagreements(result)
     typer.echo(f"disagreements: {len(diffs)} of {len(result.cases)}")
     typer.secho(f"wrote {inventory} and {results}", fg=typer.colors.GREEN)
+
+
+@app.command(name="serve")
+def serve_command(
+    port: Annotated[int, typer.Option(help="Operational API port.")] = 8000,
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Start the operational workspace API. No privileged data is served.
+
+    This process has no code path to a verdict, a branch label or a violation
+    flag: the reviewer lives in a separate server started by `cerl serve-review`.
+    """
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    fixture = app_demos.load_demo_fixture()
+    if fixture is None:
+        fixture = app_demos.build_demo_fixture()
+        typer.echo(f"built demo fixture {fixture.scenario_id}")
+    workspace = operational.Workspace(scenarios, fixture)
+    server = app_http.serve(workspace.router(), port, "operational")
+    typer.secho(
+        f"operational workspace on http://127.0.0.1:{port}  "
+        f"({len(workspace.demos)} demos, no privileged data)",
+        fg=typer.colors.GREEN,
+    )
+    server.serve_forever()
+
+
+@app.command(name="serve-review")
+def serve_review_command(
+    port: Annotated[int, typer.Option(help="Reviewer API port.")] = 8001,
+    frozen_dir: Annotated[Path, typer.Option()] = FROZEN,
+) -> None:
+    """Start the reviewer replay API. Serves verdicts; launch deliberately.
+
+    Kept a separate process from the operational API on purpose: during agent
+    evaluation this one simply is not running, which is a stronger guarantee
+    than a hidden panel.
+    """
+    scenarios = [freeze_module.load(p) for p in sorted(frozen_dir.glob("*.json"))]
+    library = reviewer.ReviewLibrary(scenarios)
+    server = app_http.serve(library.router(), port, "reviewer")
+    typer.secho(
+        f"reviewer replay on http://127.0.0.1:{port}  (privileged: verdicts)",
+        fg=typer.colors.YELLOW,
+    )
+    server.serve_forever()
 
 
 @app.command(name="regenerate")

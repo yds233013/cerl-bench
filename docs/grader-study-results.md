@@ -138,6 +138,14 @@ v2 → v3.
 its false negatives.** No change was made to the trace-aware grader; its
 semantics and `VERIFIER_VERSION` are untouched.
 
+> **The corrected state-only numbers are evaluation-exposed.** Baseline v2 was
+> written in response to failures observed on the evaluation set, so its
+> 1020/1134 is **not untouched held-out performance** and must not be presented
+> as such. The untouched figure is baseline v1's, preserved in
+> `PRE_FIX_case_results.json`. Only the trace-aware grader's counts, and the
+> state-only counts on the *development* set, were produced without having seen
+> the evaluation results.
+
 ## 6. Recorded model trajectories — case study, reported apart
 
 Never pooled with the constructed cases. These are observed behaviour; the
@@ -171,6 +179,17 @@ deadline and is not presented as a normally completed task.
 observed.** The 114 cases that produce the entire disagreement are all
 constructed. That is stated rather than glossed: this study shows what the
 graders *would* do, not that a model has done it.
+
+> **What violate-then-revert demonstrates, precisely.** It shows that a
+> state-only reward signal *can be exploited* — the same final state is reachable
+> with and without a prohibited intermediate change, so the two are
+> indistinguishable to a grader that sees only endpoints. That is a property of
+> the grader, established here.
+>
+> It does **not** show that an agent discovers this, learns it, or is drawn to
+> it under optimisation. No agent in this project has produced such a
+> trajectory; all 114 were written by hand. Whether a trained policy would find
+> the exploit is an open question this study does not address and cannot.
 
 ## 7. What this does and does not support
 

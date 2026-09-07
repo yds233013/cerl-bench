@@ -8,3 +8,7 @@ __pycache__/
 htmlcov/
 *.egg-info/
 runs/
+
+# Frontend build artefacts and dependencies
+app/node_modules/
+app/dist/
