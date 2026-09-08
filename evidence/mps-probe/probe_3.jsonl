@@ -1,0 +1,9 @@
+{"t": 0.0, "stage": "probe_begin", "probe": 3, "pid": 57276}
+{"t": 2.34, "stage": "loading_tokenizer"}
+{"t": 2.757, "stage": "loading_policy", "note": "fresh rank-8 LoRA, bfloat16, as the trial used"}
+{"t": 5.808, "stage": "policy_loaded", "synchronized": true}
+{"t": 6.319, "stage": "prompt_built", "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101", "shape": [1, 1524], "dtype": "torch.int64", "device": "mps:0", "bytes": 12192}
+{"t": 6.319, "stage": "greedy_generate_begin", "max_new_tokens": 1, "sampling": {"do_sample": false}, "prompt_tokens": 1524}
+{"t": 11.772, "stage": "greedy_generate_done", "synchronized": true, "shape": [1, 1525], "dtype": "torch.int64", "device": "mps:0", "bytes": 12200, "new_tokens": 1}
+{"t": 11.773, "stage": "probe_3_complete"}
+{"t": 11.813, "stage": "probe_end", "probe": 3}

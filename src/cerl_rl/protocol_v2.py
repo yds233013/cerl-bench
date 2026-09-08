@@ -80,9 +80,25 @@ TRAIN_TEMPERATURE = 1.0
 SAMPLING_NEUTRALISED: dict[str, object] = {
     "top_k": 0,
     "top_p": 1.0,
-    "min_p": 0.0,
     "typical_p": 1.0,
     "repetition_penalty": 1.0,
     "no_repeat_ngram_size": 0,
     "renormalize_logits": False,
+    # NOTE: ``min_p`` is deliberately ABSENT rather than set to 0.0.
+    #
+    # transformers builds the min-p warper on ``if generation_config.min_p is
+    # not None``, with no value test -- and ``0.0 is not None``. So passing
+    # ``min_p=0.0`` to mean "no min-p filtering" *constructs* the warper, which
+    # then runs ``argsort``/``gather``/``scatter`` across the whole 151,936-token
+    # vocabulary. On this machine that aborted the process with
+    # ``MPSTemporaryNDArray ... total bytes of NDArray > 2**32`` and killed the
+    # first v2 training trial (see evidence/mps-probe/REPORT.md).
+    #
+    # Omitting the key leaves it ``None``, so no warper is built. The intended
+    # semantics -- no min-p filtering -- are identical.
+    #
+    # Every other key here is safe because its guard also tests the value:
+    # ``top_k != 0``, ``top_p < 1.0``, ``typical_p < 1.0``,
+    # ``repetition_penalty != 1.0``, ``no_repeat_ngram_size > 0``,
+    # ``renormalize_logits is True``. ``min_p`` was the only bare None check.
 }

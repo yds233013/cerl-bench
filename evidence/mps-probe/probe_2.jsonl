@@ -1,0 +1,6 @@
+{"t": 0.0, "stage": "probe_begin", "probe": 2, "pid": 57252}
+{"t": 1.91, "stage": "loading_tokenizer"}
+{"t": 2.387, "stage": "loading_policy", "note": "fresh rank-8 LoRA, bfloat16, as the trial used"}
+{"t": 6.452, "stage": "policy_loaded", "synchronized": true}
+{"t": 6.963, "stage": "prompt_built", "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101", "shape": [1, 1524], "dtype": "torch.int64", "device": "mps:0", "bytes": 12192}
+{"t": 6.963, "stage": "v2_sampling_generate_begin", "max_new_tokens": 1, "sampling": {"do_sample": true, "temperature": 1.0, "top_k": 0, "top_p": 1.0, "min_p": 0.0, "typical_p": 1.0, "repetition_penalty": 1.0, "no_repeat_ngram_size": 0, "renormalize_logits": false}, "prompt_tokens": 1524}

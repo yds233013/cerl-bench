@@ -1,0 +1,16 @@
+{"t": 0.0, "stage": "probe_begin", "probe": 1, "pid": 57238}
+{"t": 1.17, "stage": "versions", "transformers": "4.57.1", "torch": "2.8.0", "mps": true}
+{"t": 1.172, "stage": "resolved_generation_config", "file": {"do_sample": true, "temperature": 0.6, "top_k": 20, "top_p": 0.95, "min_p": null, "repetition_penalty": 1.0, "eos_token_id": [151645, 151643], "pad_token_id": 151643}, "merged_for_v2": {"do_sample": true, "temperature": 1.0, "top_k": 0, "top_p": 1.0, "min_p": 0.0, "typical_p": 1.0, "repetition_penalty": 1.0, "no_repeat_ngram_size": 0, "renormalize_logits": false}}
+{"t": 1.924, "stage": "logits_processor_api", "present": true}
+{"t": 1.924, "stage": "active_warpers_under_v2_settings", "warpers": ["none"]}
+{"t": 2.012, "stage": "synthetic_logits_built", "synchronized": true, "shape": [1, 151936], "dtype": "torch.float32", "device": "mps:0", "bytes": 607744}
+{"t": 2.013, "stage": "softmax_begin"}
+{"t": 2.072, "stage": "softmax_done", "synchronized": true, "shape": [1, 151936], "dtype": "torch.float32", "device": "mps:0", "bytes": 607744}
+{"t": 2.072, "stage": "multinomial_begin", "note": "this is what generate() calls when sampling"}
+{"t": 2.272, "stage": "multinomial_done", "synchronized": true, "shape": [1, 1], "dtype": "torch.int64", "device": "mps:0", "bytes": 8, "value": 39650}
+{"t": 2.273, "stage": "argmax_begin"}
+{"t": 2.274, "stage": "argmax_done", "synchronized": true, "shape": [1], "dtype": "torch.int64", "device": "mps:0", "bytes": 8, "value": 52307}
+{"t": 2.274, "stage": "sort_begin", "note": "top-p would sort the vocabulary"}
+{"t": 2.292, "stage": "sort_done", "synchronized": true, "shape": [1, 151936], "dtype": "torch.float32", "device": "mps:0", "bytes": 607744}
+{"t": 2.293, "stage": "probe_1_complete", "verdict": "sampling ops survive a real-vocabulary tensor"}
+{"t": 2.293, "stage": "probe_end", "probe": 1}

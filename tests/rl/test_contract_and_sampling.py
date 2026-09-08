@@ -123,14 +123,15 @@ def test_every_advertised_tool_name_maps_to_a_real_action_kind():
 
 
 def test_v2_neutralises_every_truncating_sampler():
+    """min_p is neutralised by *omission* -- see the test below for why."""
     from cerl_rl import protocol_v2
 
     neutral = protocol_v2.SAMPLING_NEUTRALISED
     assert neutral["top_k"] == 0
     assert neutral["top_p"] == 1.0
-    assert neutral["min_p"] == 0.0
     assert neutral["typical_p"] == 1.0
     assert neutral["repetition_penalty"] == 1.0
+    assert "min_p" not in neutral
 
 
 @pytest.mark.model
@@ -160,3 +161,52 @@ def test_the_v2_sampling_arguments_override_those_defaults():
     merged = config.to_dict() | dict(protocol_v2.SAMPLING_NEUTRALISED)
     assert merged["top_k"] == 0
     assert merged["top_p"] == 1.0
+
+
+# --------------------------------------------------------------------------
+# the min_p trap that aborted the first v2 trial
+# --------------------------------------------------------------------------
+
+
+def test_min_p_is_omitted_rather_than_set_to_zero():
+    """Setting it to 0.0 does not disable it -- it builds the warper.
+
+    ``transformers`` guards min-p on a bare ``is not None``, and ``0.0 is not
+    None``. The constructed warper then sorts, gathers and scatters across the
+    whole vocabulary, which aborted the process on MPS and killed the first v2
+    training trial. Omitting the key leaves it ``None`` and builds nothing,
+    with identical intended semantics.
+    """
+    from cerl_rl import protocol_v2
+
+    assert "min_p" not in protocol_v2.SAMPLING_NEUTRALISED
+
+
+@pytest.mark.model
+def test_every_neutralised_setting_actually_disables_its_warper():
+    """Checked against the installed source, not assumed.
+
+    A neutral *value* only disables a warper if the guard tests the value.
+    ``min_p`` was the one that did not, and nothing stops another key from
+    joining it in a future release.
+    """
+    import inspect
+
+    from transformers.generation.utils import GenerationMixin
+
+    from cerl_rl import protocol_v2
+
+    source = inspect.getsource(GenerationMixin._get_logits_processor)
+    guards = {
+        line.strip()
+        for line in source.splitlines()
+        if line.strip().startswith("if") and "generation_config." in line
+    }
+    for key in protocol_v2.SAMPLING_NEUTRALISED:
+        guard = next((g for g in guards if f"generation_config.{key}" in g), None)
+        assert guard is not None, f"no guard found for {key}"
+        tests_value = any(token in guard for token in ("!=", "<", ">", "is True"))
+        assert tests_value, (
+            f"{key} is guarded only by a None check, so its neutral value would "
+            f"still construct the warper -- omit the key instead of neutralising it"
+        )
