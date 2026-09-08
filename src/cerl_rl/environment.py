@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from enum import StrEnum
 from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
@@ -25,6 +26,30 @@ _ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
 
 #: The three actions that end an episode.
 TERMINAL_KINDS = frozenset({"finish", "escalate", "abstain"})
+
+
+class ActionCategory(StrEnum):
+    """What an action was, for counting purposes.
+
+    v1 counted every non-malformed action as a ``tool_call``, terminal
+    declarations included, which disagrees with the benchmark verifier: it
+    reported 15 tool calls for a validation phase the verifier scores as 10, and
+    191 against 150 in training. Three categories, counted separately, so a
+    number can be compared with the verifier's instead of quietly redefining it.
+    """
+
+    TOOL_CALL = "tool_call"
+    TERMINAL = "terminal"
+    MALFORMED = "malformed"
+
+
+def categorise(action: Action) -> ActionCategory:
+    kind = str(action.kind)
+    if kind == "malformed":
+        return ActionCategory.MALFORMED
+    if kind in TERMINAL_KINDS:
+        return ActionCategory.TERMINAL
+    return ActionCategory.TOOL_CALL
 
 
 def tool_menu() -> str:
@@ -57,6 +82,21 @@ def episode_reward(verdict: Any) -> float:
     return float(default_scalar(reward_vector, committed))
 
 
+#: Every tool name the public schema advertises. An allowlist, because
+#: ``tool_name_to_kind`` is a string substitution and will happily transform a
+#: name that no tool has.
+def _public_tool_kinds() -> dict[str, str]:
+    return {schema["name"]: tool_name_to_kind(schema["name"]) for schema in all_tool_schemas()}
+
+
+PUBLIC_TOOLS: dict[str, str] = _public_tool_kinds()
+
+#: Field names the caller may never supply. ``kind`` is the discriminator the
+#: action union dispatches on: allowing it as an argument let a request name one
+#: tool and execute another.
+RESERVED_ARGUMENTS = frozenset({"kind"})
+
+
 def parse_action(text: str) -> Action:
     """Model text -> a validated Action, or a scored MalformedAction.
 
@@ -64,6 +104,21 @@ def parse_action(text: str) -> Action:
     recorded action that consumes a step. It is never retried, repaired or
     silently dropped -- any of those would make the malformed-turn rate
     unmeasurable, and that rate is what the earlier 4B run actually measured.
+
+    Three hardenings over the first version, each closing a way for the parsed
+    action to be something other than what the text asked for:
+
+    * The tool is looked up in the **public allowlist**, not transformed by
+      string substitution, so a name no tool has cannot become a plausible kind.
+    * ``kind`` is **reserved**. ``{"kind": kind, **arguments}`` previously let an
+      argument named ``kind`` overwrite the discriminator, so
+      ``{"tool": "tickets__get", "arguments": {"kind": "billing.delete_customer",
+      ...}}`` parsed as a *customer deletion*. The core's interlocks and policy
+      grading were never bypassed -- but the advertised contract was, and an
+      action was recorded that the text did not request.
+    * ``arguments`` must be an **object**. ``payload.get("arguments") or {}``
+      turned ``0``, ``""``, ``[]`` and ``null`` into an empty argument set,
+      silently inventing a call the model did not make.
     """
     snippet = text.strip()
     start, end = snippet.find("{"), snippet.rfind("}")
@@ -78,15 +133,39 @@ def parse_action(text: str) -> Action:
         return MalformedAction(raw=snippet[:400], parse_error=f"invalid JSON: {error.msg}")
     if not isinstance(payload, dict) or "tool" not in payload:
         return MalformedAction(raw=snippet[:400], parse_error="no 'tool' key in the object")
-    try:
-        kind = tool_name_to_kind(str(payload["tool"]))
-    except Exception:  # noqa: BLE001 - any unknown name is simply malformed
+
+    name = str(payload["tool"])
+    kind = PUBLIC_TOOLS.get(name)
+    if kind is None:
         return MalformedAction(
-            raw=snippet[:400], parse_error=f"unknown tool {payload['tool']!r}",
+            raw=snippet[:400],
+            parse_error=f"unknown tool {name!r}; it is not in the advertised tool list",
         )
-    arguments = payload.get("arguments") or {}
-    if not isinstance(arguments, dict):
-        return MalformedAction(raw=snippet[:400], parse_error="'arguments' must be an object")
+
+    if "arguments" not in payload:
+        arguments: Any = {}
+    else:
+        arguments = payload["arguments"]
+        if arguments is None:
+            arguments = {}
+        elif not isinstance(arguments, dict):
+            return MalformedAction(
+                raw=snippet[:400],
+                parse_error=(
+                    f"'arguments' must be an object, got {type(arguments).__name__}"
+                ),
+            )
+
+    reserved = RESERVED_ARGUMENTS & set(arguments)
+    if reserved:
+        return MalformedAction(
+            raw=snippet[:400],
+            parse_error=(
+                f"{sorted(reserved)} may not be supplied as arguments; the tool is "
+                f"chosen by 'tool' alone"
+            ),
+        )
+
     try:
         return _ACTION_ADAPTER.validate_python({"kind": kind, **arguments})
     except ValidationError as error:

@@ -130,3 +130,49 @@ def test_the_feasibility_record_matches_the_protocol(record):
     assert feas["summary"]["validation"]["safe_at_limit_12"] == 2
     assert feas["summary"]["train"]["safe_full_gold"] == 10
     assert feas["summary"]["validation"]["safe_full_gold"] == 5
+
+
+# --------------------------------------------------------------------------
+# R6: tool-call metrics
+# --------------------------------------------------------------------------
+
+
+def test_the_runner_counted_terminal_declarations_as_tool_calls(record):
+    """The defect, pinned. The recorded rows keep their values; this asserts the
+    discrepancy exists so the derived audit is not mistaken for a restatement."""
+    from cerl_rl.audit import audit
+
+    result = audit(record)
+    baseline = result["phases"]["baseline"]
+    assert baseline["reported_tool_calls"] == 15
+    assert baseline["verifier_tool_calls"] == 10
+    assert baseline["terminal_declarations"] == 5
+
+    training = result["phases"]["training"]
+    assert training["reported_tool_calls"] == 191
+    assert training["verifier_tool_calls"] == 150
+    assert training["terminal_declarations"] == 41
+    assert training["malformed_actions"] == 26
+    assert training["total_actions"] == 217
+
+
+def test_the_corrected_categories_agree_with_the_verifier(record):
+    """Two independent routes to the same number: categorising the recorded
+    actions, and asking the verifier. They must agree, or the categorisation is
+    the wrong definition rather than a corrected one."""
+    from cerl_rl.audit import audit
+
+    for phase in audit(record)["phases"].values():
+        assert phase["tool_calls"] == phase["verifier_tool_calls"]
+        assert (
+            phase["tool_calls"] + phase["terminal_declarations"]
+            + phase["malformed_actions"] == phase["total_actions"]
+        )
+
+
+def test_the_original_record_is_not_modified_by_auditing(record):
+    from cerl_rl.audit import audit
+
+    before = json.dumps(record, sort_keys=True)
+    audit(record)
+    assert json.dumps(record, sort_keys=True) == before

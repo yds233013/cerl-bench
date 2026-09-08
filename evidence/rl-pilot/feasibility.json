@@ -10,7 +10,7 @@
     "max_prompt_tokens": 8192,
     "max_new_tokens": 160
   },
-  "caveat": "Gold length is NOT a proven minimum. The oracle is one correct policy, not the shortest; a shorter correct trajectory may exist. These numbers establish that known-correct workflows FIT the proposed limits, nothing more.",
+  "caveat": "Gold length is NOT a proven minimum and these replays do NOT show the scenarios are unsolvable within the smaller limit. The oracle is one correct policy, not the shortest; no search for a shorter correct trajectory was performed. What is established: the REFERENCE trajectories exceed the 12-action limit for 6 of the 15 selected scenarios, and all 15 fit the proposed limits. No maximum achievable score is implied.",
   "scenarios": {
     "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101": {
       "partition": "train",

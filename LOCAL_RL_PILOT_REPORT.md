@@ -1,7 +1,8 @@
 # Local RL pilot — GRPO on the real W2 environment
 
-**Reward-driven training happened, it changed nothing measurable, and a
-post-hoc review found the task was partly impossible.**
+**Reward-driven training happened, it changed nothing measurable, and two
+independent reviews found the training wrapper did not satisfy its own
+contract.**
 
 Eight optimizer updates were driven by real environment rewards with finite
 gradients; the LoRA adapter moved in all 224 tensors; the checkpoint reloads and
@@ -11,17 +12,24 @@ policy produced **byte-identical action sequences** to the baseline.
 An offline review afterwards found two protocol defects that change how the run
 should be read, and they are the most important things in this document:
 
-1. **The 12-action limit made 6 of the 15 selected scenarios unsolvable by any
-   policy**, the oracle included (§3a). The reward signal the pilot trained on
-   was collected on a task that was partly impossible.
+1. **The reference trajectories did not fit the 12-action limit** for 6 of the
+   15 selected scenarios (§3a). That does not prove those scenarios are
+   unsolvable in 12 actions — a shorter correct trajectory may exist — but it
+   does mean the known-good solutions were out of reach.
 2. **The reward variation came almost entirely from the decision term** (§5a).
    Every rollout scored `correct_final_state = 0`; the spread was "declared the
    right *kind* of outcome" worth 0.3, not "did the work".
+3. **The loss did not train on what it claimed to** (§4b, R1). The trained span
+   was located by searching re-rendered text and could select tokens from the
+   system prompt; and the re-render changed the conditioning, so turns were
+   scored under a prefix the model was never given. The v1 "generated tokens
+   only, exactly on-policy" claim is therefore **withdrawn**.
 
-So the eight updates were real GRPO updates on real environment rewards, and
-what those rewards mostly measured was outcome-kind selection under a truncated
-episode. The training machinery is verified (§4); the *experiment* is not a
-clean test of anything and is not presented as one.
+So the eight updates moved parameters in a reward-weighted direction, but the
+per-token attribution behind them is not sound, and the rewards mostly measured
+outcome-kind selection under a truncated episode. The arithmetic is verified
+(§4, §4a); the *experiment* is not a clean test of anything and is not presented
+as one.
 
 Small development finding. Not a generalization claim, not evidence for or
 against C1–C6, and **not comparable to the earlier `qwen3:4b` Ollama run**, which
@@ -106,7 +114,7 @@ The zero regularization is deliberate: with no KL and no weight decay, **every
 parameter change is attributable to the reward objective alone.** There is no
 "was it just the regularizer" ambiguity to disentangle afterwards.
 
-## 3a. The action limit made the task partly impossible
+## 3a. The reference trajectories did not fit the action limit
 
 Found after the run, by replaying the canonical **gold trajectories** through the
 pilot's own episode semantics (`cerl_rl.environment.drive` — terminal action ends
@@ -119,11 +127,16 @@ pilot did.
 | Train (10) | **10/10 safe** | **7/10** |
 | Validation (5) | **5/5 safe** | **2/5** |
 
-The six failures are not policy failures. The gold trajectories need **10, 11,
-12, 13, 14 and 16** actions; the ones needing 13+ simply cannot finish in 12, so
-they end step-limited whatever the policy does. **Three of the five validation
-scenarios were unwinnable**, which caps the before/after measurement at 2/5
-before a single token is generated.
+The gold trajectories need **10, 11, 12, 13, 14 and 16** actions, so those
+needing 13+ end step-limited when replayed under a 12-action cap.
+
+**What this does and does not establish.** It establishes that the *reference*
+solutions to six scenarios — three of them in validation — exceed the limit that
+ran. It does **not** establish that those scenarios are unsolvable within 12
+actions, and it does **not** imply a maximum achievable score of 2/5. The oracle
+is one correct policy, not the shortest one, and no search for a shorter correct
+trajectory was performed. An earlier draft of this report claimed both; those
+claims are withdrawn.
 
 The token budgets have the same problem one layer down. The longest gold
 trajectory reaches a **3,639-token prompt against the 3,072 cap**, and the cap
@@ -212,7 +225,7 @@ L    = −(1/G) · Σ_i  A_i · mean_{t∈M_i} log π_θ(x_t | x_<t)
 | Sign | `−A·logπ`, so `A>0` raises likelihood | same | verified by two sign tests |
 | **Old-policy ratio / clipping** | **absent** | `min(ρA, clip(ρ,1±ε)A)` | equivalent **only** because exactly one gradient step is taken per generation, so `ρ ≡ 1` and the clip never binds. This implementation **cannot** do multiple inner epochs per batch — doing so would be uncorrected off-policy |
 | KL to reference | **absent** (β=0) | usually present | deliberate: with no KL and no weight decay, every parameter change is attributable to the reward |
-| Token normalisation | per-episode **mean** over generated tokens, then ÷G | sum over tokens ÷ total tokens | each episode carries equal weight regardless of length; the standard form length-biases toward long episodes |
+| Token normalisation | per-episode **mean** over generated tokens, then ÷G | published formulations differ | each episode carries equal weight regardless of length. The earlier claim that this departs from "the original GRPO formulation" was not checked against a specific reference and is withdrawn; it is stated here as a choice, not a deviation |
 | Loss mask | model-generated tokens only | whole completion | required here: an episode is ~93% environment text |
 | Causal alignment | hidden state at *t* scores token *t+1* | same | verified against a shifted-mask control that must disagree |
 | Gradient accumulation | per-episode backward, loss pre-divided by G | one batched backward | proven gradient-identical |
@@ -228,12 +241,112 @@ Two optimisations were checked to be optimisations and not different objectives:
 **One real deviation with no clean justification.** Training rollouts sample with
 `temperature=1.0, top_p=0.95` *and* — unintentionally — **`top_k=20`**, because
 Qwen3-0.6B's `generation_config.json` sets it and the rollout never overrides it.
-The loss differentiates the **untruncated** log-softmax. So the behaviour policy
-is a truncated distribution while the target is not, and the policy gradient is
-biased for tokens outside the top-20. With a single on-policy step the bias is
-small, but it is real, it was not intended, and the fix is to set `top_k=0`
-explicitly (or to score under the same truncation). Evaluation is unaffected:
-`do_sample=False` makes `top_k`/`top_p` inert.
+The loss differentiates the **untruncated** log-softmax, so the behaviour policy
+is a truncated distribution while the target is not. **The magnitude of the
+resulting bias was never measured**; an earlier draft called it "small" and that
+claim is withdrawn. Truncation removes support, which is also why importance
+weights are not a casual fix. v2 removes the truncation instead — see §4b.
+Evaluation is unaffected: `do_sample=False` makes `top_k`/`top_p` inert.
+
+**Note on §4a as a whole.** The equivalences below were established *given a
+mask and a token sequence*. R1 shows v1 did not construct those correctly, so
+these results validate the arithmetic, not the v1 training run.
+
+## 4b. What the second review found in the training wrapper, and protocol v2
+
+The corrections live in **protocol v2** (`src/cerl_rl/protocol_v2.py`,
+`rollout_v2.py`, `grpo.turn_backward`). v1 is frozen exactly as it ran, so
+`ef6942e` stays reproducible; v2 is a separate protocol rather than an edit,
+because the two produce different numbers and carrying a result between them
+would be comparing two experiments.
+
+### R1 — the loss did not train on the span it claimed
+
+Two independent defects, both reproduced:
+
+- **The trained span was found by text search.** v1 decoded the generated tokens
+  to text, re-rendered the whole conversation, and searched it from position
+  zero. With the pinned tokenizer, a system message containing a JSON answer
+  followed by an assistant producing that answer caused **all 32 selected tokens
+  to come from the system message**. An unmatched completion was silently
+  skipped.
+- **Re-rendering changed the conditioning.** Qwen's template drops the empty
+  `<think></think>` block from *earlier* assistant turns, so generation happened
+  after `…assistant\n<think>\n\n</think>\n\n` while the backward pass scored that
+  same action after `…assistant\n`. The loss evaluated a different conditional
+  than the one sampled.
+
+**v2 never reconstructs.** Each `generate` call's exact prompt ids and generated
+ids are recorded before any decoding, and each turn is scored in its own forward
+pass over `prompt_ids + generated_ids`. Spans are known rather than found;
+earlier turns appear as context and are never scored twice; EOS is distinguished
+from output-limit truncation; an inconsistent or empty span raises
+`TokenProvenanceError` rather than training on something else.
+
+**Consequence for v1's claims.** "The loss applies only to model-generated
+tokens" and "exactly on-policy" are **withdrawn** for the recorded run. The v1
+records do not retain raw per-turn token ids, so which historical spans were
+affected cannot be established after the fact — and reconstructing them now
+would not be original evidence.
+
+### R3 — the sampled and scored distributions differed
+
+v1 passed `temperature=1.0, top_p=0.95` and left the model's own `top_k=20`
+default active, while the loss differentiated the **unfiltered** softmax. Two
+truncations, neither reflected in the objective. v2 neutralises all of them
+(`top_k=0, top_p=1.0, min_p=0, typical_p=1, repetition_penalty=1`) so the
+distribution sampled is the distribution differentiated.
+
+The previous report called the resulting bias "small". **That was unmeasured and
+is withdrawn.** A single update per group makes the ratio-free objective
+locally reasonable *given matched distributions and contexts* — R1 and R3 are
+exactly the conditions that were not met.
+
+**The objective, stated without leaning on the label.** Per group of `G`
+rollouts on one scenario, with `A_i` the group-standardised reward and `M_i` the
+positions episode *i* generated:
+
+```
+A_i = (r_i − mean r) / std r        population std
+L   = −(1/G) Σ_i A_i · mean_{t∈M_i} log π_θ(x_t | exact prompt of x_t's turn)
+```
+
+There is no probability ratio and no clipping, so this is a group-baselined
+policy-gradient step, not the clipped GRPO surrogate; it is valid for **one**
+update per generation and cannot be run for multiple inner epochs. Per-episode
+token-mean normalisation is a choice, stated here rather than asserted as a
+deviation from any particular reference — the published GRPO formulations differ
+on this point and the earlier report's claim about "the original formulation"
+was not checked against a specific one.
+
+### R2 — the policy was not shown the tool contract
+
+v1 rendered names and argument names only. The recorded evidence contains **four
+malformed attempts to set a ticket to `closed`** — a value the schema excludes
+and the prompt never showed. v2 renders descriptions, argument types,
+requiredness, enums, numeric bounds and closed argument sets, all from the same
+public `all_tool_schemas()` an ordinary agent receives.
+
+This does not mean showing the schema would have made the model succeed. It
+means those failures cannot be read as inability to follow a specified
+interface.
+
+**Budget recomputed, because the contract is larger.** The system prompt grows
+497 → **1,315 tokens**, and the peak prompt across the 15 gold trajectories at 24
+actions is **4,457 tokens**, not the 3,639 measured with the abbreviated menu. So
+4,096 would *not* fit; `NEXT_MAX_PROMPT_TOKENS = 8192` leaves 3,735 spare against
+a 40,960-token context. **Unverified:** whether an 8,192-token forward pass fits
+comfortably in this machine's memory during training — that needs a forward pass.
+
+### R4, R5, R6, R7, R8 — the smaller repairs
+
+| | was | now |
+|---|---|---|
+| **R4** parsing | `{"kind": kind, **arguments}` let an argument named `kind` choose the tool — `tickets__get` parsed as `BillingDeleteCustomer`; `arguments` was coerced from any falsey value | tool looked up in a 26-entry public allowlist, `kind` reserved, non-object `arguments` refused |
+| **R5** replay | compared trace-head hashes only; a record with reward 999 and a fabricated terminal hash returned `ok: true`, and so did `{}` | replays and compares reward, task, safety, decision, violations and both hashes; cross-checks group rewards, skip decisions, update count and scenario selection; `{}` is `incomplete`, not verified |
+| **R6** metrics | every non-malformed action counted as a tool call | corrected counts derived into `metrics_audit.json`, agreeing with the verifier; original rows untouched |
+| **R7** deadline | wall clock, checked only between groups; in-place writes; default output was the recorded evidence directory | monotonic, enforced inside evaluation, raising rather than returning a flag; atomic writes; a directory holding a run is refused |
+| **R8** portability | unconditional `torch.mps.empty_cache()` failed 7 tests on any non-MPS machine | guarded by backend; the 16 CPU arithmetic tests pass with MPS disabled |
 
 ## 5. Before and after
 
@@ -399,10 +512,13 @@ reachable inside the budget.
   needed and nothing in this report is SFT.
 - The old `qwen3:4b` Ollama run is **not a matched baseline** for this
   experiment, and no comparison to it is drawn.
-- **The task was partly impossible** at the limits that ran: 6 of 15 selected
-  scenarios, and 3 of the 5 validation scenarios, could not be solved by any
-  policy (§3a). No conclusion about learning can be drawn from a run measured
-  against a partly unwinnable objective.
+- **The reference solutions did not fit the limits that ran** for 6 of 15
+  scenarios, 3 of them in validation (§3a). Whether a shorter correct trajectory
+  exists is unknown, so no maximum achievable score is claimed — but the
+  known-good solutions were unreachable.
+- **The per-token training attribution was unsound** (§4b): the trained span was
+  found by text search and the conditioning was re-rendered. Any statement of
+  the form "the gradient came only from generated tokens" is withdrawn for v1.
 - **The reward carried almost no task signal** (§5a): the outcome and safety
   terms were constant at zero across all 48 rollouts.
 - **No claim about *why* behaviour was unchanged** is made or supported (§5).
@@ -428,4 +544,5 @@ was run.
 
 A note on ordering: raising the learning rate first would be the obvious move and
 the wrong one. It would produce a *different* number on a task that is still
-partly unwinnable, which is how a pilot turns into a misleading result.
+out of reach of its own reference solutions, and whose loss does not train on
+the span it claims — which is how a pilot turns into a misleading result.

@@ -112,6 +112,7 @@ ignore = [
 # memory measurements the run has to report.
 "src/cerl_rl/pilot.py" = ["T201", "S603", "S607", "PLW1510"]
 "src/cerl_rl/replay.py" = ["T201"]
+"src/cerl_rl/audit.py" = ["T201"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"

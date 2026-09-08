@@ -93,6 +93,21 @@ def advantages_for(rewards: list[float], *, eps: float = 1e-4) -> list[float] | 
     return [(r - mean) / std for r in rewards]
 
 
+def release_cache() -> None:
+    """Return cached accelerator memory, on whatever backend is present.
+
+    Called unconditionally as ``torch.mps.empty_cache()`` before, which raises
+    on any machine without the MPS backend -- so the CPU arithmetic tests, which
+    are supposed to be the portable part of this work, failed to even run on
+    Linux. The cache call is memory maintenance; it must never decide whether a
+    correctness test can execute.
+    """
+    if torch.backends.mps.is_available():
+        torch.mps.empty_cache()
+    elif torch.cuda.is_available():  # pragma: no cover - no CUDA machine here
+        torch.cuda.empty_cache()
+
+
 def causal_lm(model: Any) -> Any:
     """The causal-LM module underneath whatever wrapper is in use.
 
@@ -156,5 +171,64 @@ def group_backward(
         total_loss += float(loss.detach())
         counted += int(positions.numel())
         del hidden, logits, logp, mean_logp, loss
-        torch.mps.empty_cache()
+        release_cache()
+    return total_loss, counted
+
+
+def turn_backward(
+    model: Any,
+    episodes: list[Any],
+    advantages: list[float],
+    device: torch.device,
+) -> tuple[float, int]:
+    """v2 loss: every turn scored under the exact prompt it was sampled with.
+
+    The difference from :func:`group_backward` is not an optimisation, it is a
+    correctness fix. v1 built one sequence per episode by re-rendering the whole
+    conversation and locating each completion by text search, which could select
+    tokens from the system prompt or an observation, and which scored earlier
+    turns under a prefix the model never saw (Qwen's template drops the empty
+    thinking block from earlier assistant messages when re-rendered). Here each
+    turn is its own forward pass over ``prompt_ids + generated_ids`` -- the exact
+    tokens recorded at generation -- and only that turn's generated positions
+    are scored. Earlier turns appear as context and are never scored again.
+
+    **Weighting is unchanged and explicit.** The intent in v1 was: mean
+    log-probability over an episode's generated tokens, then divided by group
+    size, so every episode counts equally regardless of length. That is
+    preserved by pooling an episode's turns -- summing log-probabilities over
+    all its generated tokens and dividing by the episode's total -- rather than
+    averaging per-turn means, which would have silently reweighted a short turn
+    equal to a long one.
+    """
+    total_loss = 0.0
+    counted = 0
+    inner = causal_lm(model)
+    for tokenised, advantage in zip(episodes, advantages, strict=True):
+        turns = [t for t in tokenised.turns if t.generated_ids]
+        if not turns:
+            continue
+        n_generated = sum(len(t.generated_ids) for t in turns)
+        for turn in turns:
+            sequence = torch.tensor(turn.sequence, device=device).unsqueeze(0)
+            n_prompt = len(turn.prompt_ids)
+            # Predicting token t uses the hidden state at t-1, so the first
+            # generated token is scored from the last prompt position.
+            positions = torch.arange(n_prompt - 1, sequence.shape[1] - 1, device=device)
+            targets = sequence[0, n_prompt:]
+            if positions.numel() != targets.numel():
+                raise ValueError(
+                    f"turn {turn.step_index}: {positions.numel()} scoring positions "
+                    f"for {targets.numel()} generated tokens",
+                )
+            hidden = inner.model(input_ids=sequence).last_hidden_state[0]
+            logits = inner.lm_head(hidden[positions]).float()
+            logp = -torch.nn.functional.cross_entropy(logits, targets, reduction="none")
+            # Each turn contributes its share of the episode's token mean.
+            loss = -(advantage * logp.sum() / n_generated) / max(1, len(episodes))
+            loss.backward()
+            total_loss += float(loss.detach())
+            counted += int(targets.numel())
+            del hidden, logits, logp, loss
+            release_cache()
     return total_loss, counted

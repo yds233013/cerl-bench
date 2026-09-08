@@ -51,9 +51,15 @@ MAX_NEW_TOKENS = 160
 #:    **This value made the task partly infeasible and invalidates the pilot's
 #:    training signal as a measure of learning.** It was chosen for compute
 #:    budget, without checking that a known-correct trajectory fits. Replaying
-#:    the canonical gold trajectories through this wrapper shows only 9 of the
-#:    15 selected scenarios can be solved at all within 12 actions: 7/10 train
-#:    and 2/5 validation. Six were unsolvable by *any* policy, perfect included.
+#:    the canonical gold trajectories through this wrapper shows that only 9 of
+#:    the 15 selected scenarios are solved *by the reference trajectory* within
+#:    12 actions: 7/10 train and 2/5 validation.
+#:
+#:    What that establishes is that the **reference** solutions exceed this
+#:    limit. It does **not** establish that no policy could solve the remaining
+#:    six within 12 actions -- a shorter correct trajectory may exist, and the
+#:    oracle is one correct policy rather than the shortest. No maximum
+#:    achievable score is implied.
 #:    See ``NEXT_MAX_ACTIONS`` and ``evidence/rl-pilot/feasibility.json``.
 MAX_ACTIONS = 12
 
@@ -65,8 +71,14 @@ MAX_ACTIONS = 12
 #: and a shorter correct trajectory may well exist -- the oracle is one correct
 #: policy, not the shortest one. 24 is 16 plus 50% headroom, so a policy that
 #: takes a couple of redundant reads, or recovers from a malformed turn, is
-#: still able to finish. The efficiency term in the reward is what should
-#: discourage waste, not a cliff in the harness.
+#: still able to finish.
+#:
+#: An earlier version of this comment said waste is discouraged by "the
+#: efficiency term in the reward". That was wrong: ``default_scalar`` weights
+#: outcome, task, decision and committed cost, and does **not** weight
+#: ``r_efficiency`` at all. Nothing in this objective penalises a redundant
+#: action. The comment is corrected rather than the reward changed -- altering
+#: the objective to match a stale comment would be the wrong repair.
 NEXT_MAX_ACTIONS = 24
 
 #: The longest gold trajectory reaches a 3,639-token prompt, so the 3,072 cap

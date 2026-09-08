@@ -1,8 +1,11 @@
-"""Can a known-correct policy finish inside the protocol's limits?
+"""Do the reference trajectories finish inside the protocol's limits?
 
-This is the check the pilot did not do before it ran, and its absence is what
-made 6 of the 15 selected scenarios unsolvable by *any* policy. It costs
-seconds, needs no model, and would have caught the defect immediately.
+This is the check the pilot did not run beforehand. It establishes that the
+**gold** solutions to 6 of the 15 selected scenarios exceed the 12-action limit
+that ran -- not that those scenarios are unsolvable, which these replays cannot
+show. A shorter correct trajectory may exist; the oracle is one correct policy,
+not the shortest. It costs seconds, needs no model, and would have caught the
+limit problem immediately.
 """
 
 from __future__ import annotations
@@ -59,12 +62,12 @@ def test_known_correct_workflows_fit_the_proposed_limit(scenario_id):
     )
 
 
-def test_the_limit_the_pilot_actually_used_was_infeasible():
+def test_the_reference_trajectories_did_not_fit_the_limit_that_ran():
     """Pins the defect rather than quietly fixing it.
 
-    Kept as an assertion so the historical result stays interpretable: the
-    recorded run's rewards were earned under a limit at which most of the task
-    could not be completed at all.
+    Stated precisely: the *gold* trajectory solves 9 of 15 within 12 actions.
+    That is a fact about the reference solutions, not a proof that the other six
+    are unsolvable in 12 -- no such proof is available from these replays.
     """
     solvable = [s for s in _selected() if _safe_at(s, protocol.MAX_ACTIONS)]
     assert len(solvable) == 9, len(solvable)

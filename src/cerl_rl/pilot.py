@@ -19,34 +19,18 @@ import torch
 from cerl.agents.prompt_only import SYSTEM_PROMPT
 from cerl_rl import protocol
 from cerl_rl import rollout as rollout_module
-from cerl_rl.grpo import GroupStats, advantages_for, group_backward
+from cerl_rl.grpo import GroupStats, advantages_for, group_backward, release_cache
 from cerl_rl.model import adapter_state, load_policy, load_tokenizer, pick_device
+from cerl_rl.runtime import Deadline, DeadlineExceeded, prepare_run_directory, write_atomic
 
 OUT = pathlib.Path("evidence/rl-pilot")
 
 
-class Deadline:
-    """A wall-clock stop, checked between units of work.
-
-    Enforced outside the training loop so a run cannot talk itself into "just
-    one more update". Partial results are always written: an interrupted pilot
-    that reported nothing would be worse than one that reported less.
-    """
-
-    def __init__(self, seconds: float) -> None:
-        self.started = time.time()
-        self.limit = seconds
-
-    @property
-    def elapsed(self) -> float:
-        return time.time() - self.started
-
-    @property
-    def remaining(self) -> float:
-        return self.limit - self.elapsed
-
-    def expired(self, reserve: float = 0.0) -> bool:
-        return self.remaining <= reserve
+def accelerator_memory_gb() -> float:
+    """Allocated accelerator memory, or -1 where there is no such counter."""
+    if torch.backends.mps.is_available():
+        return round(torch.mps.driver_allocated_memory() / 1e9, 2)
+    return -1.0
 
 
 def swap_used_mb() -> float:
@@ -66,6 +50,7 @@ def system_prompt() -> str:
 
 def evaluate(
     model: Any, tokenizer: Any, scenarios: list[Any], device: Any, *, label: str,
+    deadline: Deadline | None = None,
 ) -> dict[str, Any]:
     """The before/after measurement. One function, one configuration, both times.
 
@@ -77,6 +62,10 @@ def evaluate(
     episodes = []
     started = time.time()
     for scenario in scenarios:
+        if deadline is not None:
+            # Checked per scenario, not merely between phases: an evaluation is
+            # several minutes of generation and was previously unbounded.
+            deadline.enforce(f"{label} evaluation")
         tokenised = rollout_module.rollout(
             model, tokenizer, scenario,
             max_actions=protocol.MAX_ACTIONS,
@@ -87,7 +76,7 @@ def evaluate(
             max_prompt_tokens=protocol.MAX_PROMPT_TOKENS,
         )
         episodes.append(tokenised.episode)
-        torch.mps.empty_cache()
+        release_cache()
     n = len(episodes)
     return {
         "label": label,
@@ -142,9 +131,13 @@ def main() -> int:
     parser.add_argument("--lora-rank", type=int, default=8)
     parser.add_argument("--deadline-minutes", type=float, default=105.0)
     parser.add_argument("--out", type=pathlib.Path, default=OUT)
+    parser.add_argument(
+        "--allow-existing", action="store_true",
+        help="write into a directory that already holds a run (refused by default)",
+    )
     args = parser.parse_args()
 
-    args.out.mkdir(parents=True, exist_ok=True)
+    prepare_run_directory(args.out, allow_existing=args.allow_existing)
     deadline = Deadline(args.deadline_minutes * 60)
     record: dict[str, Any] = {
         "protocol": protocol.manifest(),
@@ -176,7 +169,9 @@ def main() -> int:
     val_scenarios = protocol.validation_selection().load()
 
     # -- baseline ----------------------------------------------------------
-    record["baseline"] = evaluate(model, tokenizer, val_scenarios, device, label="baseline")
+    record["baseline"] = evaluate(
+        model, tokenizer, val_scenarios, device, label="baseline", deadline=deadline,
+    )
     _write(args.out, record)
 
     initial = adapter_state(model)
@@ -206,7 +201,7 @@ def main() -> int:
                     max_prompt_tokens=protocol.MAX_PROMPT_TOKENS,
                 ),
             )
-            torch.mps.empty_cache()
+            release_cache()
         gen_seconds = time.time() - t0
 
         rewards = [t.episode.reward for t in episodes]
@@ -244,7 +239,7 @@ def main() -> int:
             generation_seconds=round(gen_seconds, 1),
             backward_seconds=round(time.time() - t1, 1),
             swap_used_mb=swap_used_mb(),
-            mps_gb=round(torch.mps.driver_allocated_memory() / 1e9, 2),
+            accelerator_gb=accelerator_memory_gb(),
         )
         entry["episodes"] = [_episode_row(t) for t in episodes]
         record["groups"].append(entry)
@@ -273,7 +268,15 @@ def main() -> int:
         "sha256": sha256_of(weights) if weights else None,
     }
 
-    record["after"] = evaluate(model, tokenizer, val_scenarios, device, label="after")
+    try:
+        record["after"] = evaluate(
+            model, tokenizer, val_scenarios, device, label="after", deadline=deadline,
+        )
+    except DeadlineExceeded as error:
+        # Partial results are preserved rather than lost: the training that did
+        # happen, and the checkpoint, are already on disk.
+        record["after"] = {"label": "after", "aborted": str(error)}
+        record["stopped_because"] = f"{record['stopped_because']}; after-evaluation aborted"
     record["total_model_seconds"] = round(deadline.elapsed, 1)
     _write(args.out, record)
     summary = {k: record[k] for k in ("reward_driven_updates", "stopped_because")}
@@ -302,7 +305,8 @@ def _episode_row(t: Any) -> dict[str, Any]:
 
 
 def _write(out: pathlib.Path, record: dict[str, Any]) -> None:
-    (out / "pilot_run.json").write_text(json.dumps(record, indent=2, default=str) + "\n")
+    """Atomic, so an interruption mid-write cannot destroy the previous record."""
+    write_atomic(out / "pilot_run.json", record)
 
 
 if __name__ == "__main__":
