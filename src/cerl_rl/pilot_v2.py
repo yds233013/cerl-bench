@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import time
 from typing import Any
@@ -50,28 +51,51 @@ class TurnLog:
         self.path = path
         self.turns = 0
 
-    def write(self, *, phase: str, update: int | None, rollout: int, episode: EpisodeV2) -> None:
+    def write_turn(self, turn: Any, *, phase: str, update: int | None,
+                   rollout: int, scenario_id: str) -> None:
+        """Append one completed turn, flushed to disk immediately.
+
+        Called from the rollout as each turn finishes rather than after the
+        episode, so an interrupted episode still leaves the turns it really
+        executed. Those turns were genuinely produced by the environment;
+        discarding them because a later turn overran would throw away evidence.
+        """
         with self.path.open("a", encoding="utf-8") as handle:
-            for turn in episode.turns:
-                handle.write(
-                    json.dumps(
-                        {
-                            "phase": phase,
-                            "update": update,
-                            "rollout": rollout,
-                            "scenario_id": episode.episode.scenario_id,
-                            "step_index": turn.step_index,
-                            "prompt_ids": list(turn.prompt_ids),
-                            "generated_ids": list(turn.generated_ids),
-                            "stop_reason": turn.stop_reason,
-                            "action_kind": turn.action_kind,
-                            "category": turn.category,
-                            "outcome": turn.outcome,
-                        },
-                    )
-                    + "\n",
+            handle.write(
+                json.dumps(
+                    {
+                        "phase": phase,
+                        "update": update,
+                        "rollout": rollout,
+                        "scenario_id": scenario_id,
+                        "step_index": turn.step_index,
+                        "prompt_ids": list(turn.prompt_ids),
+                        "generated_ids": list(turn.generated_ids),
+                        "stop_reason": turn.stop_reason,
+                        "action_kind": turn.action_kind,
+                        "action": turn.action,
+                        "category": turn.category,
+                        "outcome": turn.outcome,
+                    },
                 )
-                self.turns += 1
+                + "\n",
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+        self.turns += 1
+
+
+def _save_checkpoint(model: Any, out: pathlib.Path, *, update: int | None) -> dict[str, Any]:
+    """Write the adapter and describe it. Called after every completed update."""
+    path = out / "adapter"
+    model.save_pretrained(path)
+    weights = next(path.glob("adapter_model*"), None)
+    return {
+        "path": str(path),
+        "after_update": update,
+        "weights_file": weights.name if weights else None,
+        "sha256": hashlib.sha256(weights.read_bytes()).hexdigest() if weights else None,
+    }
 
 
 def episode_row(episode: EpisodeV2) -> dict[str, Any]:
@@ -155,8 +179,10 @@ def evaluate_v2(
             temperature=protocol_v2.EVAL_TEMPERATURE,
             device=device,
             before_generate=lambda step: deadline.enforce(f"{label} generation, step {step}"),
+            on_turn=lambda turn, i=index, sid=scenario.scenario_id: turn_log.write_turn(
+                turn, phase=label, update=None, rollout=i, scenario_id=sid,
+            ),
         )
-        turn_log.write(phase=label, update=None, rollout=index, episode=episode)
         rows.append(episode_row(episode))
         release_cache()
     return _aggregate(rows, label, time.monotonic() - started)
@@ -272,10 +298,12 @@ def run_pilot(
                         before_generate=lambda step, u=update: deadline.enforce(
                             f"update {u} generation, step {step}",
                         ),
+                        on_turn=lambda turn, u=update, r=rollout_index,
+                        sid=scenario.scenario_id: turn_log.write_turn(
+                            turn, phase="train", update=u, rollout=r, scenario_id=sid,
+                        ),
                     ),
                 )
-                turn_log.write(phase="train", update=update, rollout=rollout_index,
-                               episode=episodes[-1])
                 release_cache()
         except DeadlineExceeded as error:
             interrupted(f"training update {update} generation", error)
@@ -316,14 +344,40 @@ def run_pilot(
             record["stopped_because"] = f"non-finite gradient at update {update}"
             save()
             break
-        optimizer.step()
+
         stats.loss, stats.grad_norm, stats.tokens = loss, grad_norm, tokens
+        if grad_norm == 0.0:
+            # A zero gradient moves parameters only through the optimizer's own
+            # state, exactly like the zero-advantage groups the skip logic keeps
+            # out of the count. Counting it as reward-driven would let "N
+            # updates" mean something weaker than it says.
+            stats.skipped = True
+            stats.skip_reason = (
+                "gradient was exactly zero; the step would not be reward-driven"
+            )
+            entry.update(stats.as_dict())
+            record["groups"].append(entry)
+            save()
+            continue
+
+        # R3-adjacent: the budget is checked immediately before the parameter
+        # update, so an overrun cannot leave a half-applied optimizer state.
+        try:
+            deadline.enforce(f"update {update} optimizer step")
+        except DeadlineExceeded as error:
+            interrupted(f"training update {update} optimizer step", error)
+            return record
+        optimizer.step()
         reward_driven += 1
 
         entry.update(stats.as_dict())
         entry["backward_seconds"] = round(time.monotonic() - backward_started, 1)
         record["groups"].append(entry)
         record["reward_driven_updates"] = reward_driven
+        # Checkpoint after every completed update. Saving only at the end meant
+        # an interruption during training discarded every update that had
+        # already been applied.
+        record["checkpoint"] = _save_checkpoint(model, out, update=update)
         save()
 
     record["stopped_because"] = record["stopped_because"] or "completed all requested updates"
@@ -337,14 +391,7 @@ def run_pilot(
         "tensors_total": len(delta),
     }
 
-    checkpoint = out / "adapter"
-    model.save_pretrained(checkpoint)
-    weights = next(checkpoint.glob("adapter_model*"), None)
-    record["checkpoint"] = {
-        "path": str(checkpoint),
-        "weights_file": weights.name if weights else None,
-        "sha256": hashlib.sha256(weights.read_bytes()).hexdigest() if weights else None,
-    }
+    record["checkpoint"] = _save_checkpoint(model, out, update=None)
     save()
 
     try:
@@ -375,16 +422,23 @@ def main() -> int:
     from cerl_rl.model import load_policy, load_tokenizer, pick_device
 
     out = prepare_run_directory(args.out, allow_existing=args.allow_existing)
+    # Started BEFORE the model is loaded: loading is model work and counts
+    # against the budget. Constructing it as an argument to run_pilot would have
+    # started it after load_policy() had already returned.
+    deadline = Deadline(args.deadline_minutes * 60)
     device = pick_device()
+    policy = load_policy(device, lora_rank=args.lora_rank)
+    tokenizer = load_tokenizer()
+    deadline.enforce("model loading")
     record = run_pilot(
-        load_policy(device, lora_rank=args.lora_rank),
-        load_tokenizer(),
+        policy,
+        tokenizer,
         device,
         out=out,
         updates=args.updates,
         group_size=args.group_size,
         learning_rate=args.lr,
-        deadline=Deadline(args.deadline_minutes * 60),
+        deadline=deadline,
         train_scenarios=protocol_v2.training_selection().load(),
         val_scenarios=protocol_v2.validation_selection().load(),
     )

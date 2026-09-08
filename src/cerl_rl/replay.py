@@ -36,6 +36,8 @@ _ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
 #: Claims a replay cannot re-derive, because they are properties of the training
 #: process rather than of the recorded actions.
 UNVERIFIABLE_BY_REPLAY: tuple[str, ...] = (
+    ("v1 only: the recorded tool_calls figure, which counted terminal "
+     "declarations (see evidence/rl-pilot/metrics_audit.json for the corrected count)"),
     "gradient norms and losses (properties of the optimizer step, not the actions)",
     "advantages (derived from rewards, but recomputed here and cross-checked)",
     "the exact tokens sampled at each turn (v1 records do not retain them)",
@@ -48,7 +50,27 @@ REPRODUCED_FIELDS: tuple[str, ...] = (
     "safe_completion", "decision_correct", "committed", "attempted",
 )
 
-_REQUIRED_TOP_LEVEL = ("protocol", "config", "baseline", "groups")
+#: v2 additionally records the verifier's own tool-call count and the action
+#: total, so both are checked. v1's ``tool_calls`` counted terminal declarations
+#: as tool calls (R6), so comparing it against the verifier would fail every
+#: historical record for a defect that is already documented and corrected in
+#: the derived audit. It is a known format difference, not a tampering signal.
+V2_ONLY_FIELDS: tuple[str, ...] = ("tool_calls", "total_actions")
+
+#: v1 records carry a resolved ``protocol`` block; v2 records carry
+#: ``protocol_version`` and ``limits``. Both are real run formats and both must
+#: verify -- a verifier that only understands the format it was written against
+#: silently stops checking the moment the runner is upgraded.
+_REQUIRED_V1 = ("protocol", "config", "baseline", "groups")
+_REQUIRED_V2 = ("protocol_version", "limits", "config", "baseline", "groups")
+
+
+def detect_format(record: dict[str, Any]) -> str:
+    if "protocol_version" in record:
+        return "v2"
+    if "protocol" in record:
+        return "v1"
+    return "unknown"
 _REQUIRED_EPISODE = ("scenario_id", "actions", "reward", "trace_head_hash")
 
 #: Rewards are exact rationals of small integers; anything above this is a real
@@ -70,6 +92,12 @@ def replay_episode(scenario_id: str, actions: list[dict[str, Any]]) -> dict[str,
     episode = run_actions(scenario, parsed)
     verdict = episode.verdict
     return {
+        # How many of the recorded actions the environment actually executed.
+        # An action appended after a terminal one is never run, so every
+        # recomputed field still matches and the tampering is invisible unless
+        # the count is compared too.
+        "executed_actions": len(episode.trace.agent_entries()),
+        "recorded_actions": len(actions),
         "trace_head_hash": episode.trace.head_hash,
         "terminal_state_hash": episode.final.state_hash(),
         "task_completion": float(verdict.task_completion),
@@ -91,7 +119,9 @@ def _check_episode(
     row: dict[str, Any],
     where: str,
     out: list[dict[str, Any]],
+    *,
     scenario_id: str | None = None,
+    run_format: str = "v1",
 ) -> dict[str, Any] | None:
     # Group rows carry the scenario on the group, not on each episode.
     target = row.get("scenario_id") or scenario_id
@@ -104,7 +134,16 @@ def _check_episode(
         )
         return None
     replayed = replay_episode(target, row["actions"])
-    for field in REPRODUCED_FIELDS:
+    if replayed["executed_actions"] != replayed["recorded_actions"]:
+        out.append(
+            _mismatch(where, "actions",
+                      recorded=f"{replayed['recorded_actions']} recorded",
+                      replayed=f"only {replayed['executed_actions']} executed"),
+        )
+    replayed["tool_calls"] = replayed["verifier_tool_calls"]
+    replayed["total_actions"] = replayed["recorded_actions"]
+    fields = REPRODUCED_FIELDS + (V2_ONLY_FIELDS if run_format == "v2" else ())
+    for field in fields:
         if field not in row:
             continue
         recorded = row[field]
@@ -132,7 +171,9 @@ def verify_run(path: pathlib.Path) -> dict[str, Any]:
                 "mismatches": [{"field": "json", "recorded": "not an object"}]}
 
     mismatches: list[dict[str, Any]] = []
-    missing = [f for f in _REQUIRED_TOP_LEVEL if f not in record]
+    run_format = detect_format(record)
+    required = {"v1": _REQUIRED_V1, "v2": _REQUIRED_V2}.get(run_format, _REQUIRED_V1)
+    missing = [f for f in required if f not in record]
     if missing:
         # An empty or partial record is NOT a passing verification. v1 returned
         # ok:true for "{}", which reads as "verified" and means "nothing here".
@@ -150,7 +191,7 @@ def verify_run(path: pathlib.Path) -> dict[str, Any]:
     checked = 0
     for phase in ("baseline", "after"):
         for row in record.get(phase, {}).get("per_episode", []):
-            if _check_episode(row, phase, mismatches) is not None:
+            if _check_episode(row, phase, mismatches, run_format=run_format) is not None:
                 checked += 1
 
     group_rewards_ok = True
@@ -159,7 +200,7 @@ def verify_run(path: pathlib.Path) -> dict[str, Any]:
         for index, row in enumerate(group.get("episodes", [])):
             replayed = _check_episode(
                 row, f"group[{group.get('update')}][{index}]", mismatches,
-                scenario_id=group.get("scenario_id"),
+                scenario_id=group.get("scenario_id"), run_format=run_format,
             )
             if replayed is not None:
                 checked += 1
@@ -201,8 +242,15 @@ def verify_run(path: pathlib.Path) -> dict[str, Any]:
                       recorded=record["reward_driven_updates"], replayed=driven),
         )
 
-    # The training scenarios must be the ones the protocol selects.
-    declared = record.get("protocol", {}).get("training_scenarios", {}).get("ids")
+    # The training scenarios must be the ones the protocol selects. v1 records
+    # embed the resolved selection; v2 records name the protocol version, so the
+    # selection is read from that protocol instead.
+    if run_format == "v2":
+        from cerl_rl import protocol_v2
+
+        declared = list(protocol_v2.training_selection().scenario_ids)
+    else:
+        declared = record.get("protocol", {}).get("training_scenarios", {}).get("ids")
     if declared is not None:
         used = {g["scenario_id"] for g in record.get("groups", [])}
         stray = sorted(used - set(declared))
@@ -215,6 +263,7 @@ def verify_run(path: pathlib.Path) -> dict[str, Any]:
         status = "empty"
     return {
         "status": status,
+        "format": run_format,
         "ok": not mismatches and checked > 0,
         "episodes_replayed": checked,
         "group_rewards_consistent": group_rewards_ok,

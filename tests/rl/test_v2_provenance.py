@@ -51,8 +51,9 @@ def _policy(seed: int = 0) -> nn.Module:
 def _turn(step: int, prompt: list[int], generated: list[int], stop: str = "eos") -> TurnRecord:
     return TurnRecord(
         step_index=step, prompt_ids=tuple(prompt), generated_ids=tuple(generated),
-        stop_reason=stop, text="", action_kind="tickets.get", category="tool_call",
-        outcome="read_only",
+        stop_reason=stop, text="", action_kind="tickets.get",
+        action={"kind": "tickets.get", "ticket_id": "tkt_000000000001"},
+        category="tool_call", outcome="read_only",
     )
 
 
@@ -166,7 +167,8 @@ def test_a_mismatched_span_raises_rather_than_training_on_something_else():
     model = _policy(6)
     broken = TurnRecord(
         step_index=0, prompt_ids=(1, 2, 3), generated_ids=(),
-        stop_reason="eos", text="", action_kind="x", category="tool_call", outcome="",
+        stop_reason="eos", text="", action_kind="abstain",
+        action={"kind": "abstain", "reason": "x"}, category="terminal", outcome="",
     )
     # an empty span is dropped, not silently scored
     loss, tokens = turn_backward(model, [_Episode([broken])], [1.0], DEVICE)

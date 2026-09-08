@@ -180,6 +180,7 @@ def drive(
     choose: Callable[[int, Any], Action | None],
     *,
     max_actions: int,
+    after_step: Callable[[int, Action, Any, CerlEnv], None] | None = None,
 ) -> tuple[CerlEnv, list[Action], str | None]:
     """Run one episode. **The single definition of the pilot's episode semantics.**
 
@@ -196,6 +197,13 @@ def drive(
 
     ``choose`` returns the next action, or ``None`` to stop early (used when a
     scripted source runs out, or when the model's context is exhausted).
+
+    ``after_step`` is called once per executed action, immediately after the
+    environment applies it and while its outcome is known. That timing is what
+    lets a caller durably record a turn *as it completes*, rather than at the
+    end of an episode -- an episode that is interrupted half way through has
+    still really executed its earlier turns, and losing them loses evidence the
+    environment actually produced.
     """
     env = CerlEnv(scenario)
     env.reset()
@@ -208,6 +216,10 @@ def drive(
             break
         result: StepResult = env.step(action)
         actions.append(action)
+        if after_step is not None:
+            # The env is passed so the hook can read the trace entry the step
+            # just wrote, without the caller having to smuggle a reference out.
+            after_step(step, action, result, env)
         observation = result.observation
         if result.terminated:
             declared = str(action.kind)

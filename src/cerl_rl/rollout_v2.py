@@ -27,6 +27,7 @@ import torch
 
 from cerl.actions import Action
 from cerl.core import Frozen
+from cerl.env.env import CerlEnv
 from cerl.env.render import render_observation
 from cerl.scenario.schema import FrozenScenario
 from cerl.verify.verifier import verify
@@ -59,6 +60,9 @@ class TurnRecord(Frozen, arbitrary_types_allowed=True):
     stop_reason: str
     text: str
     action_kind: str
+    #: The full validated action, arguments included -- not just its kind. The
+    #: kind alone cannot be replayed, and replay is the point of keeping it.
+    action: dict[str, Any]
     category: str
     outcome: str
 
@@ -112,6 +116,7 @@ def rollout_v2(
     temperature: float = protocol_v2.TRAIN_TEMPERATURE,
     device: torch.device | None = None,
     before_generate: Callable[[int], None] | None = None,
+    on_turn: Callable[[TurnRecord], None] | None = None,
 ) -> EpisodeV2:
     """Run one episode, keeping the exact tokens of every turn.
 
@@ -119,11 +124,16 @@ def rollout_v2(
     ``generate``. The v2 pilot passes a deadline check here: a generation is the
     longest single operation in the run, so a budget that is only consulted
     between episodes cannot bound it.
+
+    ``on_turn`` is called once per completed turn, with its outcome already
+    known. The pilot writes each turn to disk there, so an episode interrupted
+    part way through still leaves the turns it really executed.
     """
     device = device or torch.device("cpu")
     observations: list[str] = []
     completions: list[str] = []
     turns: list[TurnRecord] = []
+    pending: dict[int, TurnRecord] = {}
     counters: dict[str, int] = {c.value: 0 for c in ActionCategory}
     context_exhausted = {"hit": False}
     eos_ids = {tokenizer.eos_token_id, *(tokenizer.additional_special_tokens_ids or [])}
@@ -173,25 +183,31 @@ def rollout_v2(
         action = parse_action(text)
         category = categorise(action)
         counters[category.value] += 1
-        turns.append(
-            TurnRecord(
-                step_index=step,
-                prompt_ids=tuple(int(t) for t in prompt_ids[0]),
-                generated_ids=generated_ids,
-                stop_reason=stop_reason,
-                text=text,
-                action_kind=str(action.kind),
-                category=category.value,
-                outcome="",
-            ),
+        pending[step] = TurnRecord(
+            step_index=step,
+            prompt_ids=tuple(int(t) for t in prompt_ids[0]),
+            generated_ids=generated_ids,
+            stop_reason=stop_reason,
+            text=text,
+            action_kind=str(action.kind),
+            action=action.model_dump(mode="json"),
+            category=category.value,
+            outcome="",
         )
         return action
 
-    env, actions, declared = drive(scenario, choose, max_actions=max_actions)
-    recorded = [
-        turn.model_copy(update={"outcome": str(entry.outcome)})
-        for turn, entry in zip(turns, env.world.trace.agent_entries(), strict=False)
-    ]
+    def after_step(step: int, _action: Action, _result: Any, env: CerlEnv) -> None:
+        """Finalise and emit the turn while its outcome is known."""
+        entry = env.world.trace.agent_entries()[-1]
+        turn = pending.pop(step).model_copy(update={"outcome": str(entry.outcome)})
+        turns.append(turn)
+        if on_turn is not None:
+            on_turn(turn)
+
+    env, actions, declared = drive(
+        scenario, choose, max_actions=max_actions, after_step=after_step,
+    )
+    recorded = list(turns)
     if len(recorded) != len(actions):
         raise TokenProvenanceError(
             f"recorded {len(recorded)} turns for {len(actions)} executed actions",
