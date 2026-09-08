@@ -202,8 +202,16 @@ def run_pilot(
     val_scenarios: list[Any],
     reserve_seconds: float = 8 * 60,
     system: str | None = None,
+    skip_evaluation: bool = False,
 ) -> dict[str, Any]:
-    """Baseline, GRPO training, and the same evaluation again -- all v2."""
+    """Baseline, GRPO training, and the same evaluation again -- all v2.
+
+    ``skip_evaluation`` runs the training loop alone. It exists for a bounded
+    trial whose question is only whether the training path works end to end on
+    real weights; running a before/after measurement there would spend most of
+    the budget producing numbers nobody asked for, and would touch validation
+    scenarios the trial has no business touching.
+    """
     from cerl_rl.model import adapter_state
 
     system = system or system_prompt_v2(SYSTEM_PROMPT)
@@ -250,12 +258,16 @@ def run_pilot(
         record["stopped_because"] = f"interrupted during {phase}"
         save()
 
+    record["skip_evaluation"] = skip_evaluation
     save()
     try:
-        record["baseline"] = evaluate_v2(
-            model, tokenizer, val_scenarios, device,
-            label="baseline", deadline=deadline, turn_log=turn_log, system=system,
-        )
+        if skip_evaluation:
+            record["baseline"] = {"label": "baseline", "skipped": "training-only trial"}
+        else:
+            record["baseline"] = evaluate_v2(
+                model, tokenizer, val_scenarios, device,
+                label="baseline", deadline=deadline, turn_log=turn_log, system=system,
+            )
     except DeadlineExceeded as error:
         interrupted("baseline evaluation", error)
         return record
@@ -394,6 +406,12 @@ def run_pilot(
     record["checkpoint"] = _save_checkpoint(model, out, update=None)
     save()
 
+    if skip_evaluation:
+        record["after"] = {"label": "after", "skipped": "training-only trial"}
+        record["total_seconds"] = round(deadline.elapsed, 1)
+        save()
+        return record
+
     try:
         record["after"] = evaluate_v2(
             model, tokenizer, val_scenarios, device,
@@ -417,6 +435,10 @@ def main() -> int:
     parser.add_argument("--deadline-minutes", type=float, default=85.0)
     parser.add_argument("--out", type=pathlib.Path, default=DEFAULT_OUT)
     parser.add_argument("--allow-existing", action="store_true")
+    parser.add_argument(
+        "--training-only", action="store_true",
+        help="run the training loop alone; no validation scenarios are touched",
+    )
     args = parser.parse_args()
 
     from cerl_rl.model import load_policy, load_tokenizer, pick_device
@@ -440,7 +462,9 @@ def main() -> int:
         learning_rate=args.lr,
         deadline=deadline,
         train_scenarios=protocol_v2.training_selection().load(),
-        val_scenarios=protocol_v2.validation_selection().load(),
+        # A training-only trial must not even load validation scenarios.
+        val_scenarios=[] if args.training_only else protocol_v2.validation_selection().load(),
+        skip_evaluation=args.training_only,
     )
     print(json.dumps({k: record.get(k) for k in
                       ("reward_driven_updates", "stopped_because", "interruption")}, indent=2))

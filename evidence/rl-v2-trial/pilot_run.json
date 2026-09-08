@@ -1,0 +1,54 @@
+{
+  "protocol_version": "2.0.0",
+  "uses": {
+    "protocol": "cerl_rl.protocol_v2",
+    "rollout": "cerl_rl.rollout_v2.rollout_v2",
+    "loss": "cerl_rl.grpo.turn_backward",
+    "tool_contract": "complete public schemas (cerl_rl.tools.tool_contract)"
+  },
+  "limits": {
+    "max_actions": 24,
+    "max_prompt_tokens": 8192,
+    "max_new_tokens": 160
+  },
+  "sampling": {
+    "train_temperature": 1.0,
+    "eval_temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "repetition_penalty": 1.0,
+    "no_repeat_ngram_size": 0,
+    "renormalize_logits": false
+  },
+  "config": {
+    "updates_requested": 1,
+    "group_size": 4,
+    "learning_rate": 1e-05,
+    "kl_beta": 0.0,
+    "deadline_seconds": 1080.0
+  },
+  "groups": [],
+  "reward_driven_updates": 0,
+  "interruption": null,
+  "stopped_because": "aborted: MPS single-allocation limit exceeded",
+  "skip_evaluation": true,
+  "turns_recorded": 0,
+  "baseline": {
+    "label": "baseline",
+    "skipped": "training-only trial"
+  },
+  "outcome": {
+    "result": "FAILED \u2014 the process was killed by a Metal assertion before any rollout completed",
+    "error": "MPSNDArray.mm:788 failed assertion `[MPSTemporaryNDArray initWithDevice:descriptor:] Error: total bytes of NDArray > 2**32'",
+    "class": "out-of-memory (single MPS allocation above the 4.295 GB / 2**32 limit)",
+    "when": "during the first generate() call of rollout 0; no turn completed",
+    "note_on_this_field": "added after the fact by inspection of stdout.log. The pilot could not record it itself: a Metal assertion aborts the process, so no Python exception handler ran. Everything above this key was written by the pilot before the crash.",
+    "groups": 0,
+    "rollouts_completed": 0,
+    "turns_completed": 0,
+    "optimizer_updates": 0,
+    "checkpoint_written": false
+  }
+}
