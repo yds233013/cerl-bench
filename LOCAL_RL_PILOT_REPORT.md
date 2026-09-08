@@ -415,7 +415,10 @@ and measuring it needs a forward pass, which this review is not permitted to run
 Candidate explanations, **all untested**, in no particular order:
 
 - the update was too small in *effect* (not merely in parameter norm) to reorder
-  the top token under greedy decoding;
+  the top token under greedy decoding — **partially tested since**: on one fixed
+  input the adapter moves the top logit by 0.8125 while the top token sits at
+  0.99 probability, so it cannot reorder *there*. One position is not an episode
+  (`evidence/rl-logit-diagnostic/REPORT.md`);
 - the gradient direction was uninformative, because the reward behind it was
   mostly the decision term on partly-impossible episodes (§3a, §5a);
 - eight updates is too few at this learning rate;
@@ -475,8 +478,9 @@ Separate claims, kept apart because only some are supported.
 | The checkpoint **loads** | **verified** | `PeftModel.from_pretrained` restored 2,293,760 LoRA parameters |
 | The saved adapter is **trained, not freshly initialised** | **verified** | all 112 `lora_B` tensors non-zero; a fresh LoRA has `lora_B = 0` exactly (‖lora_B‖₁ = 38.69) |
 | The after-evaluation **used the trained weights** | **verified by code trace** | `pilot.py` optimises `model` in place (`optimizer.step()`, line 237), snapshots `final = adapter_state(model)` (258), saves (268), then calls `evaluate(model, …)` (276) on that **same object**. `evaluate` constructs nothing, reloads nothing and never calls `disable_adapter()`; the in-memory adapter differed from its pre-training state by L1 72.19 at that moment |
-| Reloading the checkpoint from disk **reproduces** the after-evaluation | **UNVERIFIED** | never run; requires inference |
-| The adapter's **effect on the output distribution** | **UNVERIFIED** | never measured; requires a forward pass |
+| Reloading the checkpoint from disk gives **identical logits** to the in-memory adapter | **VERIFIED** | bit-identical next-token logits on a fixed 1,524-token input — `evidence/rl-logit-diagnostic/` |
+| Reloading the checkpoint reproduces the **after-evaluation** end to end | **UNVERIFIED** | identical logits at one position is strong but not the same as replaying all five episodes |
+| The adapter's **effect on the output distribution** | **VERIFIED, non-zero** | max \|Δlogit\| 0.8125 (≈6.5 bfloat16 steps), KL 2.2e−4; the preferred token did **not** change (0.991 → 0.989) |
 
 Because `lora_B` is zero-initialised, the adapter contributed **exactly nothing**
 at baseline — so the "before" measurement is the untouched base model, which is
@@ -572,9 +576,11 @@ was run.
    is interpretable. `tests/rl/test_feasibility.py` gates this.
 2. **Set `top_k=0` explicitly** in the rollout, so the sampled distribution is
    the one the loss differentiates (§4a).
-3. **Measure the adapter's effect on logits** before theorising about argmax.
-   One forward pass with and without the adapter answers directly what §5 leaves
-   open.
+3. ~~**Measure the adapter's effect on logits**~~ — **done**. The adapter
+   changes the distribution (max \|Δlogit\| 0.8125, KL 2.2e−4) but does not move
+   the preferred token at the position tested, and the saved checkpoint
+   reproduces bit-identically. The natural follow-up is the same measurement at
+   *every* decision point of a validation episode, where close races could flip.
 4. Only then consider more updates or a larger learning rate — and evaluate with
    sampling and multiple seeds, since greedy decoding hides sub-argmax change.
 
