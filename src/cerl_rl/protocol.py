@@ -43,11 +43,43 @@ MAX_PROMPT_TOKENS = 3072
 #: budget on prose, so this is sized for the action and the model is told not to
 #: think (see ``render_prompt``), rather than being given room to ramble.
 MAX_NEW_TOKENS = 160
-#: Environment steps per episode. The scenario budget is 40; this is lower
-#: because a 0.6B model at this speed cannot finish 40 turns inside the pilot's
-#: total compute deadline, and a truncated episode is a recorded outcome, not a
-#: failure of the harness.
+#: Environment steps per episode **as the pilot ran**. Kept at 12 so the
+#: recorded results stay reproducible.
+#:
+#: .. warning::
+#:
+#:    **This value made the task partly infeasible and invalidates the pilot's
+#:    training signal as a measure of learning.** It was chosen for compute
+#:    budget, without checking that a known-correct trajectory fits. Replaying
+#:    the canonical gold trajectories through this wrapper shows only 9 of the
+#:    15 selected scenarios can be solved at all within 12 actions: 7/10 train
+#:    and 2/5 validation. Six were unsolvable by *any* policy, perfect included.
+#:    See ``NEXT_MAX_ACTIONS`` and ``evidence/rl-pilot/feasibility.json``.
 MAX_ACTIONS = 12
+
+# -- proposed for the next run; nothing historical uses these ---------------
+#: Gold trajectories for the 15 selected scenarios need 10-16 actions, and all
+#: 15 succeed at a uniform limit of 16.
+#:
+#: **16 is not a proven minimum.** It is the length of the reference solution,
+#: and a shorter correct trajectory may well exist -- the oracle is one correct
+#: policy, not the shortest one. 24 is 16 plus 50% headroom, so a policy that
+#: takes a couple of redundant reads, or recovers from a malformed turn, is
+#: still able to finish. The efficiency term in the reward is what should
+#: discourage waste, not a cliff in the harness.
+NEXT_MAX_ACTIONS = 24
+
+#: The longest gold trajectory reaches a 3,639-token prompt, so the 3,072 cap
+#: below would have ended 5 of the 15 episodes early even at a raised action
+#: limit -- it bit at step 11-12, before the action limit did. 8,192 clears the
+#: observed maximum with room for the longer episodes a 24-action limit allows,
+#: and is far inside the model's 40,960-token context.
+NEXT_MAX_PROMPT_TOKENS = 8192
+
+#: The longest reference action encodes to 99 tokens, so 160 already fits. Kept
+#: unchanged: raising it would mostly buy room for prose, which is what the
+#: earlier 4B run drowned in.
+NEXT_MAX_NEW_TOKENS = 160
 
 #: The pilot's training objective. It is ``cerl``'s existing default scalar,
 #: used unchanged. It is NOT the benchmark metric, and no result here is

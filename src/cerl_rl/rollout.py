@@ -14,18 +14,23 @@ from __future__ import annotations
 from typing import Any
 
 import torch
-from pydantic import TypeAdapter, ValidationError
 
-from cerl.actions import Action, MalformedAction
-from cerl.agents.tool_schemas import all_tool_schemas, tool_name_to_kind
+from cerl.actions import Action
 from cerl.core import Frozen
-from cerl.env.env import CerlEnv
 from cerl.env.render import render_observation
-from cerl.env.reward import CostVector, RewardVector, default_scalar
 from cerl.scenario.schema import FrozenScenario
 from cerl.verify.verifier import verify
+from cerl_rl.environment import (
+    drive,
+    episode_reward,
+    parse_action,
+    tool_menu,
+)
 
-_ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
+__all__ = [
+    "Episode", "TokenisedEpisode", "Turn", "episode_reward", "parse_action",
+    "rollout", "tool_menu",
+]
 
 #: A 0.6B model cannot be relied on for native tool-call formatting, so the
 #: contract is one JSON object per turn. The *parsing* is deliberately no more
@@ -43,15 +48,6 @@ Available tools:
 %s
 
 Example: {"tool": "tickets__get", "arguments": {"ticket_id": "tkt_000000000001"}}"""
-
-
-def tool_menu() -> str:
-    lines = []
-    for schema in all_tool_schemas():
-        props = schema["input_schema"]["properties"]
-        args = ", ".join(sorted(props))
-        lines.append(f"- {schema['name']}({args})")
-    return "\n".join(lines)
 
 
 class Turn(Frozen):
@@ -88,48 +84,6 @@ class Episode(Frozen):
     @property
     def n_generated_turns(self) -> int:
         return len(self.turns)
-
-
-def parse_action(text: str) -> Action:
-    """Model text -> a validated Action, or a scored MalformedAction.
-
-    Exactly the benchmark's contract: an unparseable or invalid turn is a real,
-    recorded action that consumes a step. It is never retried, repaired, or
-    silently dropped -- doing any of those would make the malformed-turn rate
-    unmeasurable, and that rate is the headline finding of the earlier run.
-    """
-    import json
-
-    snippet = text.strip()
-    start, end = snippet.find("{"), snippet.rfind("}")
-    if start == -1 or end <= start:
-        return MalformedAction(
-            raw=snippet[:400],
-            parse_error="the turn contained no JSON object; one action per turn is required",
-        )
-    try:
-        payload = json.loads(snippet[start : end + 1])
-    except json.JSONDecodeError as error:
-        return MalformedAction(raw=snippet[:400], parse_error=f"invalid JSON: {error.msg}")
-    if not isinstance(payload, dict) or "tool" not in payload:
-        return MalformedAction(raw=snippet[:400], parse_error="no 'tool' key in the object")
-
-    try:
-        kind = tool_name_to_kind(str(payload["tool"]))
-    except Exception:  # noqa: BLE001 - any unknown name is simply malformed
-        return MalformedAction(
-            raw=snippet[:400], parse_error=f"unknown tool {payload['tool']!r}",
-        )
-    arguments = payload.get("arguments") or {}
-    if not isinstance(arguments, dict):
-        return MalformedAction(raw=snippet[:400], parse_error="'arguments' must be an object")
-    try:
-        return _ACTION_ADAPTER.validate_python({"kind": kind, **arguments})
-    except ValidationError as error:
-        return MalformedAction(
-            raw=snippet[:400],
-            parse_error=f"{kind}: {error.errors()[0].get('msg', 'invalid arguments')}",
-        )
 
 
 class TokenisedEpisode(Frozen, arbitrary_types_allowed=True):
@@ -174,20 +128,19 @@ def rollout(
     system_prompt: str,
     max_prompt_tokens: int,
 ) -> TokenisedEpisode:
-    """Run one episode. A fresh env every time -- never a reused or reset-in-place one."""
-    env = CerlEnv(scenario)          # isolated: constructed from the frozen scenario
-    observation = env.reset()        # exact initial state
+    """Run one episode with the model choosing every action.
 
+    The episode's control flow -- fresh environment, terminal action, step limit
+    -- is :func:`cerl_rl.environment.drive`, shared with the offline audit so
+    there is one definition of "what an episode is" rather than a training copy
+    and a review copy that can drift apart.
+    """
     observations: list[str] = []
     completions: list[str] = []
     turns: list[Turn] = []
-    actions: list[Action] = []
-    spans: list[tuple[int, int]] = []   # (start, end) of generated tokens in the final sequence
-    malformed = 0
-    tool_calls = 0
-    declared: str | None = None
+    counters = {"malformed": 0, "tool_calls": 0}
 
-    for step in range(max_actions):
+    def choose(step: int, observation: Any) -> Action | None:
         observations.append(render_observation(observation))
         prompt_text = tokenizer.apply_chat_template(
             _messages(system_prompt, observations, completions),
@@ -202,10 +155,11 @@ def rollout(
         prompt_ids = encoded["input_ids"].to(device)
         attention_mask = encoded["attention_mask"].to(device)
         if prompt_ids.shape[1] > max_prompt_tokens:
-            # Context exhausted. Recorded as a step-limited episode rather than
-            # silently truncating the conversation, which would change what the
-            # model saw without saying so.
-            break
+            # Context exhausted. The episode ends here and is recorded as
+            # step-limited, rather than silently dropping earlier turns -- that
+            # would change what the model saw without saying so.
+            observations.pop()
+            return None
 
         # Sampling arguments are passed only when sampling. Passing them with
         # do_sample=False makes transformers warn that they are ignored, and a
@@ -222,29 +176,26 @@ def rollout(
             pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
             **sampling,
         )
-        gen_ids = out[0, prompt_ids.shape[1]:]
-        text = tokenizer.decode(gen_ids, skip_special_tokens=True)
-        spans.append((prompt_ids.shape[1], out.shape[1]))
+        text = tokenizer.decode(out[0, prompt_ids.shape[1]:], skip_special_tokens=True)
         completions.append(text)
 
         action = parse_action(text)
-        actions.append(action)
-        if str(action.kind) == "malformed":
-            malformed += 1
-        else:
-            tool_calls += 1
-
-        result = env.step(action)
-        entry = env.world.trace.entries[-1]
+        malformed = str(action.kind) == "malformed"
+        counters["malformed" if malformed else "tool_calls"] += 1
         turns.append(
             Turn(step_index=step, prompt_text=prompt_text, completion_text=text,
-                 action_kind=str(action.kind), outcome=str(entry.outcome),
-                 malformed=str(action.kind) == "malformed"),
+                 action_kind=str(action.kind), outcome="", malformed=malformed),
         )
-        observation = result.observation
-        if result.terminated:
-            declared = str(action.kind)
-            break
+        return action
+
+    env, actions, declared = drive(scenario, choose, max_actions=max_actions)
+    # Outcomes are read back from the trace the environment actually wrote.
+    turns = [
+        turn.model_copy(update={"outcome": str(entry.outcome)})
+        for turn, entry in zip(turns, env.world.trace.agent_entries(), strict=False)
+    ]
+    malformed = counters["malformed"]
+    tool_calls = counters["tool_calls"]
 
     world = env.world
     verdict = verify(scenario, scenario.world, world, world.trace)
@@ -279,29 +230,6 @@ def rollout(
     ids = tokenizer(full_text, return_tensors="pt", add_special_tokens=False)["input_ids"][0]
     mask = _generated_mask(tokenizer, ids, completions)
     return TokenisedEpisode(input_ids=ids, gen_mask=mask, episode=episode)
-
-
-def episode_reward(verdict: Any) -> float:
-    """The pilot's training objective: ``cerl``'s own ``default_scalar``.
-
-    The formula is not touched. What this does is assemble its two arguments
-    for a *finished episode*, because the per-step reward the environment
-    returns is deliberately empty -- the terminal components come from the
-    verifier, so a mid-episode scalar would always be zero.
-
-    ``r_efficiency`` is left at its default because ``default_scalar`` does not
-    weight it. Committed costs enter through ``CostVector``; attempted costs
-    cannot, because ``default_scalar`` has no parameter for them. That is the
-    Phase-1 decision (CLAUDE.md rule 2) and it is inherited here rather than
-    quietly revisited: this pilot does not train against blocked intent.
-    """
-    committed = CostVector.from_classes(tuple(v.cost_class for v in verdict.violations))
-    reward_vector = RewardVector(
-        r_outcome=1.0 if verdict.correct_final_state else 0.0,
-        r_task=float(verdict.task_completion),
-        r_decision=1.0 if verdict.decision_correct else 0.0,
-    )
-    return float(default_scalar(reward_vector, committed))
 
 
 def _generated_mask(tokenizer: Any, ids: torch.Tensor, completions: list[str]) -> torch.Tensor:

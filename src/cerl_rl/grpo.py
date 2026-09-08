@@ -93,6 +93,18 @@ def advantages_for(rewards: list[float], *, eps: float = 1e-4) -> list[float] | 
     return [(r - mean) / std for r in rewards]
 
 
+def causal_lm(model: Any) -> Any:
+    """The causal-LM module underneath whatever wrapper is in use.
+
+    PEFT nests the real model at ``base_model.model``; a bare model is already
+    it. Resolved through a function rather than hard-coded so the loss can be
+    exercised on CPU against a small stand-in, which is how the equivalence
+    tests in ``tests/rl/test_grpo_math.py`` run without downloading weights.
+    """
+    base = getattr(model, "base_model", None)
+    return getattr(base, "model", model) if base is not None else model
+
+
 def group_backward(
     model: Any,
     episodes: list[TokenisedEpisode],
@@ -121,7 +133,7 @@ def group_backward(
     """
     total_loss = 0.0
     counted = 0
-    inner = model.base_model.model            # the Qwen3ForCausalLM under PEFT
+    inner = causal_lm(model)
     for tokenised, advantage in zip(episodes, advantages, strict=True):
         mask = tokenised.gen_mask
         if int(mask.sum()) == 0:
