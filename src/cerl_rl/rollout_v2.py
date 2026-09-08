@@ -20,6 +20,7 @@ rather than found.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import torch
@@ -69,6 +70,8 @@ class TurnRecord(Frozen, arbitrary_types_allowed=True):
 class EpisodeV2(Frozen, arbitrary_types_allowed=True):
     turns: tuple[TurnRecord, ...]
     episode: Episode
+    #: ``declared`` | ``action_limit`` | ``context_exhausted``.
+    termination: str = "declared"
 
     @property
     def generated_tokens(self) -> int:
@@ -108,8 +111,15 @@ def rollout_v2(
     max_prompt_tokens: int = protocol_v2.MAX_PROMPT_TOKENS,
     temperature: float = protocol_v2.TRAIN_TEMPERATURE,
     device: torch.device | None = None,
+    before_generate: Callable[[int], None] | None = None,
 ) -> EpisodeV2:
-    """Run one episode, keeping the exact tokens of every turn."""
+    """Run one episode, keeping the exact tokens of every turn.
+
+    ``before_generate`` is called with the step index immediately before each
+    ``generate``. The v2 pilot passes a deadline check here: a generation is the
+    longest single operation in the run, so a budget that is only consulted
+    between episodes cannot bound it.
+    """
     device = device or torch.device("cpu")
     observations: list[str] = []
     completions: list[str] = []
@@ -130,6 +140,9 @@ def rollout_v2(
             observations.pop()
             context_exhausted["hit"] = True
             return None
+
+        if before_generate is not None:
+            before_generate(step)
 
         sampling: dict[str, Any] = (
             {"do_sample": True, "temperature": temperature, **protocol_v2.SAMPLING_NEUTRALISED}
@@ -205,4 +218,14 @@ def rollout_v2(
         terminal_state_hash=world.state_hash(),
         trace_head_hash=world.trace.head_hash,
     )
-    return EpisodeV2(turns=tuple(recorded), episode=episode)
+    return EpisodeV2(
+        turns=tuple(recorded),
+        episode=episode,
+        # R9: v1 collapsed both exhaustion modes into ``step_limited``. They are
+        # different failures -- one is the policy running out of moves, the other
+        # is the harness running out of context -- and only one is about the policy.
+        termination=(
+            "declared" if declared is not None
+            else ("context_exhausted" if context_exhausted["hit"] else "action_limit")
+        ),
+    )

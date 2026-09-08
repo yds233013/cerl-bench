@@ -338,6 +338,42 @@ actions is **4,457 tokens**, not the 3,639 measured with the abbreviated menu. S
 a 40,960-token context. **Unverified:** whether an 8,192-token forward pass fits
 comfortably in this machine's memory during training — that needs a forward pass.
 
+### The runnable v2 pilot
+
+The v2 modules existed but nothing ran them: `cerl serve`-style entry aside, the
+only runnable pilot was still wired to v1. `src/cerl_rl/pilot_v2.py` is the
+corrected runnable path.
+
+```bash
+PYTHONPATH=src .venv-rl/bin/python -m cerl_rl.pilot_v2 \
+  --updates 20 --group-size 4 --lr 1e-5 --deadline-minutes 85 \
+  --out evidence/rl-pilot-v2
+```
+
+It calls `protocol_v2`, `rollout_v2` and `turn_backward` and **never** the v1
+rollout or `group_backward` — asserted structurally by walking the module's AST
+for call and import names, not by grepping for strings.
+
+| | |
+|---|---|
+| Prompt | complete public tool contract (`system_prompt_v2`) |
+| Limits | 24 actions, 8,192 prompt tokens, 160 output tokens |
+| Sampling | every truncating sampler neutralised, recorded in the run file |
+| Provenance | every turn's `prompt_ids`, `generated_ids`, `stop_reason`, action and outcome appended to `turns.jsonl` as the run proceeds |
+| Metrics | tool calls, terminal declarations and malformed actions counted separately (R6) |
+| Termination | `declared` / `action_limit` / `context_exhausted` kept apart (R9) |
+| Deadline | enforced before **every** generation, before the backward pass, and per scenario at each evaluation boundary; an overrun is written to disk before anything else is attempted |
+| Output | defaults to `evidence/rl-pilot-v2`, and refuses a directory that already holds a run |
+
+The model is injected rather than constructed, so the whole loop is exercised in
+tests with a fake policy and tokenizer — **no weights are loaded and no
+inference runs**. Thirteen tests cover the end-to-end run, token persistence,
+metric separation, and two interruption paths driven by a synthetic clock.
+
+**It has not been run.** Producing a v2 result needs model inference, which is
+out of scope for this pass; when it is authorised it should follow the bounded
+checkpoint/logit diagnostic, not precede it.
+
 ### R4, R5, R6, R7, R8 — the smaller repairs
 
 | | was | now |
