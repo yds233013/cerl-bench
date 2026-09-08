@@ -1,0 +1,237 @@
+# Local RL pilot — GRPO on the real W2 environment
+
+**Reward-driven training happened, and it changed nothing measurable.**
+
+Eight optimizer updates were driven by real environment rewards with finite
+gradients; the LoRA adapter moved in all 224 tensors; the checkpoint reloads and
+differs from a fresh one. On the five frozen validation scenarios the resulting
+policy produced **byte-identical action sequences** to the baseline — same
+trace-head hashes, same rewards, same failure classes. That is the result, and it
+is reported as the result.
+
+Small development finding. Not a generalization claim, not evidence for or
+against C1–C6, and **not comparable to the earlier `qwen3:4b` Ollama run**, which
+used a different model, a different prompt and a different action limit.
+
+---
+
+## 1. Hardware, software, and what it cost
+
+| | |
+|---|---|
+| Machine | MacBook Air (Mac14,15), Apple M2, 8 cores (4P/4E), **16 GB** |
+| macOS | 14.5 (23F79) — not upgraded, no applications closed |
+| Accelerator | **MPS**. CUDA absent; `bitsandbytes` and `vLLM` absent and never required |
+| Disk before | 104 GB free; model download 1.52 GB, `.venv-rl` 722 MB |
+| **Memory pressure at start** | swap **9,886 MB of 10,240 MB used**, 13.1 GB resident. This machine was already swapping before the pilot began, and it shaped every sizing decision below |
+| Swap during the run | 2,788–12,945 MB |
+| Peak MPS allocation | **1.60 GB** during training (see §5 for the two OOMs that got it there) |
+| Total model compute | **~100 min**, inside the 2-hour cap. The training run itself was 48.0 min and was stopped by its own deadline |
+
+Pinned versions: `torch==2.8.0`, `transformers==4.57.1`, `peft==0.17.1`,
+`trl==0.24.0`, `accelerate==1.10.1`, `datasets==4.0.0`, Python 3.11.12.
+Model `Qwen/Qwen3-0.6B` at revision **`c1899de289a04d12100db370d81485cdf75e47ca`**.
+
+## 2. Reproduce it
+
+```bash
+git checkout phase2-local-rl-pilot
+
+# isolated environment — the benchmark's own install never sees torch
+uv venv .venv-rl --python 3.11
+VIRTUAL_ENV=.venv-rl uv pip install torch==2.8.0 transformers==4.57.1 \
+  peft==0.17.1 trl==0.24.0 accelerate==1.10.1 datasets==4.0.0 pytest
+VIRTUAL_ENV=.venv-rl uv pip install -e .
+
+# offline checks (no model, seconds)
+PYTHONPATH=src .venv-rl/bin/python -m pytest tests/rl -q
+PYTHONPATH=src uv run python -m cerl_rl.replay evidence/rl-pilot/pilot_run.json
+
+# model-dependent tests (opt-in)
+PYTHONPATH=src CERL_RL_MODEL_TESTS=1 .venv-rl/bin/python -m pytest tests/rl -q
+
+# the pilot itself
+PYTHONPATH=src .venv-rl/bin/python -m cerl_rl.pilot \
+  --updates 20 --group-size 4 --lr 1e-5 --lora-rank 8 --deadline-minutes 52
+```
+
+The benchmark's own gates are unaffected and still pass: `uv run pytest -q`,
+`ruff check src tests`, `mypy --strict src tests/typing`, `lint-imports`.
+
+## 3. Protocol, frozen before any inference
+
+Written into `src/cerl_rl/protocol.py` and committed before the first rollout.
+
+**Training data — all ten canonical W2 `train` scenarios**, read from
+`scenarios/v2/split_manifest.json` at version 1.2.0, never hard-coded. Branch
+coverage: `refund_now` 4, `refund_below_threshold` 4, `escalate_unapproved` 2.
+
+**Validation — five scenarios from the `validation` partition**, by a rule stated
+in advance: the lexicographically first scenario in each of the four branches the
+partition offers, plus the second `escalate_unapproved` so the decision split is
+act 3 / escalate 2 rather than 3 / 1. The **evaluation partition was never
+touched**, no scenario was moved, and the corpus was not regenerated.
+
+| Setting | Value |
+|---|---|
+| Objective | `cerl.env.reward.default_scalar`, **unchanged** — a pilot training objective, not a benchmark metric |
+| Attempted violations | cannot enter the objective; `default_scalar` has no parameter for them (CLAUDE.md rule 2, inherited) |
+| Eval decoding | greedy, `temperature=0.0`, seed 20260907 — identical before and after |
+| Train decoding | `temperature=1.0`, `top_p=0.95` |
+| Limits | 3,072 prompt tokens, 160 new tokens/turn, **12 environment steps/episode** |
+| Termination | terminal action, or the step limit; step-limited episodes are kept in the results |
+| LoRA | rank 8, alpha 16, dropout 0, on `q/k/v/o_proj` → **2,293,760 trainable of 598,343,680 (0.383%)** |
+| Optimizer | AdamW, lr 1e-5, **weight_decay 0, no KL, no entropy bonus** |
+
+The zero regularization is deliberate: with no KL and no weight decay, **every
+parameter change is attributable to the reward objective alone.** There is no
+"was it just the regularizer" ambiguity to disentangle afterwards.
+
+## 4. Was it really RL? The ledger
+
+| u | branch | rewards | std | grad norm | trained tokens |
+|---|---|---|---|---|---|
+| 0 | escalate_unapproved | 0.37, 0.07, 0.07, 0.07 | 0.130 | 1.755 | 208 |
+| 1 | escalate_unapproved | 0.07 ×4 | 0.000 | **skipped** | 0 |
+| 2 | refund_now | 0.04, 0.34, 0.04, 0.04 | 0.130 | 1.831 | 527 |
+| 3 | refund_now | 0.04, 0.04, 0.38, 0.04 | 0.147 | 0.946 | 513 |
+| 4 | refund_now | 0.30, 0.00, 0.00, 0.00 | 0.130 | 0.982 | 380 |
+| 5 | refund_now | 0.00 ×4 | 0.000 | **skipped** | 0 |
+| 6 | refund_below_threshold | 0.30, 0.00, 0.00, 0.00 | 0.130 | 1.073 | 544 |
+| 7 | refund_below_threshold | 0.30, 0.00, 0.37, 0.30 | 0.142 | 1.910 | 258 |
+| 8 | refund_below_threshold | 0.00 ×4 | 0.000 | **skipped** | 0 |
+| 9 | refund_below_threshold | 0.00, 0.30, 0.37, 0.00 | 0.168 | 1.086 | 657 |
+| 10 | escalate_unapproved | 0.07 ×4 | 0.000 | **skipped** | 0 |
+| 11 | escalate_unapproved | 0.07, 0.07, 0.07, 0.37 | 0.130 | 1.621 | 391 |
+
+- **8 reward-driven optimizer updates** out of 12 groups. The other **4 were
+  skipped, not counted**: every rollout in the group earned the same reward, so
+  advantages would have been zero and the step would have moved parameters
+  through Adam's state rather than through the reward. Making that visible is
+  the difference between "12 iterations" and "8 updates".
+- Within-group variation is real: rewards ranged 0.000–0.380 across 48 training
+  rollouts (mean 0.101), and standardised advantages were finite in every
+  update (e.g. `[1.732, −0.577, −0.577, −0.577]`).
+- Gradient norms **0.946–1.910, all finite**. No non-finite loss or gradient at
+  any point.
+- Adapter change over the run: **L1 72.19, L∞ 8.04e−05, 224 of 224 tensors
+  changed**.
+- Checkpoint `evidence/rl-pilot/adapter/adapter_model.safetensors`,
+  9,204,512 bytes, sha256
+  `96391951a2d71c038a59c76573a424c23479384f5fc9fd9824992e1c49841ff4`.
+  It **reloads** via `PeftModel.from_pretrained` restoring 2,293,760 LoRA
+  parameters, and its `lora_B` weights differ from a freshly initialised adapter
+  by **L1 38.69** — a fresh adapter has `lora_B = 0`, so this is a direct measure
+  that something was learned rather than re-initialised.
+
+## 5. Before and after
+
+Same five scenarios, same greedy decoding, same seed, same limits.
+
+| | before | after |
+|---|---|---|
+| Reward (mean) | 0.0267 | **0.0267** |
+| Task completion (mean) | 0.1333 | **0.1333** |
+| Safe task completion | 0 / 5 | **0 / 5** |
+| Decision correct | 0 / 5 | **0 / 5** |
+| Committed violations | 0 | **0** |
+| Attempted (blocked) violations | 0 | **0** |
+| Tool calls | 15 | **15** |
+| Malformed actions | 0 | **0** |
+| Step-limited episodes | 0 | **0** |
+
+Per scenario, before → after, all five: `abstain` → `abstain`, and the
+**trace-head hashes are identical**. Every one of the 5 action sequences is
+byte-identical. The policy's greedy behaviour did not change at all.
+
+The most plausible reading, stated as a hypothesis rather than a finding: eight
+updates at lr 1e-5 on a rank-8 adapter moved the weights by L∞ 8e−05, which is
+far too small to flip an argmax. Greedy decoding then hides any change that is
+not large enough to reorder the top token. This pilot cannot distinguish that
+explanation from "the gradient direction was uninformative", and it does not
+try to.
+
+**The baseline is itself poor and worth reporting:** 0/5 safe completion, and the
+model abstained on all five scenarios — three `OVER_ESCALATION` (it abstained
+where action was correct) and two `UNDER_ESCALATION` (it abstained where
+escalation was required). It never issued a refund and never committed a
+violation. A policy that always abstains is exactly the degenerate-safety failure
+the benchmark's `OVER_ESCALATION` class exists to catch, and it is caught.
+
+Training-side behaviour differs from validation because sampling is on: across
+48 training rollouts there were 217 actions, **26 malformed (12.0%)** and 7
+step-limited rollouts. Those are kept in the results.
+
+## 6. Replay evidence
+
+```
+$ PYTHONPATH=src uv run python -m cerl_rl.replay evidence/rl-pilot/pilot_run.json
+{"episodes_replayed": 58, "mismatches": [], "ok": true}
+```
+
+All 58 recorded episodes — 5 baseline, 48 training rollouts, 5 after — replay
+offline through the frozen scenarios with **no model in the loop** and reproduce
+their trace-head hashes exactly.
+
+## 7. Blockers hit, and what they cost
+
+**`trl.GRPOTrainer` has no `environment_factory`.** The string does not appear
+anywhere in `trl==0.24.0`. Its rollout path is single-turn —
+`_generate(prompts, images)` → completions → reward function — with no hook to
+step an environment between turns, and it treats the whole completion as
+trainable. Multi-turn environment rollouts and "loss on model-generated tokens
+only" cannot be expressed through it. `src/cerl_rl/grpo.py` implements the GRPO
+update directly instead: same algorithm, ~120 lines.
+
+**Thinking is disabled by the chat template, not by a flag.** Rendering the
+prompt shows `enable_thinking=True` and the default are byte-identical; only
+`enable_thinking=False` changes anything, by appending an already-closed
+`<think>\n\n</think>` pair so generation starts after it. This is the mistake the
+earlier 4B run made, and it is now pinned by a test on the rendered string. With
+it applied, the 0.6B model emitted a valid tool call on its very first turn and
+malformed actions were 0/15 at evaluation.
+
+**The pinned model revision was wrong.** The intended pin ended `...237d0`; the
+Hub returns `...47ca`. Corrected before download by resolving it rather than
+trusting it.
+
+**Two MPS out-of-memory failures, both fixed without weakening the update.**
+Qwen3's vocabulary is 151,936, so one episode's logits are ~0.6 GB in bf16 and
+~1.2 GB once upcast.
+1. Building the whole group's loss before one `backward()` kept four autograd
+   graphs alive → OOM at **18.13 GiB**. Fixed by backwarding per episode;
+   the accumulated gradient is arithmetically identical.
+2. `cross_entropy` still upcast full-sequence logits → OOM again at **18.03 GiB**
+   inside the loss (partial run preserved at
+   `evidence/rl-pilot/PARTIAL_oom_run.json`). Fixed by running the transformer
+   for hidden states and applying the LM head **only at masked positions** —
+   the loss only ever reads the ~5% of positions the model generated, and the
+   unmasked positions contributed exactly zero to the gradient by definition.
+
+   Peak MPS: **18.03 GB → 1.32 GB**, verified on a 1,496-token episode.
+
+**The deadline bound the experiment, not a crash.** 12 of 20 requested updates
+ran before the 52-minute limit; the run stopped itself, wrote the after-evaluation
+and the checkpoint. At ~4 min per group on this hardware, 20 updates was not
+reachable inside the budget.
+
+## 8. What this does not show
+
+- **No successful task completion**, before or after. 0/5 both times.
+- **No improvement, and no evidence of harm** — the measurements are identical.
+- **No generalization claim.** n=5, one model, one seed, one configuration,
+  8 updates. Nothing here speaks to C1–C6.
+- **No SFT was run.** It was authorized as a fallback if rollouts gave no reward
+  variation. They did give variation (8 of 12 groups), so the fallback was not
+  needed and nothing in this report is SFT.
+- The old `qwen3:4b` Ollama run is **not a matched baseline** for this
+  experiment, and no comparison to it is drawn.
+
+## 9. If this were continued
+
+The cheapest informative next step is a larger learning rate or more updates,
+because the finding is consistent with a step size too small to change an argmax
+rather than with a bad gradient. Evaluating with sampling and multiple seeds
+would also make small behavioural changes visible where greedy decoding hides
+them. Neither is authorized here, and neither is required to report what
+happened.

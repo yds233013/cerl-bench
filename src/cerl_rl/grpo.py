@@ -101,44 +101,48 @@ def group_backward(
 ) -> tuple[float, int]:
     """Accumulate the group's gradient, one episode at a time.
 
-    Written this way for a measured reason. Computing the whole group's loss and
-    calling ``backward`` once kept four autograd graphs alive at the same time
-    and hit ``MPS backend out of memory`` at 18.13 GiB. The cause is the vocabulary:
-    Qwen3 has 151,936 entries, so the logits for a ~900-token episode are ~270 MB
-    in bf16 and ~550 MB once upcast, and a separate ``log_softmax`` buffer doubles
-    it again. Four of those, retained for backward, do not fit on a 16 GB machine
-    that is already in swap.
+    Two memory decisions, both forced by measurement rather than chosen.
 
-    Two changes fix it and neither weakens the update. Each episode is backwarded
-    immediately so only one graph exists at a time -- the accumulated gradient is
-    arithmetically identical to the batched one. And the per-token log-probability
-    comes from ``cross_entropy``, which computes it without materialising a full
-    log-softmax tensor of its own.
+    **One graph at a time.** Computing the whole group's loss and calling
+    ``backward`` once kept four autograd graphs alive and hit ``MPS backend out
+    of memory`` at 18.13 GiB. Backwarding per episode is arithmetically the same
+    accumulated gradient with a quarter of the peak.
+
+    **Logits only where the loss looks.** That alone was not enough. Qwen3's
+    vocabulary is 151,936, so a full-sequence logit tensor for a 2,000-token
+    episode is ~0.6 GB in bf16 and ~1.2 GB once ``cross_entropy`` upcasts it --
+    and a second OOM landed inside ``cross_entropy`` itself. But the loss only
+    ever reads the ~5% of positions the model generated. So the transformer is
+    run for hidden states, and the language-model head is applied *only at the
+    masked positions*. Hidden states are 1,024-wide and cost megabytes; the
+    projection then runs over a couple of hundred rows instead of thousands.
+    The gradient is unchanged -- the unmasked positions contributed zero to it
+    anyway, which is precisely what the mask means.
     """
     total_loss = 0.0
     counted = 0
+    inner = model.base_model.model            # the Qwen3ForCausalLM under PEFT
     for tokenised, advantage in zip(episodes, advantages, strict=True):
         mask = tokenised.gen_mask
         if int(mask.sum()) == 0:
             continue
         ids = tokenised.input_ids.unsqueeze(0).to(device)
-        step_mask = mask[1:].to(device).float()
 
-        logits = model(input_ids=ids).logits[:, :-1]
-        targets = ids[:, 1:]
-        # -cross_entropy is the log-probability of the realised token, computed
-        # without a second vocabulary-sized buffer.
-        logp = -torch.nn.functional.cross_entropy(
-            logits.reshape(-1, logits.size(-1)).float(),
-            targets.reshape(-1),
-            reduction="none",
-        )
-        mean_logp = (logp * step_mask).sum() / step_mask.sum()
+        # Predicting token t uses the hidden state at t-1, so a generated token
+        # at position p is scored from position p-1.
+        positions = (mask[1:] > 0).nonzero(as_tuple=True)[0].to(device)
+        targets = ids[0, 1:][positions]
+
+        hidden = inner.model(input_ids=ids).last_hidden_state[0]
+        logits = inner.lm_head(hidden[positions]).float()
+        logp = -torch.nn.functional.cross_entropy(logits, targets, reduction="none")
+        mean_logp = logp.mean()
+
         loss = -(advantage * mean_logp) / max(1, len(episodes))
         loss.backward()
 
         total_loss += float(loss.detach())
-        counted += int(step_mask.sum().item())
-        del logits, logp, loss
+        counted += int(positions.numel())
+        del hidden, logits, logp, mean_logp, loss
         torch.mps.empty_cache()
     return total_loss, counted
