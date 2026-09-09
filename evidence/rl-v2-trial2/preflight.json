@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "checks": {
+    "effective_min_p_is_none": true,
+    "min_p_warper_absent": true,
+    "one_token_generation": {
+      "passed": true,
+      "seconds": 5.7,
+      "new_tokens": 1,
+      "token": "{\""
+    }
+  },
+  "sampling_kwargs": {
+    "do_sample": true,
+    "temperature": 1.0,
+    "top_k": 0,
+    "top_p": 1.0,
+    "typical_p": 1.0,
+    "repetition_penalty": 1.0,
+    "no_repeat_ngram_size": 0,
+    "renormalize_logits": false
+  },
+  "load_seconds": 6.1,
+  "resolved_generation_config": {
+    "do_sample": true,
+    "eos_token_id": [
+      151645,
+      151643
+    ],
+    "max_new_tokens": null,
+    "min_p": null,
+    "no_repeat_ngram_size": 0,
+    "num_beams": 1,
+    "pad_token_id": 151643,
+    "renormalize_logits": false,
+    "repetition_penalty": 1.0,
+    "temperature": 1.0,
+    "top_k": 0,
+    "top_p": 1.0,
+    "typical_p": 1.0
+  },
+  "active_logits_processors": [],
+  "prompt": {
+    "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101",
+    "tokens": 1524
+  },
+  "seed_note": "The trial runs in a separate process, so no RNG state from this preflight can reach it; the pilot seeds per group from protocol_v2.EVAL_SEED.",
+  "total_seconds": 12.3
+}

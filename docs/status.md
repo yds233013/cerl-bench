@@ -5,8 +5,13 @@ document disagrees, this one is correct. Two documents are deliberately *not*
 kept current and say so at the top: `docs/design.md` (the Phase 0 design of
 record) and the dated reports `MORNING_REPORT.md` and `LOCAL_BASELINE_REPORT.md`.
 
-Last updated **2026-09-07**, after the independent review of candidate
-`3d7fc20` passed, and **v0.1.0 is published**: https://github.com/yds233013/cerl-bench
+Last updated **2026-09-08**, closing out the corrected v2 training-integration
+milestone on the experimental branch `phase2-local-rl-pilot`. The release itself
+is unchanged: the independent review of candidate `3d7fc20` passed and **v0.1.0
+is published**: https://github.com/yds233013/cerl-bench
+
+Everything below describes **v0.1.0** unless a row or section says otherwise.
+Work on `phase2-local-rl-pilot` is outside the release and is marked as such.
 
 ## Two different kinds of "not done"
 
@@ -46,7 +51,7 @@ to read into it:
 |---|---|
 | **No successful local task completion** | 0/5 safe completion; mean task completion 0.147. **All five** reached the run's 16-step cap without ever declaring an outcome. One is `UNAUTHORIZED_ACTION` — it refunded on an expired approval and latched `C_AUTH`; the other four are `INCOMPLETE`. No model has completed an episode in this repository, at this or the corrected configuration. |
 | **No paid provider evaluation** | Zero paid API calls have ever been made. The wiring exists and is exercised offline; authorisation does not. See deviation 2. |
-| **No RL training** | No SFT, GRPO or curriculum arm. There is no training loop in the repository. |
+| **No RL training arm** | No SFT, GRPO or curriculum arm has been trained, and v0.1.0 contains no training loop. On the experimental branch `phase2-local-rl-pilot`, one real reward-driven optimizer update has completed from two previously recorded rollouts — an engineering demonstration, described below. It is not a trained arm, and post-update task performance is unmeasured. |
 | **No generalization result** | No C1–C6 claim is measured. Δ(π) has never been computed for any policy, and the ID/CF contrast that the whole design exists to support has not been run. |
 
 The first of these is a measured negative result and is reported as one. The
@@ -116,7 +121,8 @@ that earlier reports referring to "deviation 4" still point at the same thing:
 | **W2 React/TS workspace** | **IMPLEMENTED** | W2 only; W1 and W3 have no UI. Guided demonstration, **not** an evaluation interface — see `docs/workspace.md` |
 | **Real local inference performed and recorded** | **DONE** | `qwen3:4b` under Ollama chose its own actions against the real environment; 5 episodes; replay-verified; `evidence/local-baseline/` |
 | MCP adapter | **NOT_IMPLEMENTED** | not started; out of v0.1 scope |
-| SFT, GRPO, curriculum arms — any RL training | **NOT_IMPLEMENTED** | not started; out of v0.1 scope. No training loop exists anywhere in the repository |
+| SFT, GRPO, curriculum arms — any RL training | **NOT_IMPLEMENTED** | no arm trained; out of v0.1 scope. v0.1.0 contains no training loop |
+| Corrected v2 training path — *branch `phase2-local-rl-pilot`, not in v0.1.0* | **DEMONSTRATED** | one reward-driven optimizer update completed from two recorded rollouts; `evidence/rl-v2-smoke-2rollout/INDEX.md`. Engineering demonstration only; no performance measured |
 
 ## Deviation 1 — W1's identity-evidence axis is a challenge set, not a matched pair
 
@@ -336,12 +342,44 @@ Operational and reviewer are **separate processes**. The operational server has
 no code path to a verdict, branch label or violation flag, asserted over the
 serialised responses. Setup and architecture: `docs/workspace.md`.
 
+## Corrected v2 training-integration milestone (2026-09-08)
+
+**Branch `phase2-local-rl-pilot`. Not part of v0.1.0 and not reviewed as part of
+it.** Closed out here without further model work.
+
+- **One real reward-driven optimizer update completed**, using two previously
+  recorded training rollouts. Recorded prompt and generated token spans and
+  replay-derived rewards produced group-relative advantages (+1.0 / −1.0), a
+  per-turn backward pass over 9 turns and 282 scored tokens, gradient norm
+  1.8240920, one AdamW step at lr 1e-5, and an atomic checkpoint. 112 `lora_B`
+  tensors moved; `lora_A` correctly did not, since dL/dA is proportional to the
+  zero-initialised B on the first step.
+- **The subset was chosen after inspecting earlier results**, using rollouts 0
+  and 1 in their original order. The selection is post-hoc and is labelled as
+  such wherever it appears. They are not the two cheapest of the four — rollout 2
+  is cheaper than rollout 1 — but taking the first two excludes rollout 3, which
+  alone is 74.7% of the recorded group's work.
+- **This is an engineering demonstration.** It is **not** the original
+  four-rollout recovery, whose backward pass exceeded its 20-minute budget and
+  which remains unfinished in `evidence/rl-v2-recovery/`. It is **not** evidence
+  of improved performance.
+- **Post-update task performance remains unmeasured.** No evaluation was run
+  before or after the update.
+- **No new generation.** Every token came from the recorded trial at `6f361d90`,
+  whose four-rollout evidence in `evidence/rl-v2-trial2/` is unchanged.
+
+Configuration, source-rollout provenance, per-turn progress log, checkpoint
+checksum, timing reconciliation and the reproduction command:
+`evidence/rl-v2-smoke-2rollout/INDEX.md`.
+
 ## What this candidate does not establish
 
 - **No generalization result.** No C1–C6 claim is measured; Δ(π) has never been
   computed for any policy. Those need trained arms, the full split structure, and
   a cluster bootstrap over templates. None exists.
-- **No RL training.** No SFT, GRPO or curriculum arm; no training loop exists.
+- **No RL training arm.** No SFT, GRPO or curriculum arm; v0.1.0 contains no
+  training loop. The one completed optimizer update on `phase2-local-rl-pilot`
+  is an engineering demonstration and establishes nothing about performance.
 - **No paid provider evaluation.** Zero paid API calls have ever been made.
 - **No successful task completion by any model.** The local run scored 0/5, and
   no completed episode exists at the corrected configuration either.

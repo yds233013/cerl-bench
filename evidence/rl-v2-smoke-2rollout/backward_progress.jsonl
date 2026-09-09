@@ -1,0 +1,9 @@
+{"episode": 0, "step_index": 0, "sequence_length": 1543, "generated_tokens": 19, "running_loss": 0.02649391070008278, "running_tokens": 19, "t": 39.48}
+{"episode": 0, "step_index": 1, "sequence_length": 1613, "generated_tokens": 21, "running_loss": 0.03285368857905269, "running_tokens": 40, "t": 69.86}
+{"episode": 0, "step_index": 2, "sequence_length": 1684, "generated_tokens": 24, "running_loss": 0.0545286531560123, "running_tokens": 64, "t": 118.08}
+{"episode": 1, "step_index": 0, "sequence_length": 1556, "generated_tokens": 32, "running_loss": 0.05395691771991551, "running_tokens": 96, "t": 150.61}
+{"episode": 1, "step_index": 1, "sequence_length": 1627, "generated_tokens": 22, "running_loss": 0.03991082520224154, "running_tokens": 118, "t": 183.09}
+{"episode": 1, "step_index": 2, "sequence_length": 1695, "generated_tokens": 20, "running_loss": 0.036996095441281796, "running_tokens": 138, "t": 235.14}
+{"episode": 1, "step_index": 3, "sequence_length": 1816, "generated_tokens": 72, "running_loss": -0.05251275096088648, "running_tokens": 210, "t": 356.39}
+{"episode": 1, "step_index": 4, "sequence_length": 1900, "generated_tokens": 40, "running_loss": -0.05368902115151286, "running_tokens": 250, "t": 551.21}
+{"episode": 1, "step_index": 5, "sequence_length": 1975, "generated_tokens": 32, "running_loss": -0.05925586586818099, "running_tokens": 282, "t": 766.59}

@@ -40,6 +40,9 @@ packages = ["src/cerl"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = [
+    "model: needs the RL pilot's model weights and torch; opt in with -m model in .venv-rl",
+]
 pythonpath = ["."]
 filterwarnings = ["error"]
 
@@ -50,6 +53,12 @@ branch = true
 [tool.mypy]
 python_version = "3.11"
 strict = true
+# The Phase-2 RL pilot is deliberately outside the benchmark's gates. It needs
+# torch/peft/trl, which are NOT part of the ordinary install by design, so type
+# checking it here would make `mypy --strict src` fail on a clean checkout and
+# would drag a training dependency into offline CI. It lives in its own venv
+# (.venv-rl) and its own test marker; see LOCAL_RL_PILOT_REPORT.md.
+exclude = ["^src/cerl_rl/"]
 warn_unreachable = true
 disallow_any_explicit = false
 plugins = ["pydantic.mypy"]
@@ -92,13 +101,19 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Reporting scripts exist to print; they are not library code.
-"scripts/*.py" = ["T201", "EXE001"]
+"scripts/*.py" = ["T201", "EXE001", "INP001", "ANN", "PLR2004", "S603", "S607", "BLE001", "SLF001", "TRY301", "PERF203"]
 "tests/*" = [
     "ANN", "PLR2004", "SLF001", "INP001", "T201", "PT018", "PERF401",
     "S603", "S607", "BLE001", "FBT001", "FBT002", "ARG001", "ARG002",
     "ARG003", "ARG004", "ARG005",  # raising stubs must accept any signature
 ]
 "src/cerl/cli.py" = ["T201", "B008", "UP007"]
+# The pilot entry points are scripts: they print, and they read the OS for the
+# memory measurements the run has to report.
+"src/cerl_rl/pilot.py" = ["T201", "S603", "S607", "PLW1510"]
+"src/cerl_rl/replay.py" = ["T201"]
+"src/cerl_rl/audit.py" = ["T201"]
+"src/cerl_rl/pilot_v2.py" = ["T201"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"

@@ -15,3 +15,7 @@ app/dist/
 
 # macOS
 .DS_Store
+
+# Phase 2 RL pilot: isolated venv and model checkpoints are not committed.
+.venv-rl/
+evidence/rl-pilot/adapter/

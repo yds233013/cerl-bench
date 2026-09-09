@@ -1,0 +1,124 @@
+{
+  "what_this_is": "engineering smoke test of the v2 backward + optimizer path",
+  "what_this_is_not": [
+    "not a recovery of the original four-rollout update (that group is 0-3)",
+    "not a research performance result",
+    "task performance is left explicitly unmeasured"
+  ],
+  "selection": {
+    "rollouts": [
+      0,
+      1
+    ],
+    "rule": "the first two by original order",
+    "when_chosen": "AFTER inspecting the previous run",
+    "why": "the full four-rollout group needed 36 backward passes over 80,279 tokens and did not fit in 20 minutes; these two are the cheapest of the four. Choosing the cheap half after seeing the cost is an engineering decision, not an experimental one"
+  },
+  "source_trial": "6f361d90b593c1e749a43dbd8c026135bed818c0",
+  "status": "completed: one optimizer step on a two-rollout smoke group",
+  "preconditions_on_all_four": {
+    "rollouts": 4,
+    "per_rollout": {
+      "0": {
+        "turns": 3,
+        "reward": 0.36666666666666664,
+        "termination": "declared:escalate",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": true,
+        "generated_tokens": 64
+      },
+      "1": {
+        "turns": 6,
+        "reward": 0.06666666666666667,
+        "termination": "declared:finish",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": false,
+        "generated_tokens": 218
+      },
+      "2": {
+        "turns": 3,
+        "reward": 0.06666666666666667,
+        "termination": "declared:finish",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": false,
+        "generated_tokens": 108
+      },
+      "3": {
+        "turns": 24,
+        "reward": 0.06666666666666667,
+        "termination": "action_limit",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": false,
+        "generated_tokens": 784
+      }
+    },
+    "problems": [],
+    "passed": true
+  },
+  "group": {
+    "rollouts": [
+      0,
+      1
+    ],
+    "turns": 9,
+    "generated_tokens": 282,
+    "total_sequence_tokens": 15409,
+    "rewards": [
+      0.36666666666666664,
+      0.06666666666666667
+    ],
+    "advantages": [
+      1.0000000000000002,
+      -1.0
+    ],
+    "note": "advantages are recomputed for THIS two-rollout group; they are not the four-rollout group's advantages"
+  },
+  "config": {
+    "seed": 20260908,
+    "device": "mps",
+    "lora_rank": 8,
+    "learning_rate": 1e-05,
+    "objective": "cerl.env.reward.default_scalar",
+    "kl_beta": 0.0,
+    "weight_decay": 0.0,
+    "loss": "cerl_rl.grpo.turn_backward",
+    "load_seconds": 6.8,
+    "all_lora_B_zero_before": true
+  },
+  "backward": {
+    "completed": true,
+    "loss": -0.05925586586818099,
+    "scored_tokens": 282,
+    "seconds": 760.1,
+    "turns_backwarded": 9
+  },
+  "gradient": {
+    "norm": 1.8240920305252075,
+    "finite": true,
+    "tensors_with_grad": 224
+  },
+  "update": {
+    "occurred": true,
+    "optimizer": "AdamW",
+    "learning_rate": 1e-05,
+    "l1": 11.465809173882008,
+    "linf": 9.99999883788405e-06,
+    "tensors_changed": 112,
+    "tensors_total": 224,
+    "lora_B_changed": 112,
+    "lora_A_changed": 0
+  },
+  "checkpoint": {
+    "path": "evidence/rl-v2-smoke-2rollout/adapter",
+    "weights_file": "adapter_model.safetensors",
+    "sha256": "87b156f884f0eea44581c5917ba50b3a8c8dbd61f6ac90a7194475ba5047ad98",
+    "bytes": 9204512,
+    "atomic": "written by save_pretrained, then checksummed from disk"
+  },
+  "task_performance": "EXPLICITLY UNMEASURED. No evaluation was run before or after this update. A completed update shows the machinery runs; it says nothing about whether the policy improved.",
+  "total_seconds": 768.7
+}

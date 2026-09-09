@@ -1,0 +1,29 @@
+{
+  "what_this_is": "Metrics recomputed from the recorded actions. The original record is unchanged; where 'reported_tool_calls' differs from 'verifier_tool_calls', the runner counted terminal declarations as tool calls and the verifier does not.",
+  "phases": {
+    "baseline": {
+      "reported_tool_calls": 15,
+      "verifier_tool_calls": 10,
+      "tool_calls": 10,
+      "terminal_declarations": 5,
+      "malformed_actions": 0,
+      "total_actions": 15
+    },
+    "after": {
+      "reported_tool_calls": 15,
+      "verifier_tool_calls": 10,
+      "tool_calls": 10,
+      "terminal_declarations": 5,
+      "malformed_actions": 0,
+      "total_actions": 15
+    },
+    "training": {
+      "reported_tool_calls": 191,
+      "verifier_tool_calls": 150,
+      "tool_calls": 150,
+      "terminal_declarations": 41,
+      "malformed_actions": 26,
+      "total_actions": 217
+    }
+  }
+}

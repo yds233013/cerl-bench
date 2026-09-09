@@ -1,0 +1,6 @@
+--- preflight (1200s of the shared 1200s budget left) ---
+preflight exit status 0
+preflight passed; running the trial with an in-process deadline of 18 minutes
+--- trial (1186s of the shared 1200s budget left) ---
+trial exit status 143
+trial exit status 143; -4s of budget left

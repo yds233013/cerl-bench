@@ -9,13 +9,26 @@ it. It exists to ask one question — do agents that succeed at enterprise tool-
 learn *transferable safe decision procedures*, or do they fit the state
 distributions they were trained on?
 
-> **Status: v0.1.0 — released.** The simulator, the scenario corpus, the
-> verifier and the evaluation harness are complete and independently reviewed.
+Two separate things live in this repository, and the difference matters:
+
+> **1. The released simulator and benchmark — v0.1.0.** The simulator, the
+> scenario corpus, the verifier and the evaluation harness are complete and
+> independently reviewed. This is the *instrument*.
 >
-> **The research question above is not answered here.** No training arm exists,
-> no model has completed a task, and no generalization result has been measured.
-> This release publishes the *instrument*, not a finding. See
+> **The research question above is not answered by it.** No training arm has been
+> trained, no model has completed a task, and no generalization result has been
+> measured. See
 > [What has and has not been measured](#what-has-and-has-not-been-measured).
+
+> **2. One completed reward-driven optimizer update — branch
+> `phase2-local-rl-pilot`, not part of v0.1.0.** A single optimizer update ran to
+> completion using **two previously recorded training rollouts**, whose subset
+> was **selected after inspecting the earlier results**.
+>
+> **It is an engineering demonstration** that the training path runs end to end
+> on real weights. **Post-update task performance is unmeasured** — no evaluation
+> was run before or after the update, so nothing here says the policy got better.
+> See [the training pilot](#the-training-pilot-branch-phase2-local-rl-pilot).
 
 ---
 
@@ -215,7 +228,12 @@ not untouched held-out performance. The untouched figure is v1's, preserved in
 
 ### Not measured
 
-- **No RL training exists.** No SFT, no GRPO, no curriculum arm.
+- **No RL training arm exists.** No SFT, no GRPO, no curriculum arm has been
+  trained. On the experimental branch `phase2-local-rl-pilot`, **one real
+  reward-driven optimizer update completed** using two previously recorded
+  training rollouts — an engineering demonstration that the training path runs,
+  described below and indexed in `evidence/rl-v2-smoke-2rollout/INDEX.md`. It is
+  not a trained arm and produced no performance measurement.
 - **No generalization result.** None of C1–C6 has been tested. The ID/CF
   contrast has never been computed on a trained policy.
 - **No successful local-model episode.** A local open-weight model
@@ -230,6 +248,55 @@ not untouched held-out performance. The untouched figure is v1's, preserved in
   not on 1.x, and the history is in `docs/pilot-split-audit.md`.
 - **W1 identity-evidence generalization.** Reported as a separate challenge set,
   not a matched pair — see `docs/w1-scope.md`.
+
+## The training pilot (branch `phase2-local-rl-pilot`)
+
+**Not part of the v0.1.0 release and not covered by its independent review.**
+
+- **One real reward-driven optimizer update completed**, using two previously
+  recorded training rollouts. Recorded token spans and replay-derived rewards
+  drove group-relative advantages, a per-turn backward pass, one AdamW step and
+  an atomic checkpoint. Gradient norm 1.8240920; 112 `lora_B` tensors moved.
+- **The subset was chosen after inspecting earlier results**, using rollouts 0
+  and 1 in their original order. That selection is post-hoc.
+- **This is an engineering demonstration.** It is not the original four-rollout
+  recovery, which never completed, and it is not evidence of improved
+  performance.
+- **Post-update task performance remains unmeasured.** No evaluation was run
+  before or after the update.
+
+Everything — configuration, source-rollout provenance, per-turn progress log,
+checkpoint checksum and the reproduction command — is linked from one evidence
+index: [`evidence/rl-v2-smoke-2rollout/INDEX.md`](evidence/rl-v2-smoke-2rollout/INDEX.md).
+
+### Running it
+
+The training dependencies are **deliberately not part of the ordinary install**.
+They are heavy, they are platform-specific, and keeping them out means
+`uv sync` and offline CI stay unaffected. They live in their own virtualenv:
+
+```bash
+uv venv .venv-rl --python 3.11
+VIRTUAL_ENV=.venv-rl uv pip install -r requirements-rl.txt
+VIRTUAL_ENV=.venv-rl uv pip install -e .
+
+# offline tests: tiny CPU networks and scripted tokenizers, no model weights
+PYTHONPATH=src .venv-rl/bin/python -m pytest tests/rl -q
+
+# the completed update, re-run under its 20-minute external watchdog
+./scripts/run_v2_smoke2.sh 1200
+```
+
+Re-running the update needs a local copy of the base model,
+[`Qwen/Qwen3-0.6B`](https://huggingface.co/Qwen/Qwen3-0.6B) (Apache-2.0). **Base
+model weights, the Hugging Face cache and `.venv-rl` are not committed** — the
+repository holds only the ~9 MB LoRA adapter the update produced. The pilot was
+developed and run on Apple silicon (MPS); nothing about it assumes that, but the
+timings and the memory limits in the reports are specific to it.
+
+Code: `src/cerl_rl/`. Tests: `tests/rl/`. Scripts: `scripts/`.
+The full Phase 2 narrative, including the failures, is in
+[`LOCAL_RL_PILOT_REPORT.md`](LOCAL_RL_PILOT_REPORT.md).
 
 ## Screenshots
 
@@ -253,6 +320,9 @@ is in `docs/` and `evidence/`, and is reproducible by the commands above.
 | `docs/pilot-split-audit.md` | Corpus 2.0.0 and split 1.2.0 |
 | `docs/rc-review-repairs.md` | The five defects found by independent review of `fc2a301`, before and after |
 | `LOCAL_BASELINE_REPORT.md` | The local-model runs, in full |
+| `evidence/rl-v2-smoke-2rollout/INDEX.md` | The training pilot's evidence index (branch `phase2-local-rl-pilot`, not in v0.1.0) |
+| `LOCAL_RL_PILOT_REPORT.md` | The Phase 2 training pilot in full, failures included |
+| `requirements-rl.txt` | Pinned training dependencies, installed separately |
 | `docs/limitations.md` | Known limitations |
 
 ## Development

@@ -1,0 +1,14 @@
+{"t": 0.0, "stage": "probe_begin", "probe": 4, "pid": 57646}
+{"t": 2.465, "stage": "loading_tokenizer"}
+{"t": 2.911, "stage": "loading_policy", "note": "fresh rank-8 LoRA, bfloat16, as the trial used"}
+{"t": 6.448, "stage": "policy_loaded", "synchronized": true}
+{"t": 6.958, "stage": "prompt_built", "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101", "shape": [1, 1524], "dtype": "torch.int64", "device": "mps:0", "bytes": 12192}
+{"t": 6.958, "stage": "case_begin", "case": "a_sample_defaults", "sampling": {"do_sample": true}}
+{"t": 12.925, "stage": "case_done", "synchronized": true, "case": "a_sample_defaults", "new_tokens": 1}
+{"t": 12.926, "stage": "case_begin", "case": "b_sample_temperature", "sampling": {"do_sample": true, "temperature": 1.0}}
+{"t": 18.464, "stage": "case_done", "synchronized": true, "case": "b_sample_temperature", "new_tokens": 1}
+{"t": 18.465, "stage": "case_begin", "case": "c_plus_top_k_0", "sampling": {"do_sample": true, "temperature": 1.0, "top_k": 0}}
+{"t": 23.877, "stage": "case_done", "synchronized": true, "case": "c_plus_top_k_0", "new_tokens": 1}
+{"t": 23.878, "stage": "case_begin", "case": "d_plus_top_p_1", "sampling": {"do_sample": true, "temperature": 1.0, "top_k": 0, "top_p": 1.0}}
+{"t": 29.411, "stage": "case_done", "synchronized": true, "case": "d_plus_top_p_1", "new_tokens": 1}
+{"t": 29.412, "stage": "case_begin", "case": "e_plus_min_p_0", "sampling": {"do_sample": true, "temperature": 1.0, "top_k": 0, "top_p": 1.0, "min_p": 0.0}}

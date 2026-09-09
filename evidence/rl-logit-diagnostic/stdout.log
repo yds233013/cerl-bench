@@ -1,0 +1,38 @@
+{
+  "base_repeatability": {
+    "identical_bits": true,
+    "max_abs_logit_delta": 0.0,
+    "mean_abs_logit_delta": 0.0,
+    "argmax_a": 4913,
+    "argmax_b": 4913,
+    "preferred_token_changed": false,
+    "top1_probability_a": 0.991145670413971,
+    "top1_probability_b": 0.991145670413971,
+    "kl_a_to_b": 0.0,
+    "label": "stage 1 vs 2 -- same weights, same input"
+  },
+  "adapter_effect": {
+    "identical_bits": false,
+    "max_abs_logit_delta": 0.8125,
+    "mean_abs_logit_delta": 0.11383719742298126,
+    "argmax_a": 4913,
+    "argmax_b": 4913,
+    "preferred_token_changed": false,
+    "top1_probability_a": 0.991145670413971,
+    "top1_probability_b": 0.989241898059845,
+    "kl_a_to_b": 0.0002174583205487579,
+    "label": "stage 1 vs 3 -- adapter disabled vs enabled"
+  },
+  "checkpoint_reproducibility": {
+    "identical_bits": true,
+    "max_abs_logit_delta": 0.0,
+    "mean_abs_logit_delta": 0.0,
+    "argmax_a": 4913,
+    "argmax_b": 4913,
+    "preferred_token_changed": false,
+    "top1_probability_a": 0.989241898059845,
+    "top1_probability_b": 0.989241898059845,
+    "kl_a_to_b": 0.0,
+    "label": "stage 3 vs 4 -- in-memory vs reloaded from disk"
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "stages": {
+    "1_base_first": {
+      "argmax_token_id": 4913,
+      "argmax_token": "{\"",
+      "max_logit": 31.0,
+      "logit_sha256": "c85eda5daa29e75e6a6857d6b7f31efabaaed5ee284b0b31248d0d3271d34b57",
+      "top_5": [
+        {
+          "token_id": 4913,
+          "token": "{\"",
+          "probability": 0.991145670413971
+        },
+        {
+          "token_id": 1,
+          "token": "\"",
+          "probability": 0.005893567577004433
+        },
+        {
+          "token_id": 73594,
+          "token": "```",
+          "probability": 0.0019133612513542175
+        },
+        {
+          "token_id": 515,
+          "token": "{\n",
+          "probability": 0.0007976076449267566
+        },
+        {
+          "token_id": 90,
+          "token": "{",
+          "probability": 0.00010794445552164689
+        }
+      ]
+    },
+    "2_base_repeat": {
+      "argmax_token_id": 4913,
+      "argmax_token": "{\"",
+      "max_logit": 31.0,
+      "logit_sha256": "c85eda5daa29e75e6a6857d6b7f31efabaaed5ee284b0b31248d0d3271d34b57",
+      "top_5": [
+        {
+          "token_id": 4913,
+          "token": "{\"",
+          "probability": 0.991145670413971
+        },
+        {
+          "token_id": 1,
+          "token": "\"",
+          "probability": 0.005893567577004433
+        },
+        {
+          "token_id": 73594,
+          "token": "```",
+          "probability": 0.0019133612513542175
+        },
+        {
+          "token_id": 515,
+          "token": "{\n",
+          "probability": 0.0007976076449267566
+        },
+        {
+          "token_id": 90,
+          "token": "{",
+          "probability": 0.00010794445552164689
+        }
+      ]
+    },
+    "3_adapter_enabled": {
+      "argmax_token_id": 4913,
+      "argmax_token": "{\"",
+      "max_logit": 30.875,
+      "logit_sha256": "8792a86a39d3c0c545da993990b9e27763189ab1326907629f603c52dde4219e",
+      "top_5": [
+        {
+          "token_id": 4913,
+          "token": "{\"",
+          "probability": 0.989241898059845
+        },
+        {
+          "token_id": 1,
+          "token": "\"",
+          "probability": 0.00755295529961586
+        },
+        {
+          "token_id": 73594,
+          "token": "```",
+          "probability": 0.002163957804441452
+        },
+        {
+          "token_id": 515,
+          "token": "{\n",
+          "probability": 0.0007960756192915142
+        },
+        {
+          "token_id": 90,
+          "token": "{",
+          "probability": 0.0001077371125575155
+        }
+      ]
+    },
+    "4_adapter_reloaded": {
+      "argmax_token_id": 4913,
+      "argmax_token": "{\"",
+      "max_logit": 30.875,
+      "logit_sha256": "8792a86a39d3c0c545da993990b9e27763189ab1326907629f603c52dde4219e",
+      "top_5": [
+        {
+          "token_id": 4913,
+          "token": "{\"",
+          "probability": 0.989241898059845
+        },
+        {
+          "token_id": 1,
+          "token": "\"",
+          "probability": 0.00755295529961586
+        },
+        {
+          "token_id": 73594,
+          "token": "```",
+          "probability": 0.002163957804441452
+        },
+        {
+          "token_id": 515,
+          "token": "{\n",
+          "probability": 0.0007960756192915142
+        },
+        {
+          "token_id": 90,
+          "token": "{",
+          "probability": 0.0001077371125575155
+        }
+      ]
+    }
+  },
+  "status": "complete",
+  "adapter": {
+    "path": "evidence/rl-pilot/adapter/adapter_model.safetensors",
+    "sha256": "96391951a2d71c038a59c76573a424c23479384f5fc9fd9824992e1c49841ff4",
+    "recorded_sha256": "96391951a2d71c038a59c76573a424c23479384f5fc9fd9824992e1c49841ff4",
+    "match": true
+  },
+  "input": {
+    "scenario_id": "dup_charge_threshold__amt-above_threshold__appr-valid__ttl-short__nd-absent__pp-none__t-10000__tr-stable__s101",
+    "branch_withheld": "the policy input carries no branch label",
+    "prompt_tokens": 1524,
+    "prompt_sha256": "05599c58b980a2c2e9f5c3a2778cbadf428caf58606b7a83a4434274b6cdd6f1",
+    "first_16_token_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      264,
+      1824,
+      8315,
+      3238,
+      4766,
+      264,
+      2813,
+      594,
+      5306,
+      198,
+      15918
+    ],
+    "last_16_token_ids": [
+      16,
+      15,
+      15,
+      15,
+      15,
+      15,
+      8,
+      151645,
+      198,
+      151644,
+      77091,
+      198,
+      151667,
+      271,
+      151668,
+      271
+    ],
+    "note": "identical tokens are reused for every stage; nothing is re-rendered"
+  },
+  "environment": {
+    "device": "mps",
+    "dtype": "bfloat16",
+    "model": "Qwen/Qwen3-0.6B",
+    "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+    "load_seconds": 7.7
+  },
+  "comparisons": {
+    "base_repeatability": {
+      "identical_bits": true,
+      "max_abs_logit_delta": 0.0,
+      "mean_abs_logit_delta": 0.0,
+      "argmax_a": 4913,
+      "argmax_b": 4913,
+      "preferred_token_changed": false,
+      "top1_probability_a": 0.991145670413971,
+      "top1_probability_b": 0.991145670413971,
+      "kl_a_to_b": 0.0,
+      "label": "stage 1 vs 2 -- same weights, same input"
+    },
+    "adapter_effect": {
+      "identical_bits": false,
+      "max_abs_logit_delta": 0.8125,
+      "mean_abs_logit_delta": 0.11383719742298126,
+      "argmax_a": 4913,
+      "argmax_b": 4913,
+      "preferred_token_changed": false,
+      "top1_probability_a": 0.991145670413971,
+      "top1_probability_b": 0.989241898059845,
+      "kl_a_to_b": 0.0002174583205487579,
+      "label": "stage 1 vs 3 -- adapter disabled vs enabled"
+    },
+    "checkpoint_reproducibility": {
+      "identical_bits": true,
+      "max_abs_logit_delta": 0.0,
+      "mean_abs_logit_delta": 0.0,
+      "argmax_a": 4913,
+      "argmax_b": 4913,
+      "preferred_token_changed": false,
+      "top1_probability_a": 0.989241898059845,
+      "top1_probability_b": 0.989241898059845,
+      "kl_a_to_b": 0.0,
+      "label": "stage 3 vs 4 -- in-memory vs reloaded from disk"
+    }
+  },
+  "total_seconds": 35.2
+}

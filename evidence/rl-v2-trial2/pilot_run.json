@@ -1,0 +1,54 @@
+{
+  "protocol_version": "2.0.0",
+  "uses": {
+    "protocol": "cerl_rl.protocol_v2",
+    "rollout": "cerl_rl.rollout_v2.rollout_v2",
+    "loss": "cerl_rl.grpo.turn_backward",
+    "tool_contract": "complete public schemas (cerl_rl.tools.tool_contract)"
+  },
+  "limits": {
+    "max_actions": 24,
+    "max_prompt_tokens": 8192,
+    "max_new_tokens": 160
+  },
+  "sampling": {
+    "train_temperature": 1.0,
+    "eval_temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0,
+    "typical_p": 1.0,
+    "repetition_penalty": 1.0,
+    "no_repeat_ngram_size": 0,
+    "renormalize_logits": false
+  },
+  "config": {
+    "updates_requested": 1,
+    "group_size": 4,
+    "learning_rate": 1e-05,
+    "kl_beta": 0.0,
+    "deadline_seconds": 1080.0
+  },
+  "groups": [],
+  "reward_driven_updates": 0,
+  "interruption": null,
+  "stopped_because": "external watchdog: shared 20-minute budget exhausted mid-group",
+  "skip_evaluation": true,
+  "turns_recorded": 0,
+  "baseline": {
+    "label": "baseline",
+    "skipped": "training-only trial"
+  },
+  "outcome": {
+    "result": "TIMED OUT \u2014 the external watchdog stopped the trial mid-group, before any optimizer update",
+    "signal": "SIGTERM from scripts/run_v2_trial2.sh at the shared 20-minute budget (exit 143)",
+    "why_the_in_process_deadline_did_not_fire_first": "the in-process budget was 18 minutes and is checked between operations; the external budget was 20 minutes shared with preflight. The watchdog fired while work was already running, which is the case an in-process deadline cannot cover and the reason the external one exists.",
+    "rollouts_completed": 4,
+    "turns_persisted": 36,
+    "groups_recorded": 0,
+    "optimizer_updates": 0,
+    "checkpoint_written": false,
+    "min_p_abort": "did NOT recur; the corrected sampling generated normally throughout",
+    "note_on_this_field": "added after the fact. SIGTERM terminates the process without running Python handlers, so the pilot could not label its own record. Everything above this key was written by the pilot.",
+    "rewards_derived_by_offline_replay": "see replay.json \u2014 the trial did not record them"
+  }
+}
