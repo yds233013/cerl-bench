@@ -215,7 +215,12 @@ not untouched held-out performance. The untouched figure is v1's, preserved in
 
 ### Not measured
 
-- **No RL training exists.** No SFT, no GRPO, no curriculum arm.
+- **No RL training arm exists.** No SFT, no GRPO, no curriculum arm has been
+  trained. On the experimental branch `phase2-local-rl-pilot`, **one real
+  reward-driven optimizer update completed** using two previously recorded
+  training rollouts — an engineering demonstration that the training path runs,
+  described below and indexed in `evidence/rl-v2-smoke-2rollout/INDEX.md`. It is
+  not a trained arm and produced no performance measurement.
 - **No generalization result.** None of C1–C6 has been tested. The ID/CF
   contrast has never been computed on a trained policy.
 - **No successful local-model episode.** A local open-weight model
@@ -230,6 +235,27 @@ not untouched held-out performance. The untouched figure is v1's, preserved in
   not on 1.x, and the history is in `docs/pilot-split-audit.md`.
 - **W1 identity-evidence generalization.** Reported as a separate challenge set,
   not a matched pair — see `docs/w1-scope.md`.
+
+### The corrected v2 training-integration milestone
+
+On the experimental branch `phase2-local-rl-pilot`, and **not** part of the
+v0.1.0 release:
+
+- **One real reward-driven optimizer update completed**, using two previously
+  recorded training rollouts. Recorded token spans and replay-derived rewards
+  drove group-relative advantages, a per-turn backward pass, one AdamW step and
+  an atomic checkpoint. Gradient norm 1.8240920; 112 `lora_B` tensors moved.
+- **The subset was chosen after inspecting earlier results**, using rollouts 0
+  and 1 in their original order. That selection is post-hoc.
+- **This is an engineering demonstration.** It is not the original four-rollout
+  recovery, which never completed, and it is not evidence of improved
+  performance.
+- **Post-update task performance remains unmeasured.** No evaluation was run
+  before or after the update.
+
+Everything — configuration, source-rollout provenance, per-turn progress log,
+checkpoint checksum and the reproduction command — is linked from
+`evidence/rl-v2-smoke-2rollout/INDEX.md`.
 
 ## Screenshots
 
@@ -253,6 +279,7 @@ is in `docs/` and `evidence/`, and is reproducible by the commands above.
 | `docs/pilot-split-audit.md` | Corpus 2.0.0 and split 1.2.0 |
 | `docs/rc-review-repairs.md` | The five defects found by independent review of `fc2a301`, before and after |
 | `LOCAL_BASELINE_REPORT.md` | The local-model runs, in full |
+| `evidence/rl-v2-smoke-2rollout/INDEX.md` | The corrected v2 training-integration milestone (branch `phase2-local-rl-pilot`, not in v0.1.0) |
 | `docs/limitations.md` | Known limitations |
 
 ## Development

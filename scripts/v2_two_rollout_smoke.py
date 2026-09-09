@@ -6,10 +6,13 @@
   rollouts 0-3; this uses two of them, so it is a different group with different
   advantages and a different gradient.
 * It is **not** a research result. The two rollouts were chosen **after**
-  inspecting the previous run -- they are the two cheapest of the four, picked
-  because the full group's 36 backward passes over 80,279 tokens did not fit in
-  20 minutes. Selecting the cheap half after seeing the cost is a legitimate
-  engineering decision and an illegitimate experimental one.
+  inspecting the previous run, by the rule "the first two in original order".
+  The reason for cutting the group at all is that the full four-rollout backward
+  pass -- 36 turns over 80,279 tokens -- did not fit in 20 minutes. They are not
+  the two cheapest: rollout 2 is cheaper than rollout 1, so the cheapest pair is
+  {0, 2}. What first-two-in-original-order does is exclude rollout 3, which alone
+  is 74.7% of the group's work. Selecting a subset after seeing the cost is a
+  legitimate engineering decision and an illegitimate experimental one.
 * It measures **nothing about task performance.** Task performance is left
   explicitly unmeasured: no evaluation is run before or after.
 
@@ -55,9 +58,11 @@ record: dict = {
         "rule": "the first two by original order",
         "when_chosen": "AFTER inspecting the previous run",
         "why": ("the full four-rollout group needed 36 backward passes over 80,279 "
-                "tokens and did not fit in 20 minutes; these two are the cheapest "
-                "of the four. Choosing the cheap half after seeing the cost is an "
-                "engineering decision, not an experimental one"),
+                "tokens and did not fit in 20 minutes. These are NOT the two "
+                "cheapest -- rollout 2 is cheaper than rollout 1 -- but taking the "
+                "first two excludes rollout 3, which alone is 74.7% of the work. "
+                "Choosing a subset after seeing the cost is an engineering "
+                "decision, not an experimental one"),
     },
     "source_trial": "6f361d90b593c1e749a43dbd8c026135bed818c0",
     "status": "started",
