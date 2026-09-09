@@ -20,7 +20,22 @@ from cerl.reference.runner import run_actions
 from cerl.scenario import freeze
 
 EVIDENCE = pathlib.Path(__file__).resolve().parents[2] / "evidence" / "rl-pilot"
+SMOKE = pathlib.Path(__file__).resolve().parents[2] / "evidence" / "rl-v2-smoke-2rollout"
 _ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
+
+#: The v1 pilot's checkpoint is deliberately **not committed** -- it is a model
+#: weight file, excluded by ``.gitignore`` along with the base model and the
+#: caches. So the checks that read it can only run where the original run
+#: happened. They skip rather than fail on a fresh clone, and the committed v2
+#: smoke adapter carries the equivalent check that *does* run everywhere.
+_V1_WEIGHTS = EVIDENCE / "adapter" / "adapter_model.safetensors"
+_needs_v1_checkpoint = pytest.mark.skipif(
+    not _V1_WEIGHTS.exists(),
+    reason=(
+        "the v1 pilot checkpoint is not committed (model weights are gitignored); "
+        "this check runs only on a machine holding the original run"
+    ),
+)
 
 
 @pytest.fixture(scope="module")
@@ -51,13 +66,24 @@ def test_every_reward_driven_group_had_a_finite_gradient(record):
             assert group["generated_tokens"] > 0
 
 
+@_needs_v1_checkpoint
 def test_the_checkpoint_on_disk_is_the_one_the_record_names(record):
-    weights = EVIDENCE / "adapter" / "adapter_model.safetensors"
+    digest = hashlib.sha256(_V1_WEIGHTS.read_bytes()).hexdigest()
+    assert digest == record["checkpoint"]["sha256"]
+
+
+def test_the_committed_smoke_checkpoint_is_the_one_its_record_names():
+    """The v2 smoke adapter *is* committed, so this runs on any clone. It is the
+    published claim that the checkpoint in the tree is the one the run wrote."""
+    record = json.loads((SMOKE / "smoke.json").read_text())
+    weights = SMOKE / "adapter" / record["checkpoint"]["weights_file"]
     assert weights.exists()
+    assert weights.stat().st_size == record["checkpoint"]["bytes"]
     digest = hashlib.sha256(weights.read_bytes()).hexdigest()
     assert digest == record["checkpoint"]["sha256"]
 
 
+@_needs_v1_checkpoint
 def test_the_saved_adapter_is_trained_rather_than_freshly_initialised():
     """A fresh LoRA has ``lora_B == 0`` exactly. Non-zero here is direct evidence
     that something was learned -- and that the baseline measured the base model,
