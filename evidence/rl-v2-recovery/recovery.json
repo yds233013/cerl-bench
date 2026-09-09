@@ -1,0 +1,115 @@
+{
+  "what_this_is": "Recovery of one optimizer update from the four rollouts recorded by the trial at commit 6f361d90b593c1e749a43dbd8c026135bed818c0. No new generation: every token was produced by that trial.",
+  "source_trial": {
+    "commit": "6f361d90b593c1e749a43dbd8c026135bed818c0",
+    "evidence": "evidence/rl-v2-trial2"
+  },
+  "status": "TIMED OUT: turn_backward did not complete within the 20-minute budget",
+  "preconditions": {
+    "rollouts": 4,
+    "per_rollout": {
+      "0": {
+        "turns": 3,
+        "reward": 0.36666666666666664,
+        "termination": "declared:escalate",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": true,
+        "generated_tokens": 64
+      },
+      "1": {
+        "turns": 6,
+        "reward": 0.06666666666666667,
+        "termination": "declared:finish",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": false,
+        "generated_tokens": 218
+      },
+      "2": {
+        "turns": 3,
+        "reward": 0.06666666666666667,
+        "termination": "declared:finish",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": false,
+        "generated_tokens": 108
+      },
+      "3": {
+        "turns": 24,
+        "reward": 0.06666666666666667,
+        "termination": "action_limit",
+        "task_completion": 0.3333333333333333,
+        "safe_completion": false,
+        "decision_correct": false,
+        "generated_tokens": 784
+      }
+    },
+    "problems": [],
+    "passed": true
+  },
+  "config": {
+    "learning_rate": 1e-05,
+    "lora_rank": 8,
+    "objective": "cerl.env.reward.default_scalar",
+    "kl_beta": 0.0,
+    "weight_decay": 0.0,
+    "recovery_seed": 20260908
+  },
+  "load_seconds": 7.8,
+  "policy_equivalence": {
+    "lora_B_tensors": 112,
+    "lora_A_tensors": 112,
+    "all_lora_B_zero": true,
+    "adapter_enabled_logits_identical_to_disabled": true,
+    "probe_prompt_tokens": 1524,
+    "argument": "LoRA computes base + scaling * B @ A. With every B exactly zero the adapter contributes nothing, so the pre-update policy IS the pinned base model -- verified here by a bit-identical logit comparison, not assumed.",
+    "limitation": "The original trial recorded no LoRA initialisation seed, so its exact A matrices cannot be recreated. That does not affect the pre-update policy, which is identical for any A while B is zero. It does affect the update: dL/dB depends on A, so the parameter change computed here is not bit-identical to the one that trial would have produced. This recovery is seeded and reproducible going forward."
+  },
+  "group": {
+    "rewards": [
+      0.36666666666666664,
+      0.06666666666666667,
+      0.06666666666666667,
+      0.06666666666666667
+    ],
+    "distinct_rewards": 2,
+    "advantages": [
+      1.7320508075688772,
+      -0.5773502691896258,
+      -0.5773502691896258,
+      -0.5773502691896258
+    ],
+    "turns": 36,
+    "generated_tokens": 1174
+  },
+  "outcome": {
+    "result": "TIMED OUT during turn_backward \u2014 no optimizer update occurred",
+    "signal": "SIGTERM from scripts/run_v2_recovery.sh at the 20-minute external budget",
+    "backward_completed": false,
+    "update_occurred": false,
+    "gradient_norm": null,
+    "parameter_changes": null,
+    "checkpoint": null,
+    "reached": [
+      "preconditions passed",
+      "policy equivalence verified",
+      "group rebuilt through the v2 structures",
+      "advantages computed",
+      "turn_backward entered"
+    ],
+    "not_reached": [
+      "turn_backward completion",
+      "gradient norm",
+      "optimizer.step",
+      "checkpoint"
+    ],
+    "measured_cost": {
+      "forward_backward_passes": 36,
+      "total_tokens": 80279,
+      "longest_sequence": 3449,
+      "note": "turn_backward runs one forward and one backward per turn, over prompt+generated. 36 passes over ~80,279 tokens did not fit in 20 minutes on this machine."
+    },
+    "note_on_this_field": "added after the fact. SIGTERM runs no Python handler, so the script could not label its own record; everything above was written by it before the stop."
+  }
+}
