@@ -21,6 +21,7 @@ of the tokens the policy chose. That is what this implements, and nothing else.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import torch
@@ -180,6 +181,7 @@ def turn_backward(
     episodes: list[Any],
     advantages: list[float],
     device: torch.device,
+    on_turn_done: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[float, int]:
     """v2 loss: every turn scored under the exact prompt it was sampled with.
 
@@ -193,6 +195,12 @@ def turn_backward(
     tokens recorded at generation -- and only that turn's generated positions
     are scored. Earlier turns appear as context and are never scored again.
 
+    ``on_turn_done`` is called after each turn's backward, with that turn's
+    running totals. It exists so a run stopped part way through can say exactly
+    how far the computation reached: a backward over many long turns is the
+    slowest thing here, and "it timed out somewhere inside" is not a useful
+    record. It observes only -- it cannot change the gradient.
+
     **Weighting is unchanged and explicit.** The intent in v1 was: mean
     log-probability over an episode's generated tokens, then divided by group
     size, so every episode counts equally regardless of length. That is
@@ -204,7 +212,7 @@ def turn_backward(
     total_loss = 0.0
     counted = 0
     inner = causal_lm(model)
-    for tokenised, advantage in zip(episodes, advantages, strict=True):
+    for index, (tokenised, advantage) in enumerate(zip(episodes, advantages, strict=True)):
         turns = [t for t in tokenised.turns if t.generated_ids]
         if not turns:
             continue
@@ -229,6 +237,13 @@ def turn_backward(
             loss.backward()
             total_loss += float(loss.detach())
             counted += int(targets.numel())
+            if on_turn_done is not None:
+                on_turn_done({
+                    "episode": index, "step_index": turn.step_index,
+                    "sequence_length": int(sequence.shape[1]),
+                    "generated_tokens": int(targets.numel()),
+                    "running_loss": total_loss, "running_tokens": counted,
+                })
             del hidden, logits, logp, loss
             release_cache()
     return total_loss, counted
