@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "checks": {
+    "effective_min_p_is_none": true,
+    "min_p_warper_absent": true,
+    "one_token_generation": {
+      "passed": true,
+      "seconds": 5.7,
+      "new_tokens": 1,
+      "token": "{\""
+    }
+  },
+  "processors": []
+}

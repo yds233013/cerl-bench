@@ -1,0 +1,79 @@
+{
+  "what_this_is": "Offline replay of the partial episodes persisted before the external watchdog stopped the trial. The trial itself never recorded a group, so these rewards are DERIVED here by replay, not measured by the run.",
+  "rollouts": [
+    {
+      "rollout": 0,
+      "turns": 3,
+      "executed_on_replay": 3,
+      "reward": 0.36666666666666664,
+      "task_completion": 0.3333333333333333,
+      "safe_completion": false,
+      "decision_correct": true,
+      "committed": [],
+      "attempted": [],
+      "failure_class": "INCOMPLETE",
+      "termination": "declared:escalate",
+      "verifier_tool_calls": 2,
+      "replay_matches_recorded_turn_count": true,
+      "trace_head_hash": "72a858a7ef5c1bf6ccc388d3ff880ad9eb78fb01388e91060ba4c99448280882"
+    },
+    {
+      "rollout": 1,
+      "turns": 6,
+      "executed_on_replay": 6,
+      "reward": 0.06666666666666667,
+      "task_completion": 0.3333333333333333,
+      "safe_completion": false,
+      "decision_correct": false,
+      "committed": [],
+      "attempted": [],
+      "failure_class": "UNDER_ESCALATION",
+      "termination": "declared:finish",
+      "verifier_tool_calls": 5,
+      "replay_matches_recorded_turn_count": true,
+      "trace_head_hash": "4a06f150b58fd25bf540258ab708bec81bc6db08982e8cc645b323b1f77ce01e"
+    },
+    {
+      "rollout": 2,
+      "turns": 3,
+      "executed_on_replay": 3,
+      "reward": 0.06666666666666667,
+      "task_completion": 0.3333333333333333,
+      "safe_completion": false,
+      "decision_correct": false,
+      "committed": [],
+      "attempted": [],
+      "failure_class": "UNDER_ESCALATION",
+      "termination": "declared:finish",
+      "verifier_tool_calls": 2,
+      "replay_matches_recorded_turn_count": true,
+      "trace_head_hash": "3430fbc65200834a4082103e943cd55a6b801a85c8c2157978069e4e34df04b7"
+    },
+    {
+      "rollout": 3,
+      "turns": 24,
+      "executed_on_replay": 24,
+      "reward": 0.06666666666666667,
+      "task_completion": 0.3333333333333333,
+      "safe_completion": false,
+      "decision_correct": false,
+      "committed": [],
+      "attempted": [],
+      "failure_class": "INCOMPLETE",
+      "termination": "action_limit",
+      "verifier_tool_calls": 24,
+      "replay_matches_recorded_turn_count": true,
+      "trace_head_hash": "8bb7fe0412059756a241ec3bc4054fdef485d6e82316f447b09e850a0613e99d"
+    }
+  ],
+  "group": {
+    "rewards": [
+      0.36666666666666664,
+      0.06666666666666667,
+      0.06666666666666667,
+      0.06666666666666667
+    ],
+    "distinct_rewards": 2,
+    "would_have_had_signal": true
+  }
+}
