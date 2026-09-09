@@ -1,0 +1,18 @@
+# Training-pilot dependencies for the branch `phase2-local-rl-pilot`.
+#
+# Deliberately NOT part of the ordinary install: `uv sync`, `mypy --strict src`
+# and offline CI must all work on a clean checkout without torch. Install these
+# into an isolated environment instead:
+#
+#     uv venv .venv-rl --python 3.11
+#     VIRTUAL_ENV=.venv-rl uv pip install -r requirements-rl.txt
+#     VIRTUAL_ENV=.venv-rl uv pip install -e .
+#
+# Pinned to the versions the recorded runs actually used. Python 3.11.
+torch==2.8.0
+transformers==4.57.1
+peft==0.17.1
+trl==0.24.0
+accelerate==1.10.1
+datasets==4.0.0
+pytest
