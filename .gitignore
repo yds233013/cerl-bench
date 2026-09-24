@@ -15,3 +15,8 @@ app/dist/
 
 # macOS
 .DS_Store
+
+# Local agent/assistant instruction files
+CLAUDE.md
+AGENTS.md
+.claude/
